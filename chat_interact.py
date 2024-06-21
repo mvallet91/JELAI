@@ -1,5 +1,3 @@
-# On chatbot environment
-
 import os
 import time
 import json
@@ -16,10 +14,11 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 chat_chain = RemoteRunnable("http://localhost:9001/chat")
 
 class ChatHandler(FileSystemEventHandler):
-    def __init__(self, chat_file):
+    def __init__(self, chat_file, loop):
         self.chat_file = os.path.abspath(chat_file)
         self.last_processed_message = None
         self.working_message_id = None
+        self.loop = loop
         self.load_last_message()
         logging.info(f"Monitoring file: {self.chat_file}")
 
@@ -49,7 +48,7 @@ class ChatHandler(FileSystemEventHandler):
                 if last_message != self.last_processed_message and "automated" not in last_message:
                     self.last_processed_message = last_message
                     logging.info(f"New message: {last_message['body']}")
-                    asyncio.run(self.automate_response(last_message, content))
+                    asyncio.run_coroutine_threadsafe(self.automate_response(last_message, content), self.loop)
         except (FileNotFoundError, json.JSONDecodeError) as e:
             logging.error(f"Error reading file: {e}")
 
@@ -114,7 +113,7 @@ class ChatHandler(FileSystemEventHandler):
             }
             self.update_working_message(working_message, content)
             idx = (idx + 1) % len(working_messages)
-            await asyncio.sleep(10 + idx % 3)  # Wait 5-7 seconds
+            await asyncio.sleep(5 + idx % 3)  # Wait 5-7 seconds
 
     def update_working_message(self, working_message, content):
         try:
@@ -151,14 +150,15 @@ class ChatHandler(FileSystemEventHandler):
             logging.error(f"Error replacing working message: {e}")
 
 def main():
-    chat_file = './Test4.chat'
-    event_handler = ChatHandler(chat_file)
+    chat_file = './ChatPandas.chat'
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    event_handler = ChatHandler(chat_file, loop)
     observer = Observer()
     observer.schedule(event_handler, path=os.path.dirname(os.path.abspath(chat_file)), recursive=False)
     observer.start()
     try:
-        while True:
-            time.sleep(1)
+        loop.run_forever()
     except KeyboardInterrupt:
         observer.stop()
     observer.join()
