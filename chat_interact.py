@@ -1,4 +1,5 @@
 import os
+import sys
 import time
 import json
 import logging
@@ -7,11 +8,15 @@ import asyncio
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 from langserve import RemoteRunnable
+from langchain_community.llms import Ollama
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
+model = Ollama(model="llama2")
+
 # Set up the RemoteRunnable for the chat_chain
-chat_chain = RemoteRunnable("http://localhost:9001/chat")
+# chat_chain = RemoteRunnable("http://localhost:9001/chat")
+chat_chain = RemoteRunnable("http://localhost:8001")
 
 class ChatHandler(FileSystemEventHandler):
     def __init__(self, chat_file, loop):
@@ -55,9 +60,9 @@ class ChatHandler(FileSystemEventHandler):
     async def automate_response(self, message, content):
         # Start a background task to send "working on it" messages
         working_task = asyncio.create_task(self.send_working_messages(content))
-        
+        session_id = message.get('sender')
         # Send the message to the LLM app and get the response
-        response_text = await self.get_llm_response(message["body"])
+        response_text = await self.get_llm_response(message["body"], session_id)
         
         # Cancel the "working on it" messages task
         working_task.cancel()
@@ -80,12 +85,20 @@ class ChatHandler(FileSystemEventHandler):
             logging.info(f"Sending response: {response}")
             self.replace_working_message(response, content)
 
-    async def get_llm_response(self, user_message):
+    async def get_llm_response(self, user_message, session_id):
         try:
+
+            ### ORIGINAL CHAT #########
             # Make an async request to the LLM app's chat endpoint
-            response = await chat_chain.ainvoke({"input": user_message})
+            # messages = ' '.join([message['body'] for message in content['messages']])
+            # response = await chat_chain.ainvoke({"input": user_message, "messages": messages})
+            ### ORIGINAL CHAT #########
+
+
+            response = await chat_chain.ainvoke({"human_input": user_message}, {'configurable': { 'session_id': session_id } })
+            
             # Convert the response from a list to a string
-            response = " ".join(response)
+            response = "".join(response)
             return response
         except Exception as e:
             logging.error(f"Error getting LLM response: {e}")
@@ -149,8 +162,11 @@ class ChatHandler(FileSystemEventHandler):
         except (FileNotFoundError, json.JSONDecodeError) as e:
             logging.error(f"Error replacing working message: {e}")
 
-def main():
-    chat_file = './ChatPandas.chat'
+def main(filepath = None):
+    if filepath:
+        chat_file = filepath
+    else:
+        chat_file = './ChatPandas.chat'
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
     event_handler = ChatHandler(chat_file, loop)
@@ -164,4 +180,7 @@ def main():
     observer.join()
 
 if __name__ == "__main__":
-    main()
+    args = sys.argv[1:]
+    if len(args) == 2 and args[0] == '-chatfile-path':
+        filepath = args[1]
+    main(filepath)

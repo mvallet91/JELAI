@@ -1,2 +1,11 @@
 .env
-.ipynb_checkpoints
+.ipynb_checkpoints/
+chat_histories/
+.vscode/
+chats/
+chat_history*
+.jupyter_ystore.db
+*.chat
+*workspace
+log*
+

@@ -9,11 +9,15 @@ from fastapi import FastAPI
 from langchain_community.llms import Ollama
 from langchain.output_parsers import CommaSeparatedListOutputParser
 from langchain.prompts import PromptTemplate, ChatPromptTemplate, MessagesPlaceholder
-from langchain_core.messages import AIMessage, HumanMessage
+from langchain_core.messages import AIMessage, HumanMessage, trim_messages
 from langchain_community.chat_message_histories import ChatMessageHistory
 from langserve import add_routes
 import uvicorn
 from langchain_openai import ChatOpenAI
+
+from operator import itemgetter
+
+from langchain_core.runnables import RunnablePassthrough
 
 # os.environ["OPENAI_API_KEY"] = getpass.getpass("Enter your OpenAI API key: ")
 
@@ -28,10 +32,14 @@ from langchain_openai import ChatOpenAI
 
 llama2 = Ollama(model="llama2")
 codellama = Ollama(model="codellama")
+
 ollama = Ollama(
     base_url=os.getenv('base_url'),
-    model="codegemma:7b-instruct"
+    model="llama3"
 )
+
+ollama = llama2
+model = llama2
 
 template = PromptTemplate.from_template("Tell me about {topic}. Be brief!")
 chain = template | llama2 | CommaSeparatedListOutputParser()
@@ -57,11 +65,43 @@ summary = """
 
 chat_template = ChatPromptTemplate.from_messages([
     ("system", prompt),
-    ("ai", summary ),
+    ("ai", "{messages}"),
     ("human", "{input}")
 ])
 
 chat_chain = chat_template | ollama | CommaSeparatedListOutputParser()
+
+### CHAT WITH HISTORY ###
+# chat_prompt = ChatPromptTemplate.from_messages(
+#     [
+#         (
+#             "system",
+#             "You are a helpful assistant. Answer all questions to the best of your ability.",
+#         ),
+#         MessagesPlaceholder(variable_name="messages"),
+#     ]
+# )
+
+# trimmer = trim_messages(
+#     max_tokens=120,
+#     strategy="last",
+#     token_counter=model,
+#     include_system=True,
+#     allow_partial=True,
+#     # start_on="human",
+# )
+
+
+# history_chain = (
+#     RunnablePassthrough.assign(messages=itemgetter("messages") | trimmer)
+#     | chat_prompt
+#     | model
+# )
+
+# add_routes(app, history_chain, path="/chain")
+
+### CHAT WITH HISTORY ###
+
 
 app = FastAPI(title="LangChain", version="1.0", description="The first server ever!")
 
