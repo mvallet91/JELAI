@@ -1,0 +1,34 @@
+# DS Tutor Notebook Image
+# 
+# This image is based on the Jupyter Scipy Notebook image and includes additional packages and configurations for DS Tutor.
+#
+# The image includes the following packages:
+# - jupyterlab_collaborative_chat
+# - jupyterlab_pioneer
+#
+# The image also includes a configuration for the JupyterLab Pioneer app to log telemetry data to a file.
+# The image is built from the Jupyter Scipy Notebook image.
+
+FROM quay.io/jupyter/scipy-notebook:latest
+
+USER root
+
+# Create logs folder
+RUN mkdir /home/jovyan/work/logs && \
+    chown -R jovyan:users /home/jovyan/work/logs
+
+# Copy jupyterlab_pioneer config
+COPY jupyter_jupyterlab_pioneer_config.py /etc/jupyter/
+
+# Install additional packages
+RUN pip install --no-cache-dir jupyterlab_collaborative_chat jupyterlab_pioneer 
+
+# Restart container
+# Restart the Jupyter server to apply changes
+CMD ["jupyter", "lab", "--ip=0.0.0.0", "--port=8888", "--no-browser", "--allow-root"]
+
+# Switch back to jovyan to avoid running the container as root
+USER jovyan
+
+# Set up the work directory
+WORKDIR /home/jovyan/work

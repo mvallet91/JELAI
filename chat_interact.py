@@ -8,11 +8,8 @@ import asyncio
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 from langserve import RemoteRunnable
-from langchain_community.llms import Ollama
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-
-model = Ollama(model="llama2")
 
 # Set up the RemoteRunnable for the chat_chain
 # chat_chain = RemoteRunnable("http://localhost:9001/chat")
