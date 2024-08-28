@@ -32,4 +32,3 @@ USER jovyan
 
 # Set up the work directory
 WORKDIR /home/jovyan/work
-
