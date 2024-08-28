@@ -10,8 +10,8 @@ c = get_config()  # noqa: F821
 # avoid having to rebuild the JupyterHub container every time we change a
 # configuration parameter.
 
-# c.JupyterHub.port = 9000
-c.JupyterHub.bind_url = "http://localhost:9000"
+c.JupyterHub.port = 9000
+# c.JupyterHub.bind_url = "http://localhost:9000"
 
 # Spawn single-user servers as Docker containers
 c.JupyterHub.spawner_class = "dockerspawner.DockerSpawner"
