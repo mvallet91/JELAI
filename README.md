@@ -1,7 +1,7 @@
 # Learning Analytics-Powered Tutor
 ## System Architecture
 ![ds-tutor architecture](./images/DS%20Tutor%20Architecture.png)
-<a href="https://www.flaticon.com/free-icons/log" title="icons" style="font-size: 0.5em;">Icons created by juicy_fish - Flaticon</a>
+<a href="https://www.flaticon.com/free-icons/" title="icons" style="font-size: 0.5em;">Icons created by juicy_fish - Flaticon</a>
 
 ### Description
 The system consists of a JupyterHub server, individual user Jupyter servers, a chatbot server, and an Ollama server. 
@@ -10,7 +10,7 @@ The system consists of a JupyterHub server, individual user Jupyter servers, a c
     - The user notebooks are based on the [Scipy-notebook](https://github.com/jupyter/docker-stacks/tree/main/images/scipy-notebook) image, including common packages for data science and machine learning.
     - The [Jupyterlab-pioneer](https://pypi.org/project/jupyterlab-pioneer/) Extension logs telemetry data from the user's interactions with the notebook.
     - The [Jupyter-chat](https://github.com/jupyterlab/jupyter-chat) Extension is used to integrate a chat interface into the notebook.
-    - The `chat_interact.py` script is used to interact with the chatbot server by watching the chat files for changes and sending the messages to the chatbot server.
+    - The `chat_interact.py` script is used to interact with the chatbot server by watching the chat files for changes and sending the messages to the chatbot server. Currently, the chatbot server is running in the host server, but it will be moved to the individual user containers in the future.
 - The chatbot server (in `history_app.py`) is a LangChain-based server that provides a REST API for the chatbot. It uses the Ollama server for the LLM. 
     - The chatbot server also uses the FileChatMessageHistory class to store the chat history for each user. The chat history is stored in the `chat_histories` directory.
     - The chatbot server currently runs in the host server (it will be moved to the `jupyterhub` container in the future).
