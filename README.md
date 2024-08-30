@@ -1,7 +1,7 @@
 # Learning Analytics-Powered Tutor
 ## System Architecture
 ![ds-tutor architecture](./images/DS%20Tutor%20Architecture.png)
-<a href="https://www.flaticon.com/free-icons/log" title="icons" style="font-size: 0.7em;">Icons created by juicy_fish - Flaticon</a>
+<a href="https://www.flaticon.com/free-icons/log" title="icons" style="font-size: 0.5em;">Icons created by juicy_fish - Flaticon</a>
 
 ### Description
 The system consists of a JupyterHub server, individual user Jupyter servers, a chatbot server, and an Ollama server. 
