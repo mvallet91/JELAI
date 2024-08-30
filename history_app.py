@@ -8,7 +8,7 @@ but will help us to demonstrate the RunnableWithMessageHistory interface.
 We'll use cookies to identify the user and/or session. This will help illustrate how to
 fetch configuration from the request.
 """
-import re
+import re, os
 from pathlib import Path
 from typing import Callable, Union
 
@@ -25,6 +25,10 @@ from langserve import add_routes
 from langserve.pydantic_v1 import BaseModel, Field
 
 from operator import itemgetter
+
+from dotenv import load_dotenv
+load_dotenv()
+base_url = os.getenv("base_url")
 
 def _is_valid_identifier(value: str) -> bool:
     """Check if the session ID is in a valid format."""

@@ -14,7 +14,7 @@ from langserve import RemoteRunnable
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 # Set up the RemoteRunnable for the chat_chain
-chat_chain = RemoteRunnable("http://localhost:8001")
+chat_chain = RemoteRunnable("http://localhost:8002")
 
 class ChatHandler(FileSystemEventHandler):
     """
