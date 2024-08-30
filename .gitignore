@@ -9,3 +9,6 @@ chat_history*
 *workspace
 log*
 
+__pycache__/
+venv/
+chatbot/

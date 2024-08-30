@@ -13,7 +13,7 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 
 # Set up the RemoteRunnable for the chat_chain
 # chat_chain = RemoteRunnable("http://localhost:9001/chat")
-chat_chain = RemoteRunnable("http://localhost:8001")
+chat_chain = RemoteRunnable("http://localhost:8002")
 
 class ChatHandler(FileSystemEventHandler):
     def __init__(self, chat_file, loop):
