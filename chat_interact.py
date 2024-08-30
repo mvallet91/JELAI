@@ -199,4 +199,4 @@ if __name__ == "__main__":
     args = sys.argv[1:]
     if len(args) == 2 and args[0] == '-chatfile-path':
         filepath = args[1]
-    main(filepath)
+        main(filepath)

@@ -94,11 +94,6 @@ prompt = ChatPromptTemplate.from_messages(
     ]
 )
 
-import os
-from dotenv import load_dotenv
-load_dotenv()
-base_url = os.getenv("base_url")
-
 model = Ollama(model="llama3.1", base_url=base_url)
 
 class InputChat(BaseModel):
@@ -145,4 +140,4 @@ add_routes(
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="localhost", port=8001)
+    uvicorn.run(app, host="localhost", port=8002)

@@ -13,7 +13,7 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 
 # Set up the RemoteRunnable for the chat_chain
 # chat_chain = RemoteRunnable("http://localhost:9001/chat")
-chat_chain = RemoteRunnable("http://localhost:8001")
+chat_chain = RemoteRunnable("http://localhost:8002")
 
 class ChatHandler(FileSystemEventHandler):
     def __init__(self, chat_directory, loop):
@@ -49,7 +49,11 @@ class ChatHandler(FileSystemEventHandler):
         # Start a background task to send "working on it" messages
         working_task = asyncio.create_task(self.send_working_messages(content, file_path))
         file_name = os.path.basename(file_path)
+        # Clean the file name, remove the .chat extension
+        file_name = file_name.replace(".chat", "")
+        logging.info(f"file_name: {file_name}")
         session_id = f"{message.get('sender')}_{file_name}"
+        logging.info(f"session_id: {session_id}")
         # Send the message to the LLM app and get the response
         response_text = await self.get_llm_response(message["body"], session_id)
         
