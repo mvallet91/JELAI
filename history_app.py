@@ -90,8 +90,12 @@ prompt = ChatPromptTemplate.from_messages(
     ]
 )
 
-model = Ollama(model="llama2")
+import os
+from dotenv import load_dotenv
+load_dotenv()
+base_url = os.getenv("base_url")
 
+model = Ollama(model="llama3.1", base_url=base_url)
 
 class InputChat(BaseModel):
     """Input for the chat endpoint."""

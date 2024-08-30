@@ -11,8 +11,6 @@
 
 FROM quay.io/jupyter/scipy-notebook:latest
 
-# USER root
-
 # Create logs folder
 RUN mkdir /home/jovyan/work/logs && \
     chown -R jovyan:users /home/jovyan/work/logs
@@ -23,12 +21,26 @@ COPY jupyter_jupyterlab_pioneer_config.py /etc/jupyter/
 # Install additional packages
 RUN pip install --no-cache-dir jupyterlab_collaborative_chat jupyterlab_pioneer 
 
-# Restart container
-# Restart the Jupyter server to apply changes
-# CMD ["jupyter", "lab", "--ip=0.0.0.0", "--port=8888", "--no-browser", "--allow-root"]
-
 # Switch back to jovyan to avoid running the container as root
 USER jovyan
 
 # Set up the work directory
 WORKDIR /home/jovyan/work
+
+## Attempt to run the chat_interact.py script in the container
+# Create a virtual environment
+# RUN python -m venv /home/jovyan/venv
+
+# Activate the virtual environment and install requirements
+COPY chat_requirements.txt /home/jovyan/
+# RUN . /home/jovyan/venv/bin/activate && \
+#    pip install --no-cache-dir -r /home/jovyan/chat_requirements.txt
+
+# Copy the chat_interact.py script
+COPY chat_interact.py /home/jovyan/
+
+# Add the command to run chat_interact.py to the startup script
+# RUN echo ". /home/jovyan/venv/bin/activate && python /home/jovyan/chat_interact.py &" >> /home/jovyan/.jupyter/jupyter_notebook_config.py
+
+# Ensure the script is executable
+# RUN chmod +x /home/jovyan/chat_interact.py

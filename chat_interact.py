@@ -5,17 +5,22 @@ import json
 import logging
 import uuid
 import asyncio
+import re
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 from langserve import RemoteRunnable
 
+# Set up logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 # Set up the RemoteRunnable for the chat_chain
-# chat_chain = RemoteRunnable("http://localhost:9001/chat")
 chat_chain = RemoteRunnable("http://localhost:8001")
 
 class ChatHandler(FileSystemEventHandler):
+    """
+    Handles chat file modifications and automates responses using an LLM.
+    """
+
     def __init__(self, chat_file, loop):
         self.chat_file = os.path.abspath(chat_file)
         self.last_processed_message = None
@@ -25,6 +30,7 @@ class ChatHandler(FileSystemEventHandler):
         logging.info(f"Monitoring file: {self.chat_file}")
 
     def load_last_message(self):
+        """Load the last message from the chat file."""
         try:
             with open(self.chat_file, 'r') as file:
                 content = json.load(file)
@@ -36,11 +42,13 @@ class ChatHandler(FileSystemEventHandler):
             self.last_processed_message = None
 
     def on_modified(self, event):
+        """Called when the chat file is modified."""
         if os.path.abspath(event.src_path) == self.chat_file:
             logging.info(f"Detected modification in: {event.src_path}")
             self.handle_new_message()
 
     def handle_new_message(self):
+        """Process new messages in the chat file."""
         try:
             with open(self.chat_file, 'r') as file:
                 content = json.load(file)
@@ -55,9 +63,11 @@ class ChatHandler(FileSystemEventHandler):
             logging.error(f"Error reading file: {e}")
 
     async def automate_response(self, message, content):
+        """Generate and send an automated response to a user message."""
         # Start a background task to send "working on it" messages
         working_task = asyncio.create_task(self.send_working_messages(content))
         session_id = message.get('sender')
+        logging.info(f"Session ID: {session_id}")
         # Send the message to the LLM app and get the response
         response_text = await self.get_llm_response(message["body"], session_id)
         
@@ -83,16 +93,15 @@ class ChatHandler(FileSystemEventHandler):
             self.replace_working_message(response, content)
 
     async def get_llm_response(self, user_message, session_id):
+        """Get a response from the LLM using the chat_chain."""
         try:
+            # Sanitize the session_id
+            sanitized_session_id = re.sub(r'[^a-zA-Z0-9_-]', '_', session_id)
 
-            ### ORIGINAL CHAT #########
-            # Make an async request to the LLM app's chat endpoint
-            # messages = ' '.join([message['body'] for message in content['messages']])
-            # response = await chat_chain.ainvoke({"input": user_message, "messages": messages})
-            ### ORIGINAL CHAT #########
-
-
-            response = await chat_chain.ainvoke({"human_input": user_message}, {'configurable': { 'session_id': session_id } })
+            response = await chat_chain.ainvoke(
+                {"human_input": user_message}, 
+                {'configurable': {'session_id': sanitized_session_id}}
+            )
             
             # Convert the response from a list to a string
             response = "".join(response)
@@ -102,6 +111,7 @@ class ChatHandler(FileSystemEventHandler):
             return None
 
     async def send_working_messages(self, content):
+        """Send periodic 'working on it' messages while processing."""
         working_messages = [
             "I'm working on it...",
             "Just a moment, please...",
@@ -126,6 +136,7 @@ class ChatHandler(FileSystemEventHandler):
             await asyncio.sleep(5 + idx % 3)  # Wait 5-7 seconds
 
     def update_working_message(self, working_message, content):
+        """Update the 'working on it' message in the chat file."""
         try:
             with open(self.chat_file, 'r+') as file:
                 # Find and update the existing "working on it" message
@@ -143,6 +154,7 @@ class ChatHandler(FileSystemEventHandler):
             logging.error(f"Error updating working message: {e}")
 
     def replace_working_message(self, response, content):
+        """Replace the 'working on it' message with the final response."""
         try:
             with open(self.chat_file, 'r+') as file:
                 # Find and replace the "working on it" message with the final response
@@ -160,6 +172,12 @@ class ChatHandler(FileSystemEventHandler):
             logging.error(f"Error replacing working message: {e}")
 
 def main(filepath = None):
+    """
+    Main function to set up the file observer and event loop.
+    
+    Args:
+        filepath (str, optional): Path to the chat file. Defaults to './ChatPandas.chat'.
+    """
     if filepath:
         chat_file = filepath
     else:
@@ -177,6 +195,7 @@ def main(filepath = None):
     observer.join()
 
 if __name__ == "__main__":
+    # Parse command-line arguments
     args = sys.argv[1:]
     if len(args) == 2 and args[0] == '-chatfile-path':
         filepath = args[1]
