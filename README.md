@@ -12,7 +12,7 @@ The system consists of a JupyterHub server, individual user Jupyter servers, a c
     - The [Jupyter-chat](https://github.com/jupyterlab/jupyter-chat) Extension is used to integrate a chat interface into the notebook.
     - The `chat_interact.py` script is used to interact with the chatbot server by watching the chat files for changes and sending the messages to the chatbot server. Currently, the chatbot server is running in the host server, but it will be moved to the individual user containers in the future.
 - The chatbot server (in `history_app.py`) is a LangChain-based server that provides a REST API for the chatbot. It uses the Ollama server for the LLM. 
-    - The chatbot server also uses the FileChatMessageHistory class to store the chat history for each user. The chat history is stored in the `chat_histories` directory.
+    - The chatbot server also uses the FileChatMessageHistory class to process the chat history for each conversation, stored in the `chat_histories` directory.
     - The chatbot server currently runs in the host server (it will be moved to the `jupyterhub` container in the future).
 - The Ollama server can be containerized or run in the host server.
 

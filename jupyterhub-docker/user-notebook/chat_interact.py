@@ -81,12 +81,6 @@ class ChatHandler(FileSystemEventHandler):
     async def get_llm_response(self, user_message, session_id):
         try:
 
-            ### ORIGINAL CHAT #########
-            # Make an async request to the LLM app's chat endpoint
-            # messages = ' '.join([message['body'] for message in content['messages']])
-            # response = await chat_chain.ainvoke({"input": user_message, "messages": messages})
-            ### ORIGINAL CHAT #########
-
             response = await chat_chain.ainvoke({"human_input": user_message}, {'configurable': { 'session_id': session_id } })
             
             # Convert the response from a list to a string
@@ -163,10 +157,13 @@ def main(directory_path):
     observer.schedule(event_handler, path=chat_directory, recursive=False)
     observer.start()
     try:
+        print("Monitoring started. Press Ctrl+C to exit.")
         loop.run_forever()
     except KeyboardInterrupt:
+        print("Keyboard interrupt received. Stopping...")
+    finally:
         observer.stop()
-    observer.join()
+        observer.join()
 
 if __name__ == "__main__":
     if len(sys.argv) != 2:
