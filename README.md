@@ -22,7 +22,7 @@ This setup has was developed and tested on Ubuntu 22.04.
 ### Prerequisites
 - Docker
 - Docker Compose
-- Python 3.10+
+- Python 3.10 or 3.11
 
 ### JupyterHub server
 Build and run the JupyterHub server using docker compose. This will create a JupyterHub instance using the latest image from the JupyterHub Docker Hub repo (quay.io/jupyterhub/jupyterhub) with the volume `jupyterhub-data` to persist data for individual users and a network `jupyterhub-network` to allow communication between the JupyterHub server, the individual user servers, and the chatbot server.
@@ -63,3 +63,23 @@ Ollama can also be run in a container (this has not been tested with the current
 ### Nginx Reverse Proxy
 - To access JupyterHub from outside the local network, follow the official [JupyterHub documentation](https://jupyterhub.readthedocs.io/en/stable/howto/configuration/config-proxy.html#nginx) to set up the Nginx reverse proxy.
 - To serve Ollama from outside the local network, you can use the Nginx reverse proxy to forward requests to the Ollama server, see the [Ollama server documentation](https://github.com/ollama/ollama/blob/main/docs/faq.md#how-can-i-use-ollama-with-a-proxy-server) for details.
+
+
+## Local Development and Experimentation
+To run the system locally for development and experimentation, you can use JupyterLab and the chatbot server in your local environment. *This has only been tested with Python 3.10 and 3.11.*
+
+1. Create a venv and install the necessary packages:
+    - `python -m venv chatbot`
+    - `source chatbot/bin/activate`, on Windows use `chatbot\Scripts\activate`
+    - `pip install -r chatbot_requirements.txt`
+2. On a different terminal, create a venv for the interface that will run JupiterLab:
+    - `python -m venv jupyterlab`
+    - `source jupyterlab/bin/activate`, on Windows use `jupyterlab\Scripts\activate`
+    - `pip install -r interface_requirements.txt`
+3. On the first terminal, still running the `chatbot` environment and run the LangChain server:
+    - `python history_app.py`
+4. Open a new terminal, activate the (`chatbot`) environment and run the chatbot interactively:
+    - `source chatbot/bin/activate` on Windows use `chatbot\Scripts\activate`
+    - `python chat_interact.py -chatfile-path  /path-to-chat/EDA.chat`
+5. On the terminal with the `jupyterlab` environment, run the JupyterLab interface:
+    - `jupyter lab`
