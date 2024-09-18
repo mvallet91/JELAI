@@ -72,14 +72,20 @@ To run the system locally for development and experimentation, you can use Jupyt
     - `python -m venv chatbot`
     - `source chatbot/bin/activate`, on Windows use `chatbot\Scripts\activate`
     - `pip install -r chatbot_requirements.txt`
-2. On a different terminal, create a venv for the interface that will run JupiterLab:
+2. On a different terminal, create a venv for the interface that will run JupyterLab:
     - `python -m venv jupyterlab`
     - `source jupyterlab/bin/activate`, on Windows use `jupyterlab\Scripts\activate`
     - `pip install -r interface_requirements.txt`
-3. On the first terminal, still running the `chatbot` environment and run the LangChain server:
+3. Create your environment variables file, where you will add the address of the Ollama server:
+    - Create an **.env** file in the **ds-tutor** directory
+    - Add the following line to the **.env** file: `base_url=http://localhost:11434` or the address of your Ollama server
+4. On the first terminal, still running the **chatbot** environment and run the LangChain server:
     - `python history_app.py`
-4. Open a new terminal, activate the (`chatbot`) environment and run the chatbot interactively:
+5. Open a new terminal, activate the (**chatbot**) environment and run the chatbot interactively:
     - `source chatbot/bin/activate` on Windows use `chatbot\Scripts\activate`
     - `python chat_interact.py -chatfile-path  /path-to-chat/EDA.chat`
-5. On the terminal with the `jupyterlab` environment, run the JupyterLab interface:
+6. Add the jupyterlab-pioneer [configuration](https://jupyter-server.readthedocs.io/en/latest/operators/configuring-extensions.html) file to the JupyterLab configuration directory:
+    - On the terminal with the **jupyterlab** environment, run `jupyter --path`
+    - Copy the config file (see the [examples](https://github.com/educational-technology-collective/jupyterlab-pioneer/tree/main/configuration_examples)), named **jupyter_jupyterlab_pioneer_config.py** to the appropriate path. For development, use the **file_exporter** and set the correct path.
+6. On the terminal with the **jupyterlab** environment, run the JupyterLab interface:
     - `jupyter lab`
