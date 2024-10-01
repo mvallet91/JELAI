@@ -40,7 +40,7 @@ RUN . /home/jovyan/venv/bin/activate && \
 COPY chat_interact.py /home/jovyan/
 
 # Add the command to run chat_interact.py to the container startup script
-ENTRYPOINT ["/bin/bash", "-c", ". /home/jovyan/venv/bin/activate && python /home/jovyan/chat_interact.py /home/jovyan/work"]
+# ENTRYPOINT ["/bin/bash", "-c", ". /home/jovyan/venv/bin/activate && python /home/jovyan/chat_interact.py /home/jovyan/work"]
 
 # RUN echo ". /home/jovyan/venv/bin/activate && python /home/jovyan/chat_interact.py &" >> /home/jovyan/.jupyter/jupyter_notebook_config.py
 
