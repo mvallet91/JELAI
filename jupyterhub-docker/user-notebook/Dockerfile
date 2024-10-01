@@ -46,3 +46,5 @@ COPY chat_interact.py /home/jovyan/
 
 # Ensure the script is executable
 # RUN chmod +x /home/jovyan/chat_interact.py
+
+CMD []

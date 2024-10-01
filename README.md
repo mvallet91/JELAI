@@ -44,7 +44,7 @@ Currently, the server is not containerized. Python 3.10 or later must be install
     - `python3 -m venv chatbot`
     - `source chatbot/bin/activate`
     - `pip install -r chatbot_requirements.txt`
-- run the app in the host server (in *chatbot* env): `nohup uvicorn history_app:app --workers 16 --port 8002 > applogshist.txt &`
+- run the app in the host server (in *chatbot* env): `nohup uvicorn history_app:app --workers 16 --port 8002 --host 0.0.0.0 > applogshist.txt &`
     - The app uses message persistence with files ([server](https://github.com/langchain-ai/langserve/blob/main/examples/chat_with_persistence/server.py), [client](https://github.com/langchain-ai/langserve/blob/main/examples/chat_with_persistence/client.ipynb))
 
 ### Chatbot File Watcher

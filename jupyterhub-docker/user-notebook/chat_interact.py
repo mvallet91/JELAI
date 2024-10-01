@@ -11,9 +11,18 @@ from langserve import RemoteRunnable
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
+# Check if the script is running in a Docker container
+def is_running_in_docker():
+    return os.path.exists('/.dockerenv')
+
+# Set the URL based on the environment
+if is_running_in_docker():
+    chat_chain_url = "http://host.docker.internal:8002"
+else:
+    chat_chain_url = "http://localhost:8002"
+
 # Set up the RemoteRunnable for the chat_chain
-# chat_chain = RemoteRunnable("http://localhost:9001/chat")
-chat_chain = RemoteRunnable("http://localhost:8002")
+chat_chain = RemoteRunnable(chat_chain_url)
 
 class ChatHandler(FileSystemEventHandler):
     def __init__(self, chat_directory, loop):
