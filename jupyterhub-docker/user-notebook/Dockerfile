@@ -46,3 +46,5 @@ ENTRYPOINT ["/bin/bash", "-c", ". /home/jovyan/venv/bin/activate && python /home
 
 # Ensure the script is executable
 # RUN chmod +x /home/jovyan/chat_interact.py
+
+CMD []

@@ -26,6 +26,11 @@ network_name = os.environ["DOCKER_NETWORK_NAME"]
 c.DockerSpawner.use_internal_ip = True
 c.DockerSpawner.network_name = network_name
 
+# Allow access to the host's network
+c.DockerSpawner.extra_host_config = {
+    'extra_hosts': {'host.docker.internal': 'host-gateway'}
+}
+
 # Explicitly set notebook directory because we'll be mounting a volume to it.
 # Most `jupyter/docker-stacks` *-notebook images run the Notebook server as
 # user `jovyan`, and set the notebook directory to `/home/jovyan/work`.
