@@ -29,17 +29,19 @@ WORKDIR /home/jovyan/work
 
 ## Attempt to run the chat_interact.py script in the container
 # Create a virtual environment
-# RUN python -m venv /home/jovyan/venv
+RUN python -m venv /home/jovyan/venv
 
 # Activate the virtual environment and install requirements
 COPY chat_requirements.txt /home/jovyan/
-# RUN . /home/jovyan/venv/bin/activate && \
-#    pip install --no-cache-dir -r /home/jovyan/chat_requirements.txt
+RUN . /home/jovyan/venv/bin/activate && \
+   pip install --no-cache-dir -r /home/jovyan/chat_requirements.txt
 
 # Copy the chat_interact.py script
 COPY chat_interact.py /home/jovyan/
 
-# Add the command to run chat_interact.py to the startup script
+# Add the command to run chat_interact.py to the container startup script
+ENTRYPOINT ["/bin/bash", "-c", ". /home/jovyan/venv/bin/activate && python /home/jovyan/chat_interact.py"]
+
 # RUN echo ". /home/jovyan/venv/bin/activate && python /home/jovyan/chat_interact.py &" >> /home/jovyan/.jupyter/jupyter_notebook_config.py
 
 # Ensure the script is executable
