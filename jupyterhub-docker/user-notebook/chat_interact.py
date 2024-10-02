@@ -44,6 +44,23 @@ class ChatHandler(FileSystemEventHandler):
         try:
             with open(file_path, 'r') as file:
                 content = json.load(file)
+
+                # Check if 'Juno' user exists
+                if 'Juno' not in content['users']:
+                    # Create a new user entry for 'Juno'
+                    content['users']['Juno'] = {
+                        "display_name": "Juno",
+                        "username": "Juno",
+                        "avatar_url": None,
+                        "initials": "J",
+                        "name": "Juno",
+                        "color": "var(--jp-collaborator-color7)"
+                    }
+                    # Save the updated content back to the file
+                    file.seek(0)
+                    json.dump(content, file, indent=4)
+                    file.truncate()
+
                 if not content["messages"]:
                     return
                 last_message = content["messages"][-1]

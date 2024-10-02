@@ -6,7 +6,7 @@ c.JupyterLabPioneerApp.exporters = [
         # writes telemetry data to local file
         "type": "file_exporter",
         "args": {
-            "path": f"/home/{username}/work/logs/log"
+            "path": f"/home/{username}/logs/log"
         },
     },
 ]
