@@ -42,7 +42,7 @@ class ChatHandler(FileSystemEventHandler):
 
     def handle_new_message(self, file_path):
         try:
-            with open(file_path, 'r') as file:
+            with open(file_path, 'r+') as file:
                 content = json.load(file)
 
                 # Check if 'Juno' user exists
@@ -94,7 +94,7 @@ class ChatHandler(FileSystemEventHandler):
             # Create a response message with the required structure
             response = {
                 "body": response_text,
-                "sender": "auto_responder",
+                "sender": "Juno",
                 "type": "msg",
                 "id": str(uuid.uuid4()),
                 "time": time.time(),

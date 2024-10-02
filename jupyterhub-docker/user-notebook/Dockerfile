@@ -12,8 +12,8 @@
 FROM quay.io/jupyter/scipy-notebook:latest
 
 # Create logs folder
-RUN mkdir /home/jovyan/work/logs && \
-    chown -R jovyan:users /home/jovyan/work/logs
+RUN mkdir /home/jovyan/logs && \
+    chown -R jovyan:users /home/jovyan/logs
 
 # Copy jupyterlab_pioneer config
 COPY jupyter_jupyterlab_pioneer_config.py /etc/jupyter/
