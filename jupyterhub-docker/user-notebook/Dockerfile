@@ -41,6 +41,6 @@ COPY chat_interact.py /home/jovyan/
 
 # TODO Try this with nohup and maybe a log text
 # Add the command to run chat_interact.py to the container startup script
-ENTRYPOINT ["/bin/bash", "-c", ". /home/jovyan/venv/bin/activate && python /home/jovyan/chat_interact.py /home/jovyan/work > /home/jovyan/chat_interact.log 2>&1 &"]
+CMD ["/bin/bash", "-c", ". /home/jovyan/venv/bin/activate && python /home/jovyan/chat_interact.py /home/jovyan/work > /home/jovyan/chat_interact.log 2>&1 & start-notebook.py"]
 
-CMD [""]
+# CMD [""]
