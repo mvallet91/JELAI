@@ -41,17 +41,15 @@ To build the image from the Dockerfile:
 ### Chatbot LangChain Server
 Currently, the server is not containerized. Python 3.10 or later must be installed in the host server to create the appropriate environment. To run the LangChain server:
 - Go to `ds-tutor`
-    - `python3 -m venv chatbot`
-    - `source chatbot/bin/activate`
-    - `pip install -r chatbot_requirements.txt`
+    - Create a virtual environment: `python3 -m venv chatbot`
+    - Activate it: `source chatbot/bin/activate`
+    - Install the requirements: `pip install -r chatbot_requirements.txt`
 - run the app in the host server (in *chatbot* env): `nohup uvicorn history_app:app --workers 16 --port 8002 --host 0.0.0.0 > applogshist.txt &`
     - The app uses message persistence with files ([server](https://github.com/langchain-ai/langserve/blob/main/examples/chat_with_persistence/server.py), [client](https://github.com/langchain-ai/langserve/blob/main/examples/chat_with_persistence/client.ipynb))
 
 ### Chatbot File Watcher
-Currently, the chatbot is not containerized. Python 3.10 or later must be installed in the host server. To run the chatbot interactively:
-- `pip3 install langserve watchdog`
-- Run **chat_interact.py** not in *chatbot*, but in host server's base python, since Docker volumes need `sudo` access:  
-- `sudo python3 chat_interact.py -chatfile-path  /data/docker/volumes/jupyterhub-user-participant7/_data/EDA.chat`
+The chat interaction app in **chat_interact.py** watches the chat files for changes and sends the messages to the chatbot server. It automatically runs in the individual containers.
+Currently, the [Jupyter-chat](https://github.com/jupyterlab/jupyter-chat) extension limits exploration to the JupyterLab [root directory](https://github.com/jupyterlab/jupyter-chat/issues/61), so there is the risk that users could access or modify the chat files. This will be addressed in future versions.
 
 ### Ollama Server
 For a local LLM server, you can use [Ollama](https://ollama.com/). Follow the instructions in the [Ollama server documentation](https://github.com/varunvasudeva1/ollama-server-docs?tab=readme-ov-file) to install and run Ollama as a service.
@@ -66,7 +64,9 @@ Ollama can also be run in a container (this has not been tested with the current
 
 
 ## Local Development and Experimentation
-To run the system locally for development and experimentation, you can use JupyterLab and the chatbot server in your local environment. *This has only been tested with Python 3.10 and 3.11.*
+To run the system locally for development and experimentation, you can use JupyterLab and the chatbot server in your local environment.
+This does not require Docker, but it needs Python 3.10 or 3.11. 
+For the Ollama server, see the steps above.
 
 1. Create a venv and install the necessary packages:
     - `python -m venv chatbot`
