@@ -71,11 +71,11 @@ To run the system locally for development and experimentation, you can use Jupyt
 1. Create a venv and install the necessary packages:
     - `python -m venv chatbot`
     - `source chatbot/bin/activate`, on Windows use `chatbot\Scripts\activate`
-    - `pip install -r chatbot_requirements.txt`
+    - `python.exe -m pip install -r chatbot_requirements.txt`
 2. On a different terminal, create a venv for the interface that will run JupyterLab:
     - `python -m venv jupyterlab`
     - `source jupyterlab/bin/activate`, on Windows use `jupyterlab\Scripts\activate`
-    - `pip install -r interface_requirements.txt`
+    - `python.exe -m pip install -r interface_requirements.txt`
 3. Create your environment variables file, where you will add the address of the Ollama server:
     - Create an **.env** file in the **ds-tutor** directory
     - Add the following line to the **.env** file: `base_url=http://localhost:11434` or the address of your Ollama server
