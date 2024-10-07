@@ -83,6 +83,11 @@ system_prompt = """
         If the conversation is going off-topic, guide the student back to the main topic.
         Your answers go straight to the student, talk directly to them and avoid unnecessary information.
         Be encouraging and supportive!
+
+        The assistant may provide you with some context from the student's notebook actions with their input.
+        Focus on the last few actions to answer their question.
+        If you need more context, ask the student for more information.
+        
          """
 
 # Declare a chain
@@ -91,10 +96,11 @@ prompt = ChatPromptTemplate.from_messages(
         ("system", system_prompt),
         MessagesPlaceholder(variable_name="history"),
         ("human", "{human_input}"),
+        ("assistant", "{context}"),
     ]
 )
 
-model = Ollama(model="llama3.1", base_url=base_url)
+model = Ollama(model="llama3.1:70b", base_url=base_url)
 
 class InputChat(BaseModel):
     """Input for the chat endpoint."""
@@ -109,6 +115,7 @@ class InputChat(BaseModel):
         description="The human input to the chat system.",
         extra={"widget": {"type": "chat", "input": "human_input"}},
     )
+    context: dict = Field(default=None, description="Additional context from the user's notebook actions.")
 
 
 chain = prompt | model
