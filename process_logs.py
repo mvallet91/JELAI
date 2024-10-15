@@ -53,6 +53,9 @@ class LogFileListener:
         first_entry = event_dict[0]
         session_id = first_entry.get('notebookState', {}).get('sessionID', 'unknown_session')
         notebook_name = first_entry.get('notebook', 'unknown_notebook').replace(':', '_')
+
+        # Use the notebook name to create a consistent output filename
+        # This ensures alignment with the chat filenames
         output_filename = f"{session_id}_{notebook_name}.json"
         output_file_path = os.path.join(self.processed_logs_dir, output_filename)
 
@@ -70,10 +73,11 @@ async def main(log_file_path, processed_logs_dir):
         os.makedirs(processed_logs_dir)
 
     log_listener = LogFileListener(log_file_path, processed_logs_dir)
+    logging.info(f"Log processing started, watching file: {log_file_path}")
     await log_listener.watch_log_file()
 
 if __name__ == "__main__":
-    log_file_path = "log-file"  # Replace with your log file path
+    log_file_path = "log2"  # Replace with your log file path
     processed_logs_dir = "processed_logs"  # Directory to save processed logs
 
     try:

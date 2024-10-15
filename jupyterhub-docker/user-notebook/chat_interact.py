@@ -45,6 +45,11 @@ class ChatHandler(FileSystemEventHandler):
             with open(file_path, 'r+') as file:
                 content = json.load(file)
 
+                # Add context from processed logs if available
+                session_id = self.extract_session_id_from_filename(file_path)
+                processed_log_data = self.get_processed_log_data(session_id)
+                content['processed_log'] = processed_log_data
+
                 # Check if 'Juno' user exists
                 if 'Juno' not in content['users']:
                     # Create a new user entry for 'Juno'
@@ -71,6 +76,73 @@ class ChatHandler(FileSystemEventHandler):
         except (FileNotFoundError, json.JSONDecodeError) as e:
             logging.error(f"Error reading file {file_path}: {e}")
 
+    def extract_session_id_from_filename(self, file_path):
+        # Assuming session_id is part of the file name, extract it
+        file_name = os.path.basename(file_path)
+        session_id = file_name.split('.')[0]  # Remove the .chat extension
+        # lowercase and sanitize the session_id
+        session_id = session_id.replace(" ", "_").lower()
+        return session_id
+
+    def format_log_entry(self, log):
+        """Format a single log entry into a readable string."""
+        if log['event'] == "Executed cells":
+            return f"Executed cell {log['cell_index']} with input: {log.get('input', 'No input provided')}, output: {log.get('output', 'No output provided')}"
+        elif log['event'] == "Edited cell":
+            return f"Edited cell {log['cell_index']} with content: {log.get('content', 'No content provided')}"
+        elif log['event'] == "Added new cell":
+            return f"Added a new cell at index {log.get('cell_index', 'Unknown')}"
+        else:
+            return f"Event: {log['event']} at cell {log.get('cell_index', 'Unknown')}"
+
+    def get_processed_log_data(self, session_id):
+        # Locate the processed_logs directory
+        processed_logs_dir = os.path.join(self.chat_directory, 'processed_logs')
+
+        # Check if the directory exists
+        if not os.path.exists(processed_logs_dir):
+            logging.error(f"Processed logs directory not found: {processed_logs_dir}")
+            return None
+
+        # Find the first (or only) file in the processed_logs directory
+        try:
+            log_file_name = next(os.path.join(processed_logs_dir, f) for f in os.listdir(processed_logs_dir) if f.endswith('.json'))
+        except StopIteration:
+            logging.error("No log files found in processed_logs directory.")
+            return None
+
+        # Open and read the log file
+        with open(log_file_name, 'r') as log_file:
+            try:
+                logs = json.load(log_file)
+            except json.JSONDecodeError as e:
+                logging.error(f"Error decoding JSON from log file: {e}")
+                return None
+
+        # Sanitize session_id (already sanitized before calling this function)
+        sanitized_session_id = session_id.replace(" ", "_").lower()
+
+        # Find the log with the matching notebook, strip prefix (e.g., "RTC:") and ".ipynb" suffix
+        matching_logs = []
+        for log in logs:
+            notebook = log.get('notebook', '').lower()
+            if notebook:
+                # Extract the notebook name by removing the prefix and suffix
+                notebook_name = notebook.split(":")[-1].replace(".ipynb", "")
+                if notebook_name == sanitized_session_id:
+                    matching_logs.append(log)
+
+        # Send the last 6 matching logs, formatted as text
+        if matching_logs:
+            last_logs = matching_logs[-6:]  # Get the last 6 logs
+            formatted_logs = [self.format_log_entry(log) for log in last_logs]  # Format each log entry
+            return "\n".join(formatted_logs)  # Return as a single string, separated by newlines
+        
+        else:
+            logging.info(f"No matching logs found for session ID: {sanitized_session_id}")
+            return None
+
+
     async def automate_response(self, message, content, file_path):
         # Start a background task to send "working on it" messages
         working_task = asyncio.create_task(self.send_working_messages(content, file_path))
@@ -80,8 +152,12 @@ class ChatHandler(FileSystemEventHandler):
         logging.info(f"file_name: {file_name}")
         session_id = f"{message.get('sender')}_{file_name}"
         logging.info(f"session_id: {session_id}")
+
         # Send the message to the LLM app and get the response
-        response_text = await self.get_llm_response(message["body"], session_id)
+        # response_text = await self.get_llm_response(message["body"], session_id)
+        logging.info(f"Message: {message['body']}")
+        logging.info(f"Context: {content.get('processed_log')}")
+        response_text = await self.get_llm_response(message["body"], session_id, context=content.get('processed_log'))
         
         # Cancel the "working on it" messages task
         working_task.cancel()
@@ -104,17 +180,27 @@ class ChatHandler(FileSystemEventHandler):
             logging.info(f"Sending response to {file_path}: {response}")
             self.replace_working_message(response, content, file_path)
 
-    async def get_llm_response(self, user_message, session_id):
+    async def get_llm_response(self, user_message, session_id, context=None):
         try:
+            # Ensure context is a dict
+            if isinstance(context, list):
+                context = {"notebook_events": context}
+            # If context is a string, convert it to a dict
+            if isinstance(context, str):
+                context = {"notebook_events": [context]}
 
-            response = await chat_chain.ainvoke({"human_input": user_message}, {'configurable': { 'session_id': session_id } })
-            
-            # Convert the response from a list to a string
-            response = "".join(response)
+            input_data = {
+                "human_input": user_message,
+                "context": context or {}
+            }
+            logging.info(f"Input data: {input_data}")
+            response = await chat_chain.ainvoke(input_data, {'configurable': {'session_id': session_id}})
+            response = "".join(response)  # Convert the response from list to string if needed
             return response
         except Exception as e:
             logging.error(f"Error getting LLM response: {e}")
             return None
+
 
     async def send_working_messages(self, content, file_path):
         working_messages = [
