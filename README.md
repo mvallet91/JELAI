@@ -25,8 +25,8 @@ This setup has was developed and tested on Ubuntu 22.04.
 - Python 3.10 or 3.11
 
 ### JupyterHub server
-Build and run the JupyterHub server using docker compose. This will create a JupyterHub instance using the latest image from the JupyterHub Docker Hub repo (quay.io/jupyterhub/jupyterhub) with the volume `jupyterhub-data` to persist data for individual users and a network `jupyterhub-network` to allow communication between the JupyterHub server, the individual user servers, and the chatbot server.
-- Go to the `jupyterhub-docker` directory
+Build and run the JupyterHub server using docker compose. This will create a JupyterHub instance using the latest image from the JupyterHub Docker Hub repo (quay.io/jupyterhub/jupyterhub) with the volume **jupyterhub-data** to persist data for individual users and a network **jupyterhub-network** to allow communication between the JupyterHub server, the individual user servers, and the chatbot server.
+- Go to the **jupyterhub-docker** directory in the terminal
 - Run `docker compose build` to build the container
 - Run `docker compose up -d` to start the container in detached mode.
 
@@ -34,13 +34,13 @@ Build and run the JupyterHub server using docker compose. This will create a Jup
 The individual user servers are automatically created (or *spawned*) when a user is created in the JupyterHub server. These servers include the necessary configuration for the JupyterLab-Pioneer and Jupyter-Chat extensions to log telemetry data and enable chat functionality in the notebook.
 
 To build the image from the Dockerfile:
-- go to the `jupyterhub-docker/user-notebook` directory
-- `docker build -t user-notebook .` - this will build the image and tag it as `user-notebook`.
+- Go to the **jupyterhub-docker/user-notebook** directory in the terminal
+- Run `docker build -t user-notebook .` - this will build the image and tag it as `user-notebook`. If you make any changes to the Dockerfile, such as adding specific packages, you will need to rebuild the image. You can version the image by adding a tag, e.g., `user-notebook:v1` and changing that in the **docker-compose.yml** file in the **jupyterhub-docker** directory.
 
 
-### Chatbot LangChain Server
-Currently, the server is not containerized. Python 3.10 or later must be installed in the host server to create the appropriate environment. To run the LangChain server:
-- Go to `ds-tutor`
+### LLM-Handler Server
+Currently, this server is not containerized so it must be run manually. Python 3.10 or later must be installed in the host server to create the appropriate environment. To run the server:
+- Go to the home directory where the repository was cloned:
     - Create a virtual environment: `python3 -m venv chatbot`
     - Activate it: `source chatbot/bin/activate`
     - Install the requirements: `pip install -r chatbot_requirements.txt`
@@ -76,16 +76,24 @@ For the Ollama server, see the steps above.
     - `python -m venv jupyterlab`
     - `source jupyterlab/bin/activate`, on Windows use `jupyterlab\Scripts\activate`
     - `python.exe -m pip install -r interface_requirements.txt`
-3. Create your environment variables file, where you will add the address of the Ollama server:
+3. Create your environment variables file, where you will add the address of the Ollama server you're using:
     - Create an **.env** file in the **ds-tutor** directory
-    - Add the following line to the **.env** file: `base_url=http://localhost:11434` or the address of your Ollama server
-4. On the first terminal, still running the **chatbot** environment and run the LangChain server:
+    - Add the following line to the **.env** file: `base_url=http://localhost:11434` if you have it local or the address of your Ollama server
+4. On the first terminal, still running the **chatbot** environment and run the LLM-handler server:
     - `python history_app.py`
-5. Open a new terminal, activate the (**chatbot**) environment and run the chatbot interactively:
+    - Type `Ctrl+C` to stop the server. This server must be active to process the chat messages.
+5. Open a new terminal, activate the (**chatbot**) environment and run the chatbot handler:
     - `source chatbot/bin/activate` on Windows use `chatbot\Scripts\activate`
-    - `python chat_interact.py -chatfile-path  /path-to-chat/EDA.chat`
+    - `python .\jupyterhub-docker\user-notebook\chat_interact.py working-directory` and this will check for any new chats created in the directory provided and send them to the chatbot server.
+    - Type `Ctrl+C` to stop the chatbot handler. This script must be active to send the chat messages to the chatbot server.
 6. Add the jupyterlab-pioneer [configuration](https://jupyter-server.readthedocs.io/en/latest/operators/configuring-extensions.html) file to the JupyterLab configuration directory:
     - On the terminal with the **jupyterlab** environment, run `jupyter --path`
     - Copy the config file (see the [examples](https://github.com/educational-technology-collective/jupyterlab-pioneer/tree/main/configuration_examples)), named **jupyter_jupyterlab_pioneer_config.py** to the appropriate path. For development, use the **file_exporter** and set the correct path.
+    - You only have to do this once, the configuration will be saved in the JupyterLab configuration directory.
 6. On the terminal with the **jupyterlab** environment, run the JupyterLab interface:
     - `jupyter lab`
+    - The JupyterLab interface will open in your browser. You can now interact with the chatbot and use the JupyterLab-Pioneer extension to log telemetry data.
+7. To run the :construction: experimental :construction: log processing script, activate the **chatbot** environment and run the script:
+    - `python process_logs.py path-to-log-file path-to-output-directory`
+    - This script will process the logs in the **logs** file (the one configured in **jupyter_jupyterlab_pioneer_config.py**) and create a JSON file with the processed logs for each notebook in the given directory.
+    - For the LLM to see the logs as context, <ins>the notebook and the chat file must have the same name</ins>. 
