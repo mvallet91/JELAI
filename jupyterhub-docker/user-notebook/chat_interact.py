@@ -92,6 +92,8 @@ class ChatHandler(FileSystemEventHandler):
             return f"Edited cell {log['cell_index']} with content: {log.get('content', 'No content provided')}"
         elif log['event'] == "Added new cell":
             return f"Added a new cell at index {log.get('cell_index', 'Unknown')}"
+        elif log['event'] == "Pasted content ":
+            return f"Pasted content at cell {log.get('cell_index', 'Unknown')}, with content: {log.get('content', 'No content provided')}"
         else:
             return f"Event: {log['event']} at cell {log.get('cell_index', 'Unknown')}"
 
