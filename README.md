@@ -88,12 +88,12 @@ For the Ollama server, see the steps above.
     - Type `Ctrl+C` to stop the chatbot handler. This script must be active to send the chat messages to the chatbot server.
 6. Add the jupyterlab-pioneer [configuration](https://jupyter-server.readthedocs.io/en/latest/operators/configuring-extensions.html) file to the JupyterLab configuration directory:
     - On the terminal with the **jupyterlab** environment, run `jupyter --path`
-    - Copy the config file (see the [examples](https://github.com/educational-technology-collective/jupyterlab-pioneer/tree/main/configuration_examples)), named **jupyter_jupyterlab_pioneer_config.py** to the appropriate path. For development, use the **file_exporter** and set the correct path.
+    - Copy the config file (see the [examples](https://github.com/educational-technology-collective/jupyterlab-pioneer/tree/main/configuration_examples)), named **jupyter_jupyterlab_pioneer_config.py** to the appropriate path. For development, use the **file_exporter** and set the correct path. See the config in **jupyterhub-docker/user-notebook/jupyter_jupyterlab_pioneer_config.py**.
     - You only have to do this once, the configuration will be saved in the JupyterLab configuration directory.
-6. On the terminal with the **jupyterlab** environment, run the JupyterLab interface:
+7. On the terminal with the **jupyterlab** environment, run the JupyterLab interface:
     - `jupyter lab`
     - The JupyterLab interface will open in your browser. You can now interact with the chatbot and use the JupyterLab-Pioneer extension to log telemetry data.
-7. To run the :construction: experimental :construction: log processing script, activate the **chatbot** environment and run the script:
+8. To run the :construction: experimental :construction: log processing script, activate the **chatbot** environment and run the script:
     - `python process_logs.py path-to-log-file path-to-output-directory`
-    - This script will process the logs in the **logs** file (the one configured in **jupyter_jupyterlab_pioneer_config.py**) and create a JSON file with the processed logs for each notebook in the given directory.
+    - This script will process the logs in the **logs** file (the one configured in step 6 **jupyter_jupyterlab_pioneer_config.py**) and create a JSON file with the processed logs for each notebook in the given directory.
     - For the LLM to see the logs as context, <ins>the notebook and the chat file must have the same name</ins>. 

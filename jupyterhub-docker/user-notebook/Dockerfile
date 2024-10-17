@@ -32,9 +32,9 @@ WORKDIR /home/jovyan/work
 RUN python -m venv /home/jovyan/venv
 
 # Activate the virtual environment and install requirements
-COPY chat_requirements.txt /home/jovyan/
+COPY chat_interact_requirements.txt /home/jovyan/
 RUN . /home/jovyan/venv/bin/activate && \
-   pip install --no-cache-dir -r /home/jovyan/chat_requirements.txt
+   pip install --no-cache-dir -r /home/jovyan/chat_interact_requirements.txt
 
 # Copy the chat_interact.py script
 COPY chat_interact.py /home/jovyan/
