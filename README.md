@@ -1,7 +1,20 @@
-# Learning Analytics-Powered Tutor
+# JELAI: a Jupyter Environment for Learning Analytics and AI
 ## System Architecture
-![ds-tutor architecture](./images/DS%20Tutor%20Architecture.png)
+![ds-tutor architecture](./images/JELAIOctober.jpg)
 <a href="https://www.flaticon.com/free-icons/" title="icons" style="font-size: 0.5em;">Icons created by juicy_fish - Flaticon</a>
+
+## Overview
+JELAI is a system that integrates a Jupyter environment with a chatbot to provide a learning analytics and AI platform. 
+The system is designed to support education using Jupyter notebooks, such as programming, data science and machine learning, by providing a collaborative environment where students can interact with Jupyter notebooks and receive assistance from a chatbot. 
+The chatbot uses a large language model (LLM) to provide responses based on the chat history and their actions as they work through the notebooks. 
+JELAI is intended to help students learn and explore, get feedback on their work, and receive guidance on problem-solving.
+For instructors, the system can provide insights into student interactions with the notebooks, allowing them to monitor progress, identify areas where students may need help, and provide targeted support.
+For researchers, the system can be used to collect data on student interactions and explore the use of LLMs in educational settings.
+
+Table of Contents:
+- [Description](#description)
+- [Setup and Configuration](#setup-and-configuration)
+- [Development and Local Experimentation](#development-and-local-experimentation)
 
 ### Description
 The system consists of a JupyterHub server, individual user Jupyter servers, a chatbot server, and an Ollama server. 
@@ -10,11 +23,11 @@ The system consists of a JupyterHub server, individual user Jupyter servers, a c
     - The user notebooks are based on the [Scipy-notebook](https://github.com/jupyter/docker-stacks/tree/main/images/scipy-notebook) image, including common packages for data science and machine learning.
     - The [Jupyterlab-pioneer](https://pypi.org/project/jupyterlab-pioneer/) Extension logs telemetry data from the user's interactions with the notebook.
     - The [Jupyter-chat](https://github.com/jupyterlab/jupyter-chat) Extension is used to integrate a chat interface into the notebook.
-    - The `chat_interact.py` script is used to interact with the chatbot server by watching the chat files for changes and sending the messages to the chatbot server. Currently, the chatbot server is running in the host server, but it will be moved to the individual user containers in the future.
-- The chatbot server (in `history_app.py`) is a LangChain-based server that provides a REST API for the chatbot. It uses the Ollama server for the LLM. 
-    - The chatbot server also uses the FileChatMessageHistory class to process the chat history for each conversation, stored in the `chat_histories` directory.
-    - The chatbot server currently runs in the host server (it will be moved to the `jupyterhub` container in the future).
-- The Ollama server can be containerized or run in the host server.
+    - The `chat_interact.py` script is used to interact with the LLM-handler server by watching the chat files for changes and sending the messages to the server.
+- The LLM-handler server (in `history_app.py`) is a LangChain-based server that provides a REST API for the chatbot. It works with the Ollama server. 
+    - The LLM-handler server also uses the FileChatMessageHistory class to process the chat history for each conversation, stored in the `chat_histories` directory.
+    - The LLM-handler server currently runs in the host server (it will be moved to a separate container in the future).
+- The Ollama server can run locally in the host machine or on a separate one. Cloud or third-party services can also be used, but the system is designed to work with a self-hosted server. 
 
 ## Setup and Configuration
 This setup has was developed and tested on Ubuntu 22.04. 
@@ -53,17 +66,18 @@ Currently, the [Jupyter-chat](https://github.com/jupyterlab/jupyter-chat) extens
 
 ### Ollama Server
 For a local LLM server, you can use [Ollama](https://ollama.com/). Follow the instructions in the [Ollama server documentation](https://github.com/varunvasudeva1/ollama-server-docs?tab=readme-ov-file) to install and run Ollama as a service.
-Performance will depend on the host server's capability, we have achieved good performance with basic conversations using Llama 3.1 8b (the smallest model) and 70b_q8 (quantized to 8-bit) and near-real-time response with a Nvidia A40 GPU. 
-Ollama can also be run in a container (this has not been tested with the current setup). To run the Ollama server in a container, run the following command:
+Performance will depend on the host server's capability, we have achieved acceptable responses with basic conversations in English using Llama 3.1 8b (the smallest model) and great answers within 15 seconds with the 70b model on an Nvidia A40 GPU. 
+Ollama can also be containerized. To run the Ollama server in a container, run the following command:
 - `docker run -d -p 11434:11434 ollama/ollama:latest`
 
+Third-party services (cloud LLM providers) have not been evaluated, but in theory, they can be used as long as they provide a REST API for the chatbot server to interact with.
+The model within the **history_app.py** file may need to be modified to work with different LLM servers.
 
 ### Nginx Reverse Proxy
-- To access JupyterHub from outside the local network, follow the official [JupyterHub documentation](https://jupyterhub.readthedocs.io/en/stable/howto/configuration/config-proxy.html#nginx) to set up the Nginx reverse proxy.
-- To serve Ollama from outside the local network, you can use the Nginx reverse proxy to forward requests to the Ollama server, see the [Ollama server documentation](https://github.com/ollama/ollama/blob/main/docs/faq.md#how-can-i-use-ollama-with-a-proxy-server) for details.
+To access JupyterHub from outside the local network, follow the official [JupyterHub documentation](https://jupyterhub.readthedocs.io/en/stable/howto/configuration/config-proxy.html#nginx) to set up the Nginx reverse proxy. Similarly, to serve Ollama from a separate machine to the one running JELAI, you can use the Nginx reverse proxy to forward requests to Ollama, see the [Ollama server documentation](https://github.com/ollama/ollama/blob/main/docs/faq.md#how-can-i-use-ollama-with-a-proxy-server) for details.
 
 
-## Local Development and Experimentation
+## Development and Local Experimentation
 To run the system locally for development and experimentation, you can use JupyterLab and the chatbot server in your local environment.
 This does not require Docker, but it needs Python 3.10 or 3.11. 
 For the Ollama server, see the steps above.
