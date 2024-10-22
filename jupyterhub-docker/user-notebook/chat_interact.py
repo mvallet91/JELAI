@@ -1,5 +1,6 @@
 import os
 import sys
+import re
 import time
 import json
 import logging
@@ -79,9 +80,9 @@ class ChatHandler(FileSystemEventHandler):
     def extract_session_id_from_filename(self, file_path):
         # Assuming session_id is part of the file name, extract it
         file_name = os.path.basename(file_path)
-        session_id = file_name.split('.')[0]  # Remove the .chat extension
-        # lowercase and sanitize the session_id
-        session_id = session_id.replace(" ", "_").lower()
+        session_id = file_name[:-5]  # Remove the .chat extension
+        # Sanitize the session_id: lowercase, replace spaces with underscores, remove non-alphanumeric characters
+        session_id = re.sub(r'[^a-z0-9_]', '', session_id.replace(" ", "_").lower())
         return session_id
 
     def format_log_entry(self, log):
@@ -122,7 +123,7 @@ class ChatHandler(FileSystemEventHandler):
                 return None
 
         # Sanitize session_id (already sanitized before calling this function)
-        sanitized_session_id = session_id.replace(" ", "_").lower()
+        sanitized_session_id = re.sub(r'[^a-z0-9_]', '', session_id.replace(" ", "_").lower())
 
         # Find the log with the matching notebook, strip prefix (e.g., "RTC:") and ".ipynb" suffix
         matching_logs = []
@@ -131,7 +132,8 @@ class ChatHandler(FileSystemEventHandler):
             if notebook:
                 # Extract the notebook name by removing the prefix and suffix
                 notebook_name = notebook.split(":")[-1].replace(".ipynb", "")
-                if notebook_name == sanitized_session_id:
+                sanitized_notebook_name = re.sub(r'[^a-z0-9_]', '', notebook_name.replace(" ", "_").lower())
+                if sanitized_notebook_name == sanitized_session_id:
                     matching_logs.append(log)
 
         # Send the last 6 matching logs, formatted as text
@@ -141,7 +143,7 @@ class ChatHandler(FileSystemEventHandler):
             return "\n".join(formatted_logs)  # Return as a single string, separated by newlines
         
         else:
-            logging.info(f"No matching logs found for session ID: {sanitized_session_id}")
+            logging.info(f"No matching logs found for session ID: {sanitized_session_id} , {sanitized_notebook_name}")
             return None
 
 
@@ -151,8 +153,10 @@ class ChatHandler(FileSystemEventHandler):
         file_name = os.path.basename(file_path)
         # Clean the file name, remove the .chat extension
         file_name = file_name.replace(".chat", "")
-        logging.info(f"file_name: {file_name}")
-        session_id = f"{message.get('sender')}_{file_name}"
+        sanitized_file_name = re.sub(r'[^a-z0-9_]', '', file_name.replace(" ", "_").lower())
+        logging.info(f"file_name: {sanitized_file_name}")
+        sanitized_sender = re.sub(r'[^a-z0-9_]', '', message.get('sender', '').replace(" ", "_").lower())
+        session_id = f"{sanitized_sender}_{sanitized_file_name}"
         logging.info(f"session_id: {session_id}")
 
         # Send the message to the LLM app and get the response
