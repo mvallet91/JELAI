@@ -2,6 +2,7 @@ import os
 import json
 import logging
 import asyncio
+import sys
 from watchgod import awatch
 from datetime import datetime
 from collections import OrderedDict
@@ -77,8 +78,12 @@ async def main(log_file_path, processed_logs_dir):
     await log_listener.watch_log_file()
 
 if __name__ == "__main__":
-    log_file_path = "log2"  # Replace with your log file path
-    processed_logs_dir = "processed_logs"  # Directory to save processed logs
+
+    if len(sys.argv) != 3:
+        print("Usage: python process_logs.py <file_path> <processed_logs_dir>")
+        sys.exit(1)
+    log_file_path = sys.argv[1]
+    processed_logs_dir = sys.argv[2]
 
     try:
         asyncio.run(main(log_file_path, processed_logs_dir))
