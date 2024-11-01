@@ -48,6 +48,10 @@ c.DockerSpawner.remove = False
 # For debugging arguments passed to spawned containers
 c.DockerSpawner.debug = True
 
+# Limit cpu usage
+c.DockerSpawner.cpu_limit = 0.25
+c.DockerSpawner.http_timeout = 60
+
 # User containers will access hub by container name on the Docker network
 c.JupyterHub.hub_ip = "jupyterhub"
 c.JupyterHub.hub_port = 8080

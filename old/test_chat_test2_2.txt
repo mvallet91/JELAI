@@ -1,0 +1,35 @@
+2024-10-01 09:49:12,385 - ERROR - Error loading last message: [Errno 2] No such file or directory: '/var/lib/docker/volumes/jupyterhub-user-test2/_data/test2.chat'
+2024-10-01 09:49:12,385 - INFO - Monitoring file: /var/lib/docker/volumes/jupyterhub-user-test2/_data/test2.chat
+2024-10-01 09:49:53,614 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-test2/_data/test2.chat
+2024-10-01 09:49:53,614 - ERROR - Error reading file: Expecting value: line 1 column 1 (char 0)
+2024-10-01 09:49:53,619 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-test2/_data/test2.chat
+2024-10-01 09:49:58,369 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-test2/_data/test2.chat
+2024-10-01 09:49:58,369 - ERROR - Error reading file: Expecting value: line 1 column 1 (char 0)
+2024-10-01 09:49:58,369 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-test2/_data/test2.chat
+2024-10-01 09:49:58,370 - INFO - New message: hola!
+2024-10-01 09:49:58,370 - INFO - Session ID: admin
+2024-10-01 09:49:58,384 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-test2/_data/test2.chat
+2024-10-01 09:49:58,385 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-test2/_data/test2.chat
+2024-10-01 09:50:02,186 - INFO - HTTP Request: POST http://localhost:8002/invoke "HTTP/1.1 200 OK"
+2024-10-01 09:50:02,187 - INFO - Sending response: {'body': "It seems like we took a brief pause. You wanted to know about doing Exploratory Data Analysis (EDA) in Pandas, right? Let's get back on track!\n\nTo continue exploring EDA with Pandas, what aspect of it would you like to focus on? Do you want to learn more about data visualization, statistical summaries, or maybe handling missing values?", 'sender': 'auto_responder', 'type': 'msg', 'id': '37363b8e-274b-4efd-9e02-f240c73e23a5', 'time': 1727769002.1873274, 'raw_time': False, 'automated': True}
+2024-10-01 09:50:02,187 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-test2/_data/test2.chat
+2024-10-01 09:50:31,689 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-test2/_data/test2.chat
+2024-10-01 09:50:31,690 - ERROR - Error reading file: Expecting value: line 1 column 1 (char 0)
+2024-10-01 09:50:31,690 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-test2/_data/test2.chat
+2024-10-01 09:50:31,690 - INFO - New message: sí, cuéntame de EDA con pandas. Cuál es el primer paso?
+2024-10-01 09:50:31,691 - INFO - Session ID: admin
+2024-10-01 09:50:31,693 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-test2/_data/test2.chat
+2024-10-01 09:50:33,621 - INFO - HTTP Request: POST http://localhost:8002/invoke "HTTP/1.1 200 OK"
+2024-10-01 09:50:33,622 - INFO - Sending response: {'body': "You're excited to dive into EDA with Pandas! \n\nThe first step is to explore and understand the structure of your data. You can do this by looking at the columns and their corresponding data types using `df.info()`.\n\nLet's modify our previous example to show you how it works:\n```python\nprint(df.info())\n```\nThis will give you a concise summary of each column, including its data type.\n\nNow that we have an idea about the structure of our data, what would you like to explore next? Would you like to see how to handle missing values or perhaps create some visualizations to better understand your data?", 'sender': 'auto_responder', 'type': 'msg', 'id': '771044c7-a075-4421-85a7-db4b1ca54d7d', 'time': 1727769033.6220791, 'raw_time': False, 'automated': True}
+2024-10-01 09:50:33,622 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-test2/_data/test2.chat
+2024-10-01 09:50:49,152 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-test2/_data/test2.chat
+2024-10-01 09:50:49,153 - ERROR - Error reading file: Expecting value: line 1 column 1 (char 0)
+2024-10-01 09:50:49,154 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-test2/_data/test2.chat
+2024-10-01 09:50:49,154 - INFO - New message: me puedes decir esa parte en espanol?
+2024-10-01 09:50:49,154 - INFO - Session ID: admin
+2024-10-01 09:50:49,156 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-test2/_data/test2.chat
+2024-10-01 09:50:49,159 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-test2/_data/test2.chat
+2024-10-01 09:50:52,070 - INFO - HTTP Request: POST http://localhost:8002/invoke "HTTP/1.1 200 OK"
+2024-10-01 09:50:52,070 - INFO - Sending response: {'body': '¡Claro! La primera parte del EDA con Pandas es explorar y entender la estructura de tus datos. Puedes hacer esto mirando las columnas y sus tipos de dato correspondientes usando `df.info()`.\n\nVamos a modificar nuestro ejemplo anterior para que veas cómo funciona:\n```python\nprint(df.info())\n```\nEsto te dará una resumen conciso de cada columna, incluyendo su tipo de dato.\n\nAhora que tenemos una idea sobre la estructura de nuestros datos, ¿qué quieres explorar a continuación? ¿Quieres saber cómo manejar valores faltantes o tal vez crear algunas visualizaciones para entender mejor tus datos?', 'sender': 'auto_responder', 'type': 'msg', 'id': 'ba6ee94d-228a-4446-a58b-b8e1acedcf5d', 'time': 1727769052.0707366, 'raw_time': False, 'automated': True}
+2024-10-01 09:50:52,071 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-test2/_data/test2.chat
+2024-10-01 09:50:52,071 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-test2/_data/test2.chat

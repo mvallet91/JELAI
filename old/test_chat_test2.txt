@@ -1,0 +1,36 @@
+2024-09-30 14:26:15,221 - INFO - Loaded last message: None
+2024-09-30 14:26:15,221 - INFO - Monitoring file: /var/lib/docker/volumes/jupyterhub-user-test2/_data/test.chat
+2024-09-30 14:26:37,374 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-test2/_data/test.chat
+2024-09-30 14:26:37,374 - ERROR - Error reading file: Expecting value: line 1 column 1 (char 0)
+2024-09-30 14:26:37,375 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-test2/_data/test.chat
+2024-09-30 14:26:37,375 - INFO - New message: hi. 
+2024-09-30 14:26:37,382 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-test2/_data/test.chat
+2024-09-30 14:26:37,885 - INFO - HTTP Request: POST http://localhost:8002/invoke "HTTP/1.1 200 OK"
+2024-09-30 14:26:37,886 - INFO - Sending response: {'body': 'Welcome! What brings you here today? Do you have a question about data science or something else?', 'sender': 'auto_responder', 'type': 'msg', 'id': '4aeb553e-26f2-4aa5-a9d0-23c93fc4a11a', 'time': 1727699197.8867214, 'raw_time': False, 'automated': True}
+2024-09-30 14:26:37,887 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-test2/_data/test.chat
+2024-09-30 16:42:27,062 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-test2/_data/test.chat
+2024-09-30 16:42:27,062 - ERROR - Error reading file: Expecting value: line 1 column 1 (char 0)
+2024-09-30 16:42:27,063 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-test2/_data/test.chat
+2024-09-30 16:42:27,063 - INFO - New message: yes, whats a df
+2024-09-30 16:42:27,069 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-test2/_data/test.chat
+2024-09-30 16:42:30,760 - INFO - HTTP Request: POST http://localhost:8002/invoke "HTTP/1.1 200 OK"
+2024-09-30 16:42:30,761 - INFO - Sending response: {'body': "You're talking about Pandas! A `df` is short for DataFrame, which is like a table in Excel but in Python. It's used to store and manipulate data. What would you like to know about DataFrames?", 'sender': 'auto_responder', 'type': 'msg', 'id': '775b32e7-53f1-4c26-a113-170a4301af83', 'time': 1727707350.761599, 'raw_time': False, 'automated': True}
+2024-09-30 16:42:30,762 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-test2/_data/test.chat
+2024-09-30 16:50:30,390 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-test2/_data/test.chat
+2024-09-30 16:50:30,390 - ERROR - Error reading file: Expecting value: line 1 column 1 (char 0)
+2024-09-30 16:50:30,391 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-test2/_data/test.chat
+2024-09-30 16:50:30,392 - INFO - New message: how to import some data from a csv
+2024-09-30 16:50:30,395 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-test2/_data/test.chat
+2024-09-30 16:50:30,396 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-test2/_data/test.chat
+2024-09-30 16:50:35,628 - INFO - HTTP Request: POST http://localhost:8002/invoke "HTTP/1.1 200 OK"
+2024-09-30 16:50:35,629 - INFO - Sending response: {'body': "To import data from a CSV file into a DataFrame, you can use the `read_csv` function from Pandas.\n\n```python\nimport pandas as pd\ndata = pd.read_csv('your_file.csv')\n```\n\nJust replace `'your_file.csv'` with the path to your actual CSV file. What kind of data do you have in that CSV file - is it something you've worked with before, or something new?", 'sender': 'auto_responder', 'type': 'msg', 'id': '7c147ec2-1c02-40f2-ada6-19a2bf26ab65', 'time': 1727707835.6293335, 'raw_time': False, 'automated': True}
+2024-09-30 16:50:35,629 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-test2/_data/test.chat
+2024-09-30 16:50:35,630 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-test2/_data/test.chat
+2024-09-30 16:55:10,534 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-test2/_data/test.chat
+2024-09-30 16:55:10,535 - INFO - New message: and explain how to do EDA but like a song from System of a Down
+2024-09-30 16:55:10,535 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-test2/_data/test.chat
+2024-09-30 16:55:10,539 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-test2/_data/test.chat
+2024-09-30 16:55:10,539 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-test2/_data/test.chat
+2024-09-30 16:55:13,213 - INFO - HTTP Request: POST http://localhost:8002/invoke "HTTP/1.1 200 OK"
+2024-09-30 16:55:13,214 - INFO - Sending response: {'body': 'What a unique request!\n\nOkay, imagine I\'m singing this...\n\n"Get your data, ready to roll\nImport the library, don\'t be cold\nPandas is in, now it\'s time to see\nThe structure of your data, just like me"\n\nYou\'ve got your DataFrame, now let\'s explore\nWith summary stats, and a glimpse galore\nDescribe your data, with mean and with mode\nGet an idea of the distribution, don\'t be slow\n\nVisualize the relationships, between columns so fine\n Scatter plots and histograms, will make it all shine\n Check for missing values, and outliers too\n Don\'t let them sneak up on you!\n\nAnd remember, EDA is a process, not just a song\nIterate and refine, until your insights are strong!\n\nNow, how do these lyrics make you feel about doing EDA?', 'sender': 'auto_responder', 'type': 'msg', 'id': 'a6476c61-8e8c-46ee-b586-b7d895cd1ad8', 'time': 1727708113.2144573, 'raw_time': False, 'automated': True}
+2024-09-30 16:55:13,215 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-test2/_data/test.chat

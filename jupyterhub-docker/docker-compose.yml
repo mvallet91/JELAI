@@ -33,7 +33,7 @@ services:
       DOCKER_NETWORK_NAME: jupyterhub-network
       # JupyterHub will spawn this Notebook image for users
       # DOCKER_NOTEBOOK_IMAGE: quay.io/jupyter/base-notebook:latest
-      DOCKER_NOTEBOOK_IMAGE: user-notebook:v9
+      DOCKER_NOTEBOOK_IMAGE: user-notebook:v12
       # Notebook directory inside user image
       DOCKER_NOTEBOOK_DIR: /home/jovyan/work
 

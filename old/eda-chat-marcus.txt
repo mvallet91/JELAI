@@ -1,0 +1,2 @@
+2024-08-28 22:19:21,462 - INFO - Loaded last message: None
+2024-08-28 22:19:21,462 - INFO - Monitoring file: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/chats/EDA.chat

@@ -1,0 +1,134 @@
+INFO:     Uvicorn running on http://0.0.0.0:8002 (Press CTRL+C to quit)
+INFO:     Started parent process [112652]
+INFO:     Started server process [112666]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Started server process [112664]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Started server process [112661]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Started server process [112658]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Started server process [112655]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Started server process [112660]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Started server process [112667]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Started server process [112663]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Started server process [112654]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Started server process [112656]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Started server process [112669]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Started server process [112657]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Started server process [112659]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Started server process [112668]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Started server process [112662]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Started server process [112665]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+
+ __          ___      .__   __.   _______      _______. _______ .______     ____    ____  _______
+|  |        /   \     |  \ |  |  /  _____|    /       ||   ____||   _  \    \   \  /   / |   ____|
+|  |       /  ^  \    |   \|  | |  |  __     |   (----`|  |__   |  |_)  |    \   \/   /  |  |__
+|  |      /  /_\  \   |  . `  | |  | |_ |     \   \    |   __|  |      /      \      /   |   __|
+|  `----./  _____  \  |  |\   | |  |__| | .----)   |   |  |____ |  |\  \----.  \    /    |  |____
+|_______/__/     \__\ |__| \__|  \______| |_______/    |_______|| _| `._____|   \__/     |_______|
+
+[1;32;40mLANGSERVE:[0m Playground for chain "/" is live at:
+[1;32;40mLANGSERVE:[0m  │
+[1;32;40mLANGSERVE:[0m  └──> /playground/
+[1;32;40mLANGSERVE:[0m
+[1;32;40mLANGSERVE:[0m See all available routes at /docs/
+
+[1;31;40mLANGSERVE:[0m ⚠️ Using pydantic 2.8.2. OpenAPI docs for invoke, batch, stream, stream_log endpoints will not be generated. API endpoints and playground should work as expected. If you need to see the docs, you can downgrade to pydantic 1. For example, `pip install pydantic==1.10.13`. See https://github.com/tiangolo/fastapi/issues/10360 for details.
+
+INFO:     172.18.0.4:41814 - "POST /invoke HTTP/1.1" 200 OK
+INFO:     Received SIGHUP, restarting processes.
+INFO:     Waiting for child process [112654]
+/usr/lib/python3.10/multiprocessing/resource_tracker.py:104: UserWarning: resource_tracker: process died unexpectedly, relaunching.  Some resources might leak.
+  warnings.warn('resource_tracker: process died unexpectedly, '
+INFO:     Waiting for child process [112655]
+INFO:     Waiting for child process [112656]
+INFO:     Waiting for child process [112657]
+INFO:     Waiting for child process [112658]
+INFO:     Waiting for child process [112659]
+INFO:     Waiting for child process [112660]
+INFO:     Waiting for child process [112661]
+INFO:     Waiting for child process [112662]
+INFO:     Waiting for child process [112663]
+INFO:     Waiting for child process [112664]
+INFO:     Waiting for child process [112665]
+INFO:     Waiting for child process [112666]
+INFO:     Waiting for child process [112667]
+INFO:     Waiting for child process [112668]
+INFO:     Waiting for child process [112669]
+INFO:     Started server process [190893]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Started server process [190892]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Started server process [190891]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Started server process [190894]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Started server process [190905]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Started server process [190890]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Started server process [190895]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Started server process [190898]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Started server process [190900]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Started server process [190899]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Started server process [190902]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Started server process [190904]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Started server process [190901]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Started server process [190897]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Started server process [190896]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Started server process [190903]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.

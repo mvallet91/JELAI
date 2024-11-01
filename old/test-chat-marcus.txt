@@ -1,0 +1,19 @@
+2024-08-28 21:09:00,022 - INFO - Loaded last message: None
+2024-08-28 21:09:00,028 - INFO - Monitoring file: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/Test.chat
+2024-08-28 21:09:26,567 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/Test.chat
+2024-08-28 21:09:26,568 - ERROR - Error reading file: Expecting value: line 1 column 1 (char 0)
+2024-08-28 21:09:26,569 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/Test.chat
+2024-08-28 21:09:26,569 - INFO - New message: Hi chat
+2024-08-28 21:09:26,574 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/Test.chat
+2024-08-28 21:09:26,575 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/Test.chat
+2024-08-28 21:09:26,577 - ERROR - Error getting LLM response: 
+2024-08-28 21:12:51,418 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/Test.chat
+2024-08-28 21:12:51,418 - ERROR - Error reading file: Expecting value: line 1 column 1 (char 0)
+2024-08-28 21:12:51,419 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/Test.chat
+2024-08-28 21:12:59,191 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/Test.chat
+2024-08-28 21:12:59,191 - ERROR - Error reading file: Expecting value: line 1 column 1 (char 0)
+2024-08-28 21:12:59,193 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/Test.chat
+2024-08-28 21:12:59,193 - INFO - New message: is it working?
+2024-08-28 21:12:59,195 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/Test.chat
+2024-08-28 21:12:59,197 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/Test.chat
+2024-08-28 21:12:59,199 - ERROR - Error getting LLM response: 

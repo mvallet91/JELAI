@@ -1,0 +1,278 @@
+2024-08-28 22:20:37,826 - INFO - Loaded last message: None
+2024-08-28 22:20:37,827 - INFO - Monitoring file: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-08-29 09:38:16,725 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-08-29 09:38:16,725 - ERROR - Error reading file: Expecting value: line 1 column 1 (char 0)
+2024-08-29 09:38:16,726 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-08-29 09:38:16,726 - INFO - New message: Hi
+2024-08-29 09:38:16,732 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-08-29 09:38:19,745 - INFO - HTTP Request: POST http://localhost:8002/invoke "HTTP/1.1 200 OK"
+2024-08-29 09:38:19,745 - INFO - Sending response: {'body': "Welcome! Go ahead, ask me anything. What's on your mind about data science and Python?", 'sender': 'auto_responder', 'type': 'msg', 'id': 'd0468078-9c57-494b-b920-fc48dd53d459', 'time': 1724917099.7457495, 'raw_time': False, 'automated': True}
+2024-08-29 09:38:19,746 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-02 15:14:37,591 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-02 15:14:37,591 - ERROR - Error reading file: Expecting value: line 1 column 1 (char 0)
+2024-09-02 15:14:37,592 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-02 15:14:37,592 - INFO - New message: hi I need some help
+2024-09-02 15:14:37,595 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-02 15:14:37,595 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-02 15:14:40,721 - INFO - HTTP Request: POST http://localhost:8002/invoke "HTTP/1.1 200 OK"
+2024-09-02 15:14:40,722 - INFO - Sending response: {'body': 'I got it! What specifically do you need help with? Is it something related to a project or just want to learn more about data science and Python in general?', 'sender': 'auto_responder', 'type': 'msg', 'id': 'ef49f4f4-0789-45f5-b546-5d95d1c6b9e9', 'time': 1725282880.7225463, 'raw_time': False, 'automated': True}
+2024-09-02 15:14:40,723 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-02 15:26:01,516 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-02 15:26:01,516 - ERROR - Error reading file: Expecting value: line 1 column 1 (char 0)
+2024-09-02 15:26:01,517 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-02 15:26:01,517 - INFO - New message: what can is to import a csv data set?
+2024-09-02 15:26:01,521 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-02 15:26:05,067 - INFO - HTTP Request: POST http://localhost:8002/invoke "HTTP/1.1 200 OK"
+2024-09-02 15:26:05,068 - INFO - Sending response: {'body': "You can use the `pandas` library to import a CSV file. Try this:\n```python\nimport pandas as pd\ndata = pd.read_csv('your_file.csv')\n```\nReplace `'your_file.csv'` with the actual path to your CSV file.\n\nThink about what kind of data you want to extract from your CSV file...", 'sender': 'auto_responder', 'type': 'msg', 'id': 'f5ff5f7c-7736-4fab-a4ec-87377064cbc3', 'time': 1725283565.0684044, 'raw_time': False, 'automated': True}
+2024-09-02 15:26:05,069 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-02 15:26:05,069 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-02 15:27:53,501 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-02 15:27:53,502 - ERROR - Error reading file: Expecting value: line 1 column 1 (char 0)
+2024-09-02 15:27:53,502 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-02 15:27:53,503 - INFO - New message: how can i print
+2024-09-02 15:27:53,508 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-02 15:27:53,508 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-02 15:27:54,610 - INFO - HTTP Request: POST http://localhost:8002/invoke "HTTP/1.1 200 OK"
+2024-09-02 15:27:54,610 - INFO - Sending response: {'body': "You can use the `print()` function in Python to print out the imported data. Try this:\n```python\nimport pandas as pd\ndata = pd.read_csv('your_file.csv')\nprint(data.head())\n```\nThis will show you the first few rows of your CSV file.\n\nWhat would you like to do with the rest of your data?", 'sender': 'auto_responder', 'type': 'msg', 'id': '4c5f203e-7370-4bf3-aaad-7095b76a6500', 'time': 1725283674.610641, 'raw_time': False, 'automated': True}
+2024-09-02 15:27:54,611 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-02 15:29:24,248 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-02 15:29:24,249 - ERROR - Error reading file: Expecting value: line 1 column 1 (char 0)
+2024-09-02 15:29:24,250 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-02 15:29:24,250 - INFO - New message: how do I get a descxription of the number of vairables and the number of rows of an important dataset
+2024-09-02 15:29:24,253 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-02 15:29:24,253 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-02 15:29:25,631 - INFO - HTTP Request: POST http://localhost:8002/invoke "HTTP/1.1 200 OK"
+2024-09-02 15:29:25,631 - INFO - Sending response: {'body': "You can use the `info()` function in pandas to get a description of your dataset. Try this:\n\n```python\nimport pandas as pd\ndata = pd.read_csv('your_file.csv')\nprint(data.info())\n```\n\nThis will show you the index dtype and column non-null counts, memory usage, and data types for each variable.\n\nThink about what insights this information can give you into your data...", 'sender': 'auto_responder', 'type': 'msg', 'id': 'd442703a-5129-4778-9ed3-1432ab44e786', 'time': 1725283765.6316404, 'raw_time': False, 'automated': True}
+2024-09-02 15:29:25,634 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-02 15:32:37,755 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-02 15:32:37,756 - ERROR - Error reading file: Expecting value: line 1 column 1 (char 0)
+2024-09-02 15:32:37,757 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-02 15:32:37,757 - INFO - New message: how do i get just the number of the variables and the number of observations in the dataset
+2024-09-02 15:32:37,760 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-02 15:32:38,868 - INFO - HTTP Request: POST http://localhost:8002/invoke "HTTP/1.1 200 OK"
+2024-09-02 15:32:38,868 - INFO - Sending response: {'body': "You can use the following code to get only the number of variables and rows:\n\n```python\nimport pandas as pd\ndata = pd.read_csv('your_file.csv')\nprint(data.shape)\n```\n\nThis will output a tuple with two values: `(num_variables, num_rows)`.", 'sender': 'auto_responder', 'type': 'msg', 'id': '00146c22-4736-49eb-80e9-822bd77a0917', 'time': 1725283958.8689072, 'raw_time': False, 'automated': True}
+2024-09-02 15:32:38,869 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-02 15:33:44,902 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-02 15:33:44,902 - ERROR - Error reading file: Expecting value: line 1 column 1 (char 0)
+2024-09-02 15:33:44,904 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-02 15:33:44,904 - INFO - New message: but this seems to give me the number of rows as first result
+2024-09-02 15:33:44,922 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-02 15:33:46,553 - INFO - HTTP Request: POST http://localhost:8002/invoke "HTTP/1.1 200 OK"
+2024-09-02 15:33:46,553 - INFO - Sending response: {'body': "In that case, you can use `len(data)` instead of `data.shape` to get the number of rows directly.\n\n```python\nimport pandas as pd\ndata = pd.read_csv('your_file.csv')\nprint(len(data))\n```\n\nThis will give you just the number of rows. The `shape` attribute still gives you both variables and rows, but if you only need one value, using `len()` is a more straightforward approach.\n\nWhat kind of analysis are you planning to do with this dataset?", 'sender': 'auto_responder', 'type': 'msg', 'id': '183db933-9cde-48a1-b3a1-8aa9a060f6ee', 'time': 1725284026.5538588, 'raw_time': False, 'automated': True}
+2024-09-02 15:33:46,554 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-02 15:34:07,717 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-02 15:34:07,717 - ERROR - Error reading file: Expecting value: line 1 column 1 (char 0)
+2024-09-02 15:34:07,722 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-02 15:34:07,722 - INFO - New message: show me the documentation of the data package and its functions
+2024-09-02 15:34:07,724 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-02 15:34:09,664 - INFO - HTTP Request: POST http://localhost:8002/invoke "HTTP/1.1 200 OK"
+2024-09-02 15:34:09,665 - INFO - Sending response: {'body': 'You can use the built-in Python `help` function to access the documentation for a specific module or function. For example, to see the documentation for pandas, try this:\n```python\nimport pandas as pd\nhelp(pd)\n```\nThis will open up a help window in your Jupyter notebook with information about the pandas library and its functions.\n\nAlternatively, you can use the `?` operator to get help on a specific function. For example:\n```python\nimport pandas as pd\nprint?(pd.read_csv)\n```\nThis will also show you the documentation for the `read_csv` function in pandas.\n\nWhat do you want to learn more about in pandas?', 'sender': 'auto_responder', 'type': 'msg', 'id': '5344caca-b532-4da5-ba65-dbc7d438193b', 'time': 1725284049.66504, 'raw_time': False, 'automated': True}
+2024-09-02 15:34:09,665 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-02 15:34:09,666 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-02 15:34:38,249 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-02 15:34:38,249 - ERROR - Error reading file: Expecting value: line 1 column 1 (char 0)
+2024-09-02 15:34:38,250 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-02 15:34:38,250 - INFO - New message: give me the help data.shape
+2024-09-02 15:34:38,252 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-02 15:34:40,236 - INFO - HTTP Request: POST http://localhost:8002/invoke "HTTP/1.1 200 OK"
+2024-09-02 15:34:40,237 - INFO - Sending response: {'body': "You can use the built-in Python `help` function to access the documentation for a specific attribute or method. For example, to see the documentation for the `shape` attribute of a pandas DataFrame, try this:\n\n```python\nimport pandas as pd\ndata = pd.read_csv('your_file.csv')\nhelp(data.shape)\n```\n\nThis will open up a help window in your Jupyter notebook with information about the `shape` attribute.\n\nNote that the `help()` function can also be used with just the attribute or method name, like this:\n\n```python\nimport pandas as pd\nprint(help(data.shape))\n```\n\nLet me know if you have any other questions!", 'sender': 'auto_responder', 'type': 'msg', 'id': '8081df62-de0e-437c-a489-f5592424bb54', 'time': 1725284080.2369914, 'raw_time': False, 'automated': True}
+2024-09-02 15:34:40,237 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-02 15:34:40,238 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-02 15:34:40,238 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-02 15:37:23,311 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-02 15:37:23,311 - ERROR - Error reading file: Expecting value: line 1 column 1 (char 0)
+2024-09-02 15:37:23,312 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-02 15:37:23,312 - INFO - New message: how can i group all observations by a variable
+2024-09-02 15:37:23,315 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-02 15:37:26,132 - INFO - HTTP Request: POST http://localhost:8002/invoke "HTTP/1.1 200 OK"
+2024-09-02 15:37:26,133 - INFO - Sending response: {'body': "You can use the `groupby()` function in pandas to group your data by a specific variable. Here's an example:\n```python\nimport pandas as pd\ndata = pd.read_csv('your_file.csv')\ngrouped_data = data.groupby('variable_name')['column_to_sum'].sum()\n```\nReplace `'variable_name'` with the actual name of the column you want to group by, and `'column_to_sum'` with the name of the column that contains the values you want to sum up.\n\nFor example, if you have a DataFrame with columns `category`, `age`, and `salary`, and you want to calculate the average salary for each category, you would use:\n```python\ngrouped_data = data.groupby('category')['salary'].mean()\n```\nThis will return a new Series where the index is the unique values in the `category` column, and the values are the calculated means.\n\nThink about what kind of analysis you can perform using grouped data...", 'sender': 'auto_responder', 'type': 'msg', 'id': '52b2e315-47b7-4bb0-942c-66533a1640de', 'time': 1725284246.1330469, 'raw_time': False, 'automated': True}
+2024-09-02 15:37:26,133 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-02 15:40:07,634 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-02 15:40:07,634 - ERROR - Error reading file: Expecting value: line 1 column 1 (char 0)
+2024-09-02 15:40:07,635 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-02 15:40:07,635 - INFO - New message: how can I make a count for the number of occurences of a value for a certain variable
+2024-09-02 15:40:07,638 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-02 15:40:10,260 - INFO - HTTP Request: POST http://localhost:8002/invoke "HTTP/1.1 200 OK"
+2024-09-02 15:40:10,260 - INFO - Sending response: {'body': "You can use the `value_counts()` function in pandas to get a count of occurrences for each unique value in a specific column. Here's an example:\n\n```python\nimport pandas as pd\ndata = pd.read_csv('your_file.csv')\ncounts = data['variable_name'].value_counts()\nprint(counts)\n```\n\nThis will give you a Series where the index are the unique values in `variable_name`, and the values are the counts of each occurrence.\n\nFor example, if `variable_name` contains only two unique values `'A'` and `'B'`, the output might look like this:\n\n```\nB    20\nA    15\nName: variable_name, dtype: int64\n```\n\nThis tells you that value `'B'` occurs 20 times in the column, while value `'A'` occurs only 15 times.\n\nLet me know if you have any other questions!", 'sender': 'auto_responder', 'type': 'msg', 'id': '49cd16ae-2b20-4600-8b47-6f72e7b6d149', 'time': 1725284410.260933, 'raw_time': False, 'automated': True}
+2024-09-02 15:40:10,261 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-02 15:46:39,194 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-02 15:46:39,194 - ERROR - Error reading file: Expecting value: line 1 column 1 (char 0)
+2024-09-02 15:46:39,195 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-02 15:46:39,195 - INFO - New message: show me a link to the pandas documentation
+2024-09-02 15:46:39,198 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-02 15:46:39,198 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-02 15:46:39,198 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-02 15:46:43,559 - INFO - HTTP Request: POST http://localhost:8002/invoke "HTTP/1.1 200 OK"
+2024-09-02 15:46:43,559 - INFO - Sending response: {'body': 'You can access the pandas documentation directly from your Jupyter notebook using the following command:\n\n```python\nimport pandas as pd\nhelp(pd)\n```\n\nThis will open up a help window with information about the pandas library and its functions.\n\nAlternatively, you can also visit the official pandas documentation website at [https://pandas.pydata.org/docs/](https://pandas.pydata.org/docs/).\n\nWhat would you like to learn more about in pandas?', 'sender': 'auto_responder', 'type': 'msg', 'id': '1331653a-687a-47a2-ad80-e57e872f8402', 'time': 1725284803.5598068, 'raw_time': False, 'automated': True}
+2024-09-02 15:46:43,560 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-02 15:46:43,561 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-02 16:59:46,686 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-02 16:59:46,686 - ERROR - Error reading file: Expecting value: line 1 column 1 (char 0)
+2024-09-02 16:59:46,687 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-02 17:17:00,820 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-02 17:17:00,820 - ERROR - Error reading file: Expecting value: line 1 column 1 (char 0)
+2024-09-02 17:17:00,821 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-02 19:03:39,995 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-02 19:03:39,995 - ERROR - Error reading file: Expecting value: line 1 column 1 (char 0)
+2024-09-02 19:03:39,996 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-02 19:17:05,535 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-02 19:17:05,535 - ERROR - Error reading file: Expecting value: line 1 column 1 (char 0)
+2024-09-02 19:17:05,536 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-02 19:26:19,971 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-02 19:26:19,971 - ERROR - Error reading file: Expecting value: line 1 column 1 (char 0)
+2024-09-02 19:26:19,972 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-02 20:04:15,980 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-02 20:04:15,980 - ERROR - Error reading file: Expecting value: line 1 column 1 (char 0)
+2024-09-02 20:04:15,981 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-02 22:49:06,705 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-02 22:49:06,705 - ERROR - Error reading file: Expecting value: line 1 column 1 (char 0)
+2024-09-02 22:49:06,706 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-03 00:55:03,871 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-03 00:55:03,872 - ERROR - Error reading file: Expecting value: line 1 column 1 (char 0)
+2024-09-03 00:55:03,872 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-03 01:56:37,910 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-03 01:56:37,911 - ERROR - Error reading file: Expecting value: line 1 column 1 (char 0)
+2024-09-03 01:56:37,912 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-03 02:57:38,299 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-03 02:57:38,300 - ERROR - Error reading file: Expecting value: line 1 column 1 (char 0)
+2024-09-03 02:57:38,301 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-03 04:59:03,493 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-03 04:59:03,493 - ERROR - Error reading file: Expecting value: line 1 column 1 (char 0)
+2024-09-03 04:59:03,494 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-03 06:00:29,364 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-03 06:00:29,364 - ERROR - Error reading file: Expecting value: line 1 column 1 (char 0)
+2024-09-03 06:00:29,367 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-03 10:32:53,429 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-03 10:32:53,429 - ERROR - Error reading file: Expecting value: line 1 column 1 (char 0)
+2024-09-03 10:32:53,433 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-03 11:43:13,729 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-03 11:43:13,729 - ERROR - Error reading file: Expecting value: line 1 column 1 (char 0)
+2024-09-03 11:43:13,731 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-03 12:45:42,606 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-03 12:45:42,606 - ERROR - Error reading file: Expecting value: line 1 column 1 (char 0)
+2024-09-03 12:45:42,607 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-03 13:02:34,780 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-03 13:02:34,780 - ERROR - Error reading file: Expecting value: line 1 column 1 (char 0)
+2024-09-03 13:02:34,785 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-03 13:19:45,345 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-03 13:19:45,346 - ERROR - Error reading file: Expecting value: line 1 column 1 (char 0)
+2024-09-03 13:19:45,347 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-03 16:51:11,862 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-03 16:51:11,862 - ERROR - Error reading file: Expecting value: line 1 column 1 (char 0)
+2024-09-03 16:51:11,863 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-03 16:56:03,838 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-03 16:56:03,838 - ERROR - Error reading file: Expecting value: line 1 column 1 (char 0)
+2024-09-03 16:56:03,839 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-03 19:42:54,174 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-03 19:42:54,175 - ERROR - Error reading file: Expecting value: line 1 column 1 (char 0)
+2024-09-03 19:42:54,176 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-04 00:18:27,518 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-04 00:18:27,518 - ERROR - Error reading file: Expecting value: line 1 column 1 (char 0)
+2024-09-04 00:18:27,519 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-04 00:27:08,245 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-04 00:27:08,245 - ERROR - Error reading file: Expecting value: line 1 column 1 (char 0)
+2024-09-04 00:27:08,246 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-04 01:28:10,521 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-04 01:28:10,521 - ERROR - Error reading file: Expecting value: line 1 column 1 (char 0)
+2024-09-04 01:28:10,523 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-04 02:28:48,197 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-04 02:28:48,197 - ERROR - Error reading file: Expecting value: line 1 column 1 (char 0)
+2024-09-04 02:28:48,199 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-04 03:30:00,858 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-04 03:30:00,858 - ERROR - Error reading file: Expecting value: line 1 column 1 (char 0)
+2024-09-04 03:30:00,869 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-04 03:56:42,413 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-04 03:56:42,414 - ERROR - Error reading file: Expecting value: line 1 column 1 (char 0)
+2024-09-04 03:56:42,415 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-04 04:31:13,751 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-04 04:31:13,752 - ERROR - Error reading file: Expecting value: line 1 column 1 (char 0)
+2024-09-04 04:31:13,753 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-04 05:31:49,309 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-04 05:31:49,309 - ERROR - Error reading file: Expecting value: line 1 column 1 (char 0)
+2024-09-04 05:31:49,310 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-04 06:08:39,783 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-04 06:08:39,784 - ERROR - Error reading file: Expecting value: line 1 column 1 (char 0)
+2024-09-04 06:08:39,785 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-04 06:33:06,084 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-04 06:33:06,084 - ERROR - Error reading file: Expecting value: line 1 column 1 (char 0)
+2024-09-04 06:33:06,086 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-04 08:09:26,327 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-04 08:09:26,327 - ERROR - Error reading file: Expecting value: line 1 column 1 (char 0)
+2024-09-04 08:09:26,328 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-04 08:21:21,263 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-04 08:21:21,264 - ERROR - Error reading file: Expecting value: line 1 column 1 (char 0)
+2024-09-04 08:21:21,265 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-04 08:52:37,940 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-04 08:52:37,942 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-04 09:03:56,602 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-04 09:03:56,603 - ERROR - Error reading file: Expecting value: line 1 column 1 (char 0)
+2024-09-04 09:03:56,605 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-04 09:56:05,138 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-04 09:56:05,138 - ERROR - Error reading file: Expecting value: line 1 column 1 (char 0)
+2024-09-04 09:56:05,141 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-04 11:07:36,442 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-04 11:07:36,442 - ERROR - Error reading file: Expecting value: line 1 column 1 (char 0)
+2024-09-04 11:07:36,448 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-04 11:25:13,530 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-04 11:25:13,531 - ERROR - Error reading file: Expecting value: line 1 column 1 (char 0)
+2024-09-04 11:25:13,553 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-04 13:04:08,367 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-04 13:04:08,367 - ERROR - Error reading file: Expecting value: line 1 column 1 (char 0)
+2024-09-04 13:04:08,368 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-04 13:18:18,380 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-04 13:18:18,380 - ERROR - Error reading file: Expecting value: line 1 column 1 (char 0)
+2024-09-04 13:18:18,381 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-04 13:26:20,602 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-04 13:26:20,603 - ERROR - Error reading file: Expecting value: line 1 column 1 (char 0)
+2024-09-04 13:26:20,605 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-04 13:35:31,911 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-04 13:35:31,911 - ERROR - Error reading file: Expecting value: line 1 column 1 (char 0)
+2024-09-04 13:35:31,913 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-04 13:42:44,750 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-04 13:42:44,751 - ERROR - Error reading file: Expecting value: line 1 column 1 (char 0)
+2024-09-04 13:42:44,752 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-04 13:51:13,619 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-04 13:51:13,620 - ERROR - Error reading file: Expecting value: line 1 column 1 (char 0)
+2024-09-04 13:51:13,621 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-04 14:45:26,543 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-04 14:45:26,543 - ERROR - Error reading file: Expecting value: line 1 column 1 (char 0)
+2024-09-04 14:45:26,545 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-04 20:12:55,336 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-04 20:12:55,337 - ERROR - Error reading file: Expecting value: line 1 column 1 (char 0)
+2024-09-04 20:12:55,338 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-04 21:07:47,695 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-04 21:07:47,695 - ERROR - Error reading file: Expecting value: line 1 column 1 (char 0)
+2024-09-04 21:07:47,697 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-04 21:58:34,509 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-04 21:58:34,509 - ERROR - Error reading file: Expecting value: line 1 column 1 (char 0)
+2024-09-04 21:58:34,510 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-04 22:36:27,582 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-04 22:36:27,582 - ERROR - Error reading file: Expecting value: line 1 column 1 (char 0)
+2024-09-04 22:36:27,583 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-04 22:48:22,450 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-04 22:48:22,450 - ERROR - Error reading file: Expecting value: line 1 column 1 (char 0)
+2024-09-04 22:48:22,452 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-05 00:28:58,518 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-05 00:28:58,519 - ERROR - Error reading file: Expecting value: line 1 column 1 (char 0)
+2024-09-05 00:28:58,521 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-05 00:57:37,611 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-05 00:57:37,611 - ERROR - Error reading file: Expecting value: line 1 column 1 (char 0)
+2024-09-05 00:57:37,612 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-05 02:57:39,413 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-05 02:57:39,414 - ERROR - Error reading file: Expecting value: line 1 column 1 (char 0)
+2024-09-05 02:57:39,415 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-05 03:59:00,040 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-05 03:59:00,040 - ERROR - Error reading file: Expecting value: line 1 column 1 (char 0)
+2024-09-05 03:59:00,042 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-05 06:00:14,349 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-05 06:00:14,349 - ERROR - Error reading file: Expecting value: line 1 column 1 (char 0)
+2024-09-05 06:00:14,351 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-05 07:01:02,607 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-05 07:01:02,607 - ERROR - Error reading file: Expecting value: line 1 column 1 (char 0)
+2024-09-05 07:01:02,608 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-05 07:55:09,160 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-05 07:55:09,160 - ERROR - Error reading file: Expecting value: line 1 column 1 (char 0)
+2024-09-05 07:55:09,162 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-05 07:58:40,528 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
+2024-09-05 07:58:40,528 - ERROR - Error reading file: Expecting value: line 1 column 1 (char 0)
+2024-09-05 07:58:40,530 - INFO - Detected modification in: /var/lib/docker/volumes/jupyterhub-user-marcus/_data/EDA.chat
