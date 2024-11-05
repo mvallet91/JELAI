@@ -101,7 +101,7 @@ prompt = ChatPromptTemplate.from_messages(
     ]
 )
 
-model = Ollama(model="gemma2", base_url=base_url)
+model = Ollama(model="llama3.1:70b", base_url=base_url)
 
 class InputChat(BaseModel):
     """Input for the chat endpoint."""
@@ -148,4 +148,4 @@ add_routes(
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="localhost", port=8002)
+    uvicorn.run(app, host="0.0.0.0", port=8002)

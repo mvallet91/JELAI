@@ -33,12 +33,31 @@ services:
       DOCKER_NETWORK_NAME: jupyterhub-network
       # JupyterHub will spawn this Notebook image for users
       # DOCKER_NOTEBOOK_IMAGE: quay.io/jupyter/base-notebook:latest
-      DOCKER_NOTEBOOK_IMAGE: user-notebook
+      DOCKER_NOTEBOOK_IMAGE: user-notebook:v10
       # Notebook directory inside user image
       DOCKER_NOTEBOOK_DIR: /home/jovyan/work
 
+  middleware:
+    build:
+      context: ./middleware
+      dockerfile: Dockerfile
+    image: middleware
+    container_name: middleware
+    networks:
+      - jupyterhub-network
+    volumes:
+      - "middleware-data:/var/log/jelai"
+      - "chat-histories:/app/chat_histories"
+    ports:
+      - "24224:24224"
+      - "8002:8002"  # Expose LLM handler server
+    depends_on:
+      - hub
+
 volumes:
   jupyterhub-data:
+  middleware-data:
+  chat-histories:
 
 networks:
   jupyterhub-network:

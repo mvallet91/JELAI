@@ -87,16 +87,25 @@ class ChatHandler(FileSystemEventHandler):
 
     def format_log_entry(self, log):
         """Format a single log entry into a readable string."""
-        if log['event'] == "Executed cells":
-            return f"Executed cell {log['cell_index']} with input: {log.get('input', 'No input provided')}, output: {log.get('output', 'No output provided')}"
-        elif log['event'] == "Edited cell":
-            return f"Edited cell {log['cell_index']} with content: {log.get('content', 'No content provided')}"
-        elif log['event'] == "Added new cell":
-            return f"Added a new cell at index {log.get('cell_index', 'Unknown')}"
-        elif log['event'] == "Pasted content ":
-            return f"Pasted content at cell {log.get('cell_index', 'Unknown')}, with content: {log.get('content', 'No content provided')}"
-        else:
-            return f"Event: {log['event']} at cell {log.get('cell_index', 'Unknown')}"
+        event_type = log['event']
+        cell_index = log.get('cell_index', 'Unknown')
+        
+        event_formatters = {
+            "Executed cells": lambda: f"Executed cell {cell_index} with input: {log.get('input', 'No input provided')}, "
+                                    f"output: {log.get('output', 'No output provided')}",
+            "Edited cell": lambda: f"Edited cell {cell_index} with content: {log.get('content', 'No content provided')}",
+            "Added new cell": lambda: f"Added a new cell at index {cell_index}",
+            "Deleted cell": lambda: f"Deleted cell at index {cell_index}",
+            "Moved cell": lambda: f"Moved cell from index {log.get('from_index', 'Unknown')} to {cell_index}",
+            "Cell output": lambda: f"Output generated for cell {cell_index}: {log.get('output', 'No output provided')}",
+            "Pasted content": lambda: f"Pasted content at cell {cell_index}, content: {log.get('content', 'No content provided')}",
+            "CellExecuteEvent": lambda: f"Executed cell {cell_index} at {log.get('time', 'Unknown time')}",
+            "Opened notebook": lambda: f"Opened notebook '{log.get('notebook', 'Unknown notebook')}' at {log.get('time', 'Unknown time')}",
+            "Closed notebook": lambda: f"Closed notebook '{log.get('notebook', 'Unknown notebook')}' at {log.get('time', 'Unknown time')}",
+            "Notebook became visible": lambda: f"Notebook '{log.get('notebook', 'Unknown notebook')}' became visible at {log.get('time', 'Unknown time')}"
+}
+
+        return event_formatters.get(event_type, lambda: f"Event: {event_type} at cell {cell_index}")()
 
     def get_processed_log_data(self, session_id):
         # Locate the processed_logs directory
@@ -127,6 +136,8 @@ class ChatHandler(FileSystemEventHandler):
 
         # Find the log with the matching notebook, strip prefix (e.g., "RTC:") and ".ipynb" suffix
         matching_logs = []
+        # TODO - improve the matching logic, verify the log file location and structure
+        
         for log in logs:
             notebook = log.get('notebook', '').lower()
             if notebook:
