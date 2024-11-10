@@ -10,6 +10,9 @@ chat_history*
 log*
 .venv/
 jupyterlab/
-__pycache__/
 venv/
 chatbot/
+!log_processor
+!log_processor/**
+__pycache__/
+jupyterlab_data/
