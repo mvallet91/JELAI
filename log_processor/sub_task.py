@@ -4,7 +4,13 @@ from log_processor.notebook_log.notebook_log import LogEntry
 
 
 class SubTask:
-    """Represents a continous span of working on a single task"""
+    """
+    Represents a continous span of working on a single task
+
+    Attributes:
+        log_entries: All log entries that are part of this subtask
+    
+    """
 
     log_entries: List[LogEntry]
 

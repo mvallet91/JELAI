@@ -7,13 +7,15 @@ from log_processor.chat_log.chat_user import ChatUser
 
 
 class ChatLog:
+    """A processed chat log containing messages and users."""
+
     messages: List[ChatMessage]
     users: Dict[str, ChatUser]
     processed_log: Optional[Any]
 
     def get_message_count(self):
         return len(self.messages)
-    
+
     def get_first_message_before(self, time: float) -> Optional[ChatMessage]:
         for message in self.messages:
             if message.time < time:

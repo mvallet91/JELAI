@@ -1,3 +1,5 @@
+from difflib import Se
+    quenceMatcher
 from typing import Optional
 
 
@@ -36,6 +38,9 @@ class ChatMessage:
 
     def is_answer(self):
         return self.type == "answer"
+    
+    def get_text_similarity(self, other: str):
+        return SequenceMatcher(None, self.body, other).ratio()
 
     def __str__(self):
         return f"{self.sender} ({self.time}): {self.body}"

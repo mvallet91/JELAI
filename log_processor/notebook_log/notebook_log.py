@@ -13,6 +13,8 @@ from log_processor.task import Task
 
 
 class NotebookLog:
+    """A processed notebook log containing log entries."""
+
     log_entries: List[LogEntry]
 
     def __init__(self, log_entries: List[LogEntry]):
