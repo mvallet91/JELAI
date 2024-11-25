@@ -1,6 +1,7 @@
 import json
 from typing import Any, Dict, List, Optional
 
+from log_processor.notebook_log.notebook_activity import NotebookActivity
 from log_processor.notebook_log.notebook_cell_activity import NotebookCellActivity
 from log_processor.notebook_log.notebook_cell_sub_activity import (
     NotebookCellSubActivity,
@@ -8,8 +9,17 @@ from log_processor.notebook_log.notebook_cell_sub_activity import (
 from log_processor.notebook_log.notebook_log_entry import NotebookLogEntry
 
 
-class NotebookLog:
+class NotebookLog(NotebookActivity):
     """A processed notebook log containing log entries."""
+
+    @staticmethod
+    def load_from_file(file_path: str):
+        with open(file_path, "r") as file:
+            data = file.read()
+            data = '[' + data[:-1] + ']'
+            data = json.loads(data)
+
+        return NotebookLog.load(data)
 
     @staticmethod
     def load(dict: Any):
@@ -17,20 +27,10 @@ class NotebookLog:
 
         return NotebookLog(log_entries)
 
-    log_entries: List[NotebookLogEntry]
-
     def __init__(self, log_entries: List[NotebookLogEntry]):
-        self.log_entries = log_entries
+        super().__init__(log_entries)
 
-    def get_event_count(self):
-        return len(self.log_entries)
-
-    def get_event_by_index(self, index: int) -> Optional[NotebookLogEntry]:
-        if 0 <= index < len(self.log_entries):
-            return self.log_entries[index]
-        return None
-
-    def split_into_notebook_sub_activities(self) -> List[NotebookCellSubActivity]:
+    def get_notebook_sub_activities(self) -> List[NotebookCellSubActivity]:
         current_subtask: NotebookCellSubActivity = NotebookCellSubActivity([])
         subtasks = {"first": current_subtask}
 
@@ -56,7 +56,7 @@ class NotebookLog:
 
     def get_notebook_activities(self) -> List[NotebookCellActivity]:
         tasks: Dict[str, NotebookCellActivity] = {}
-        notebook_cell_sub_activities = self.split_into_notebook_sub_activities()
+        notebook_cell_sub_activities = self.get_notebook_sub_activities()
 
         for notebook_cell_sub_activity in notebook_cell_sub_activities:
             cell_id = notebook_cell_sub_activity.get_cell_id()
@@ -65,12 +65,3 @@ class NotebookLog:
             tasks[cell_id].sub_activities.append(notebook_cell_sub_activity)
 
         return list(tasks.values())
-
-
-def load_notebook_log(file_path: str) -> NotebookLog:
-    with open(file_path, "r", encoding="utf-8") as file:
-        data = file.read()
-        data = "[" + data[:-1] + "]"
-        data = json.loads(data)
-
-    return NotebookLog.load(data)

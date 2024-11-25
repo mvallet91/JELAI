@@ -11,19 +11,21 @@ class ChatLog(ChatActivity):
 
     processed_log: Optional[Any]
 
-    def __init__(self):
-        super().__init__([], {})
-        self.processed_log = None
+    @staticmethod
+    def load_from_file(file_path: str):
+        with open(file_path, "r") as file:
+            data = json.load(file)
 
+        return ChatLog.load(data)
 
-def load_chat_log(file_path: str) -> ChatLog:
-    with open(file_path, "r") as file:
-        data = json.load(file)
+    @staticmethod
+    def load(data: Any):
+        return ChatLog(
+            [ChatMessage(**msg) for msg in data["messages"]],
+            {key: ChatUser(**value) for key, value in data["users"].items()},
+            data["processed_log"],
+        )
 
-    chat_log = ChatLog()
-
-    chat_log.messages = [ChatMessage(**msg) for msg in data["messages"]]
-    chat_log.users = {key: ChatUser(**value) for key, value in data["users"].items()}
-    chat_log.processed_log = data["processed_log"]
-
-    return chat_log
+    def __init__(self, messages, users, processed_log):
+        super().__init__(messages, users)
+        self.processed_log = processed_log

@@ -7,7 +7,7 @@ from log_processor.chat_log.chat_user import ChatUser
 
 class ChatActivity:
     """
-    Represents multiple chat messages. Used to calculate things about them.
+    Represents multiple chat messages. Calculates matrics about this activity.
 
     """
 
@@ -29,9 +29,8 @@ class ChatActivity:
         for message in self.messages:
             if message.is_answer():
                 matches = re.findall(r"\`(.+?)\`", message.body)
-                for matchNum, match in enumerate(matches, start=1):
-                    code = match.group(0)
-                    codes.append(code)
+                for match in matches:
+                    codes.append(match)
 
         return codes
     
@@ -45,7 +44,7 @@ class ChatActivity:
 
     def get_summary(self) -> str:
         return (
-            "==Chat activity==\n"
+            "== Chat activity ==\n"
             f"Amount of questions = {self.get_amount_of_questions()}\n"
             f"Generated code = {self.get_all_generate_code()}"
         )

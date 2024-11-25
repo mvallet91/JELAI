@@ -19,10 +19,10 @@ class CellActivity:
         self.notebook_activity = notebook_activity
         self.chat_activity = chat_activity
 
-    # def get_used_ai_code(self):
-    #     codes = self.chat_activity.get_all_generate_code()
-    #     matches = self.notebook_activity.check_matching_code(codes)
-    #     return matches
+    def get_used_ai_code(self):
+        codes = self.chat_activity.get_all_generate_code()
+        matches = self.notebook_activity.check_matching_code(codes)
+        return matches
 
     def get_summary(self) -> str:
         return (

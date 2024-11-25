@@ -15,8 +15,8 @@ class NotebookCellActivity:
 
     sub_activities: List[NotebookCellSubActivity]
 
-    def __init__(self):
-        self.sub_activities = []
+    def __init__(self, sub_activities: List[NotebookCellSubActivity]):
+        self.sub_activities = sub_activities
 
     def get_correctness_score_at(self, time: float):
         raise NotImplementedError
@@ -53,9 +53,9 @@ class NotebookCellActivity:
 
     def get_summary(self) -> str:
         return (
-            f"==Notebook summary for cell {self.get_cell_id()}==\n"
+            f"== Notebook summary of cell {self.get_cell_id()} ==\n"
             f"Times executed = {self.get_amount_of_executions()} times with {self.get_amount_of_execution_errors()} errors.\n"
-            f"Completion time = {self.get_completion_time()}"
+            f"Completion time = {round(self.get_completion_time(), 1)}s"
         )
 
     def __str__(self):
