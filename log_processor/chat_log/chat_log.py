@@ -1,26 +1,19 @@
 import json
-from dataclasses import dataclass
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Optional
 
+from log_processor.chat_log.chat_activity import ChatActivity
 from log_processor.chat_log.chat_message import ChatMessage
 from log_processor.chat_log.chat_user import ChatUser
 
 
-class ChatLog:
+class ChatLog(ChatActivity):
     """A processed chat log containing messages and users."""
 
-    messages: List[ChatMessage]
-    users: Dict[str, ChatUser]
     processed_log: Optional[Any]
 
-    def get_message_count(self):
-        return len(self.messages)
-
-    def get_first_message_before(self, time: float) -> Optional[ChatMessage]:
-        for message in self.messages:
-            if message.time < time:
-                return message
-        return None
+    def __init__(self):
+        super().__init__([], {})
+        self.processed_log = None
 
 
 def load_chat_log(file_path: str) -> ChatLog:

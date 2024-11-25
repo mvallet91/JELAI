@@ -1,5 +1,4 @@
-from difflib import Se
-    quenceMatcher
+from difflib import SequenceMatcher
 from typing import Optional
 
 
@@ -34,11 +33,11 @@ class ChatMessage:
         return len(self.body)
 
     def is_question(self):
-        return self.type == "question"
+        return self.sender != "Juno"
 
     def is_answer(self):
-        return self.type == "answer"
-    
+        return self.sender == "Juno"
+
     def get_text_similarity(self, other: str):
         return SequenceMatcher(None, self.body, other).ratio()
 
