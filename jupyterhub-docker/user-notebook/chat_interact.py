@@ -9,6 +9,7 @@ import asyncio
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 from langserve import RemoteRunnable
+import httpx
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
@@ -18,12 +19,17 @@ def is_running_in_docker():
 
 # Set the URL based on the environment
 if is_running_in_docker():
-    chat_chain_url = "http://host.docker.internal:8002"
+    base_url = "http://host.docker.internal:8002"
 else:
-    chat_chain_url = "http://localhost:8002"
+    base_url = "http://localhost:8002"
 
 # Set up the RemoteRunnable for the chat_chain
-chat_chain = RemoteRunnable(chat_chain_url)
+chat_chain_url = f"{base_url}/chat"  # Update to use the correct endpoint
+# chat_chain = RemoteRunnable(chat_chain_url)
+
+
+# # Set up the RemoteRunnable for the chat_chain
+# chat_chain = RemoteRunnable(chat_chain_url)
 
 class ChatHandler(FileSystemEventHandler):
     def __init__(self, chat_directory, loop):
@@ -103,7 +109,7 @@ class ChatHandler(FileSystemEventHandler):
             "Opened notebook": lambda: f"Opened notebook '{log.get('notebook', 'Unknown notebook')}' at {log.get('time', 'Unknown time')}",
             "Closed notebook": lambda: f"Closed notebook '{log.get('notebook', 'Unknown notebook')}' at {log.get('time', 'Unknown time')}",
             "Notebook became visible": lambda: f"Notebook '{log.get('notebook', 'Unknown notebook')}' became visible at {log.get('time', 'Unknown time')}"
-}
+    }
 
         return event_formatters.get(event_type, lambda: f"Event: {event_type} at cell {cell_index}")()
 
@@ -206,14 +212,28 @@ class ChatHandler(FileSystemEventHandler):
             if isinstance(context, str):
                 context = {"notebook_events": [context]}
 
+            # Input data to be sent to the server
             input_data = {
                 "human_input": user_message,
                 "context": context or {}
             }
+
             logging.info(f"Input data: {input_data}")
-            response = await chat_chain.ainvoke(input_data, {'configurable': {'session_id': session_id}})
-            response = "".join(response)  # Convert the response from list to string if needed
-            return response
+
+            # Construct the endpoint URL directly
+            chat_chain_url = f"{base_url}/chat/{session_id}"
+
+            # Make an async POST request using httpx
+            async with httpx.AsyncClient(timeout=60.0) as client: 
+                response = await client.post(chat_chain_url, json=input_data)
+                response.raise_for_status()  # Raise an error for bad responses
+                response_data = response.json()
+                logging.info(f"Response data: {response_data}")
+                return response_data.get("response", "")
+
+        except httpx.HTTPStatusError as http_err:
+            logging.error(f"HTTP error occurred: {http_err}")
+            return None
         except Exception as e:
             logging.error(f"Error getting LLM response: {e}")
             return None

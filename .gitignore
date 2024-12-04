@@ -13,3 +13,5 @@ jupyterlab/
 __pycache__/
 venv/
 chatbot/
+
+/jupyterhub-docker/middleware/venv/
