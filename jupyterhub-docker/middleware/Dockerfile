@@ -1,5 +1,5 @@
 # Base Image
-FROM python:3.10-slim
+FROM python:3.12-slim
 
 # Install Fluentd
 RUN apt-get update && \
@@ -11,8 +11,8 @@ RUN apt-get update && \
 COPY td-agent.conf /fluent/etc/td-agent.conf
 
 # Install LLM Handler requirements
-COPY middleware_requirements.txt /app/
-RUN pip install --no-cache-dir -r /app/middleware_requirements.txt
+COPY requirements.txt /app/
+RUN pip install --no-cache-dir -r /app/requirements.txt
 
 # Copy LLM Handler code
 COPY llm_handler.py /app/llm_handler.py

@@ -52,7 +52,8 @@ def create_session_factory(base_dir: Union[str, Path]) -> Callable[[str], FileCh
 
 # System prompt for the assistant
 system_prompt = """
-You are Juno, an experienced data science and programming tutor embedded in a Jupyter Notebook, so your advice must be concise, short, and clear. Students are working on Python programming, data science, and machine learning projects. 
+You are Juno, an experienced data science and programming tutor embedded in a Jupyter Notebook, so your advice must be concise, short, and clear. 
+Students are working on Python programming, data science, and machine learning projects. 
 Your goal is to help them understand the concepts and guide them to the right solutions.
 Focus on the student's question.
 
@@ -62,7 +63,7 @@ Subtly add reflective questions when appropriate.
 It's ok to let the students explore a little, but gently guide the student back to the main topic.
 Be encouraging and supportive.
 
-You might get some context from the student's notebook actions, it will be called 'notebook_events', you can use this to contextualize your answers.
+Together with the <Student message>, you might get some <Relevant Context> from the student's notebook actions, you can use this to contextualize your answers.
 If you need more information, ask the student!
 
 """
@@ -77,7 +78,7 @@ prompt = ChatPromptTemplate.from_messages(
 )
 
 # Model initialization
-model = Ollama(model="qwq", base_url=base_url)
+model = Ollama(model="gemma2:27b", base_url=base_url)
 
 # Combine prompt and model into a chain
 chain = prompt | model
@@ -108,8 +109,8 @@ async def chat(session_id: str, request: Request):
 
         # Format context into the input prompt
         if context:
-            context_str = "\nContext:\n" + "\n".join(context.get("notebook_events", []))
-            formatted_human_input = f"{context_str}\n\n{human_input}"
+            context_str = "\n".join(context.get("notebook_events", []))
+            formatted_human_input = f"Student message:{human_input}\n\nRelevant context:\n{context_str}\n"
         else:
             formatted_human_input = human_input
 
@@ -117,6 +118,7 @@ async def chat(session_id: str, request: Request):
         chain_input = {
             "human_input": formatted_human_input
         }
+        logging.info(f"Request for session ID {session_id}: {chain_input}")
 
         # Run the chain with history asynchronously
         result = await chain_with_history.ainvoke(
