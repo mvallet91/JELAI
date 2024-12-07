@@ -37,6 +37,14 @@ services:
       # Notebook directory inside user image
       DOCKER_NOTEBOOK_DIR: /home/jovyan/work
 
+  user-notebook:
+    build:
+      context: ./user-notebook
+      dockerfile: Dockerfile
+    image: user-notebook
+    networks:
+      - jupyterhub-network
+
   middleware:
     build:
       context: ./middleware
