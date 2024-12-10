@@ -105,8 +105,9 @@ class ChatHandler(FileSystemEventHandler):
             "Moved cell": lambda: f"Moved cell from index {log.get('from_index', 'Unknown')} to {cell_index}",
             "Cell output": lambda: f"Output generated for cell {cell_index}: {log.get('output', 'No output provided')}",
             "Pasted content": lambda: f"Pasted content at cell {cell_index}, content: {log.get('content', 'No content provided')}",
-            "CellExecuteEvent": lambda: f"Executed cell {cell_index} with input: {log.get('input', 'No input provided')}, "
-                                    f"output: {log.get('output', 'No output provided')}",
+            "Executed cells with error": lambda: f"Executed cell {cell_index} with error: {log.get('error', 'No error provided')}, content: {log.get('content', 'No content provided')}",
+            # "CellExecuteEvent": lambda: f"Executed cell {cell_index} with input: {log.get('input', 'No input provided')}, "
+                                    # f"output: {log.get('output', 'No output provided')}",
             # "Opened notebook": lambda: f"Opened notebook '{log.get('notebook', 'Unknown notebook')}' at {log.get('time', 'Unknown time')}",
             # "Closed notebook": lambda: f"Closed notebook '{log.get('notebook', 'Unknown notebook')}' at {log.get('time', 'Unknown time')}",
             # "Notebook became visible": lambda: f"Notebook '{log.get('notebook', 'Unknown notebook')}' became visible at {log.get('time', 'Unknown time')}"

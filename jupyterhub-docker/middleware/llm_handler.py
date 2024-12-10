@@ -63,7 +63,7 @@ Subtly add reflective questions when appropriate.
 It's ok to let the students explore a little, but gently guide the student back to the main topic.
 Be encouraging and supportive.
 
-Together with the <Student message>, you might get some <Relevant Context> from the student's notebook actions, you can use this to contextualize your answers.
+Together with the <Student Message>, you might get some <Relevant Context> from the student's notebook actions, you can use this to contextualize your answers.
 If you need more information, ask the student!
 
 """
@@ -110,7 +110,7 @@ async def chat(session_id: str, request: Request):
         # Format context into the input prompt
         if context:
             context_str = "\n".join(context.get("notebook_events", []))
-            formatted_human_input = f"Student message:{human_input}\n\nRelevant context:\n{context_str}\n"
+            formatted_human_input = f"<Student message>{human_input}<\Student message>\n\n<Relevant context>{context_str}<\Relevant context>\n\n"
         else:
             formatted_human_input = human_input
 
