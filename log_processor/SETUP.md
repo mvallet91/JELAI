@@ -1,9 +1,9 @@
-The config file used in jupyter
+Use the following config file saved at: jupyterlab\etc\jupyter\jupyter_jupyterlab_pioneer_config.py
 ```python
 # This file should be saved into one of the config directories provided by `jupyter --path`.
 
-c.ServerApp.root_dir = "./jupyterlab_data"
-c.ChatHistoryManager.history_dir = './jupyterlab_data'
+c.ServerApp.root_dir = "./output"
+c.ChatHistoryManager.history_dir = './output'
 
 """An array of the exporters.
 
@@ -28,7 +28,7 @@ c.JupyterLabPioneerApp.exporters = [
     {
         # writes telemetry data to local file
         "type": "file_exporter",
-        "args": {"path": "jupyterlab_data/log"},
+        "args": {"path": "output/log"},
     },
     # {
     #     # sends telemetry data to a remote http endpoint (AWS S3 bucket)

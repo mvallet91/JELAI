@@ -79,20 +79,61 @@ class NotebookEventDetail:
     eventTime: int
     eventInfo: Optional[NotebookEventInfo]
 
+@dataclass
+class NotebookContentCell:
+    @staticmethod
+    def load(dict: Any):
+        return NotebookContentCell(
+            dict["id"],
+            dict["cell_type"],
+            dict["source"],
+            dict["metadata"],
+            dict["outputs"],
+            dict["execution_count"],
+        )
+
+    id: str
+    cell_type: str
+    source: str
+    metadata: Dict[str, Any]
+    outputs: List[Dict[str, Any]]
+    execution_count: Optional[int]
+
+@dataclass
+class NotebookContent:
+    @staticmethod
+    def load(dict: Any):
+        return NotebookContent(
+            dict["metadata"],
+            dict["nbformat"],
+            dict["nbformat_minor"],
+            [NotebookContentCell.load(cell) for cell in dict["cells"]],
+        )
+
+    metadata: Dict[str, Any]
+    nbformat: int
+    nbformat_minor: int
+    cells: List[NotebookContentCell]
 
 @dataclass
 class NotebookState:
     @staticmethod
     def load(dict: Any):
+        notebookContent = None
+        if dict["notebookContent"] is not None:
+            notebookContent = NotebookContent.load(dict["notebookContent"])
+
         return NotebookState(
             dict["sessionID"],
             dict["notebookPath"],
-            dict["notebookContent"],
+            notebookContent,
         )
 
     sessionID: str
     notebookPath: str
-    notebookContent: Optional[Any]
+    notebookContent: Optional[NotebookContent]
+
+
 
 
 @dataclass

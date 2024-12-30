@@ -15,10 +15,10 @@ class Log:
     def get_cell_activities(self) -> list[CellActivity]:
         activities: list[CellActivity] = []
 
-        notebook_activities = self.notebook_log.get_notebook_activities()
+        notebook_activities = self.notebook_log.get_notebook_cell_activity_composites()
         for notebook_activity in notebook_activities:
             chat_activity = ChatActivity([], {})
-            for notebook_sub_activity in notebook_activity.sub_activities:
+            for notebook_sub_activity in notebook_activity.cell_activities:
                 activity = self.chat_log.get_activity_between(
                     notebook_sub_activity.get_start_time(),
                     notebook_sub_activity.get_end_time(),

@@ -1,42 +1,52 @@
+from difflib import SequenceMatcher
 from typing import List, Optional
 
 from log_processor.notebook_log.notebook_log_entry import NotebookLogEntry
-from difflib import SequenceMatcher
 
 
 class NotebookActivity:
     """
-    Represents a collection of notebook activity.
-
-    Attributes:
-        subtasks: A list of moment that the user spend on this task.
+    A collection of notebook log entries.
     """
 
-    log_entries: List[NotebookLogEntry]
+    _log_entries: List[NotebookLogEntry]
 
     def __init__(
         self,
         log_entries: List[NotebookLogEntry],
     ):
-        self.log_entries = log_entries
+        self._log_entries = log_entries
 
-        self.log_entries.sort(key=lambda x: x.eventDetail.eventTime)
+        self._log_entries.sort(key=lambda x: x.eventDetail.eventTime)
+
+        self.check_invariants()
+
+    def check_invariants(self):
+        # Check that the log entries are not empty
+        assert len(self._log_entries) > 0, "Log entries should not be empty"
+
+        # Check that the log entries are sorted by time
+        for i in range(1, len(self._log_entries)):
+            assert (
+                self._log_entries[i].eventDetail.eventTime
+                >= self._log_entries[i - 1].eventDetail.eventTime
+            ), "Log entries should be sorted by event time"
 
     def get_start_time(self):
-        return self.log_entries[0].eventDetail.eventTime
+        return self._log_entries[0].eventDetail.eventTime
 
     def get_end_time(self):
-        return self.log_entries[-1].eventDetail.eventTime
+        return self._log_entries[-1].eventDetail.eventTime
 
     def get_completion_time(self):
         return self.get_end_time() - self.get_start_time()
 
     def get_cell_ids(self):
         ids = set()
-        if self.log_entries[0].eventDetail.eventName == "NotebookOpenEvent":
+        if self._log_entries[0].eventDetail.eventName == "NotebookOpenEvent":
             ids.add("first-cell")
 
-        for entry in self.log_entries:
+        for entry in self._log_entries:
             event_name = entry.eventDetail.eventName
             if event_name == "ActiveCellChangeEvent":
                 eventInfo = entry.eventDetail.eventInfo
@@ -49,7 +59,7 @@ class NotebookActivity:
 
     def get_amount_of_executions(self):
         total = 0
-        for entry in self.log_entries:
+        for entry in self._log_entries:
             event_name = entry.eventDetail.eventName
             if event_name == "CellExecuteEvent":
                 total += 1
@@ -57,16 +67,16 @@ class NotebookActivity:
         return total
 
     def get_event_count(self):
-        return len(self.log_entries)
+        return len(self._log_entries)
 
     def get_event_by_index(self, index: int) -> Optional[NotebookLogEntry]:
-        if 0 <= index < len(self.log_entries):
-            return self.log_entries[index]
+        if 0 <= index < len(self._log_entries):
+            return self._log_entries[index]
         return None
 
     def get_amount_of_execution_errors(self):
         total = 0
-        for entry in self.log_entries:
+        for entry in self._log_entries:
             event_name = entry.eventDetail.eventName
             if event_name == "CellExecuteEvent":
                 eventInfo = entry.eventDetail.eventInfo
@@ -75,15 +85,28 @@ class NotebookActivity:
                     total += 1
 
         return total
-    
-    def get_final_state(self):
-        return self.log_entries[-1].eventDetail.eventInfo
-    
+
+    def get_state_of_cell_at(self, cell_id: str, time: int):
+        final_state = None
+        for entry in self._log_entries:
+            event_name = entry.eventDetail.eventName
+            if event_name == "CellExecuteEvent" and entry.eventDetail.eventTime <= time:
+                notebook_content = entry.notebookState.notebookContent
+                assert (
+                    notebook_content is not None
+                ), "notebook_content should not be None"
+                cells = notebook_content.cells
+                for cell in cells:
+                    if cell.id == cell_id:
+                        final_state = cell.source
+
+        return final_state
+
     def get_text_similarity(self, other: str):
         similarity_scores = []
-        for entry in self.log_entries:
+        for entry in self._log_entries:
             eventInfo = entry.eventDetail.eventInfo
-            if eventInfo and hasattr(eventInfo, 'text'):
+            if eventInfo and hasattr(eventInfo, "text"):
                 similarity = SequenceMatcher(None, eventInfo.text, other).ratio()
                 similarity_scores.append(similarity)
 

@@ -1,5 +1,7 @@
 from log_processor.chat_log.chat_activity import ChatActivity
-from log_processor.notebook_log.notebook_cell_activity import NotebookCellActivity
+from log_processor.notebook_log.notebook_cell_activity_composite import (
+    NotebookCellActivityComposite,
+)
 
 
 class CellActivity:
@@ -10,11 +12,13 @@ class CellActivity:
         subtasks: A list of moment that the user spend on this task.
     """
 
-    notebook_activity: NotebookCellActivity
+    notebook_activity: NotebookCellActivityComposite
     chat_activity: ChatActivity
 
     def __init__(
-        self, notebook_activity: NotebookCellActivity, chat_activity: ChatActivity
+        self,
+        notebook_activity: NotebookCellActivityComposite,
+        chat_activity: ChatActivity,
     ):
         self.notebook_activity = notebook_activity
         self.chat_activity = chat_activity

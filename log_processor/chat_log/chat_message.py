@@ -33,7 +33,11 @@ class ChatMessage:
         return len(self.body)
 
     def is_question(self):
-        return self.sender != "Juno"
+        if self.automated == True:
+            return False
+        if self.sender == "Juno":
+            return False
+        return True
 
     def is_answer(self):
         return self.sender == "Juno"
