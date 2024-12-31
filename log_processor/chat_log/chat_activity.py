@@ -50,18 +50,28 @@ class ChatActivity:
             self._users,
         )
 
-    def get_all_generate_code(self):
+    def get_code_snippets(
+        self, include_questions: bool = True, include_answers: bool = True
+    ):
         codes = []
         for message in self._messages:
-            if message.is_answer():
+            if (include_questions and message.is_question()) or (
+                include_answers and message.is_answer()
+            ):
                 matches = re.finditer(
                     r"(\`\`\`python|\`)((.|\n)+?)\`{1,3}", message.body, re.DOTALL
                 )
                 for match in matches:
-                    a = match.group(2)
-                    codes.append(a)
+                    code_snippet = match.group(2)
+                    codes.append(code_snippet)
 
         return codes
+
+    def get_generated_code_snippets(self):
+        return self.get_code_snippets(False, True)
+    
+    def get_send_code_snippets(self):
+        return self.get_code_snippets(True, False)
 
     def get_list_of_messages(self):
         messages = []
@@ -76,7 +86,9 @@ class ChatActivity:
         return messages
 
     def get_interactions(self):
-        from log_processor.chat_log.chat_interaction import ChatInteraction # avoid circular import
+        from log_processor.chat_log.chat_interaction import (
+            ChatInteraction,
+        )  # avoid circular import
 
         interactions: List[ChatInteraction] = []
         for i in range(0, len(self._messages) - 1):
@@ -91,8 +103,8 @@ class ChatActivity:
 
     def get_summary(self) -> str:
         return (
-            "== Chat activity ==\n"
+            "## Chat activity\n"
             f"Amount of questions = {self.get_amount_of_messages()}\n"
             f"Interactions = {self.get_list_of_messages()}\n"
-            f"Generated code = {self.get_all_generate_code()}"
+            f"Generated code = {self.get_generated_code_snippets()}"
         )

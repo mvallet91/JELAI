@@ -41,21 +41,40 @@ class NotebookActivity:
     def get_completion_time(self):
         return self.get_end_time() - self.get_start_time()
 
-    def get_cell_ids(self):
+    def get_cell_indexes(self):
+        """Get indexes of the cells which are used in this activity"""
         ids = set()
-        if self._log_entries[0].eventDetail.eventName == "NotebookOpenEvent":
-            ids.add("first-cell")
 
         for entry in self._log_entries:
-            event_name = entry.eventDetail.eventName
-            if event_name == "ActiveCellChangeEvent":
-                eventInfo = entry.eventDetail.eventInfo
-                assert eventInfo is not None, "eventInfo should not be None"
-                cells = eventInfo.cells
-                assert cells is not None, "cells should not be None"
-                ids.add(cells[0].id)
+            eventInfo = entry.eventDetail.eventInfo
+            if eventInfo is None:
+                continue
+
+            cell_id = eventInfo.index
+            if cell_id is None:
+                continue
+
+            ids.add(cell_id)
 
         return ids
+
+
+    def get_cell_ids(self):
+        """Get ids of cells with indexes found in get cell indexes"""
+        ids = set()
+        indexes = self.get_cell_indexes()
+
+        for entry in self._log_entries:
+            eventInfo = entry.eventDetail.eventInfo
+            if eventInfo is None:
+                continue
+            if eventInfo.cells is not None:
+                for cell in eventInfo.cells:
+                    if cell.index in indexes:
+                        ids.add(cell.id)
+        
+        return ids
+
 
     def get_amount_of_executions(self):
         total = 0

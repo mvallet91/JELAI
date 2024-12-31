@@ -7,14 +7,11 @@ if __name__ == "__main__":
     notebook_log = NotebookLog.load_from_file("output/log")
     log = Log(chat_log, notebook_log)
 
-
     for task in log.get_cell_activities():
         print(task.get_summary())
-        print(task.notebook_activity.get_similarity_with_end_result_at(task.notebook_activity.get_end_time()))
         print()
 
     interactions = log.chat_log.get_interactions()
     for interaction in interactions:
         print(interaction.get_waiting_time())
         print()
-        

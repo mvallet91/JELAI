@@ -1,4 +1,4 @@
-from typing import List, Sequence
+from typing import Sequence
 
 from log_processor.notebook_log.notebook_activity import NotebookActivity
 
@@ -12,7 +12,7 @@ class NotebookActivityComposite(NotebookActivity):
 
     def __init__(self, activities: Sequence[NotebookActivity]):
         self._activities = activities
-        
+
         super().__init__(
             [
                 log_entry

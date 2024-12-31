@@ -32,27 +32,34 @@ class NotebookLog(NotebookActivity):
     def __init__(self, log_entries: List[NotebookLogEntry]):
         super().__init__(log_entries)
 
+    # TODO make protection againgt changes the index of a cell
     def get_notebook_cell_activities(self) -> List[NotebookCellActivity]:
-        current_subtask = []
-        subtasks = {"first": current_subtask}
+        cell_index_to_activity = {}
 
         for entry in self._log_entries:
-
-            # New subtasks when switching cells
             event_name = entry.eventDetail.eventName
-            if event_name == "ActiveCellChangeEvent":
-                eventInfo = entry.eventDetail.eventInfo
-                assert eventInfo is not None, "eventInfo should not be None"
+
+            eventInfo = entry.eventDetail.eventInfo
+            if eventInfo is None:
+                print(f"No event info found for {event_name}")
+                continue
+            
+            if eventInfo.cells is not None:
                 cells = eventInfo.cells
-                assert cells is not None, "cells should not be None"
-                cell_id = cells[0].id
-                if cell_id not in subtasks:
-                    subtasks[cell_id] = []
-                current_subtask = subtasks[cell_id]
+                cell_ids = [cell.index for cell in cells]
+            else:
+                cell_ids = [eventInfo.index]
+                if cell_ids[0] is None:
+                    print(f"No cell index found for {event_name}")
+                    continue
+            
+            for cell_id in cell_ids:
+                if cell_id not in cell_index_to_activity:
+                    cell_index_to_activity[cell_id] = []
 
-            current_subtask.append(entry)
+                cell_index_to_activity[cell_id].append(entry)
 
-        return [NotebookCellActivity(subtask) for subtask in subtasks.values()]
+        return [NotebookCellActivity(subtask) for subtask in cell_index_to_activity.values()]
 
     def get_notebook_cell_activity_composites(
         self,

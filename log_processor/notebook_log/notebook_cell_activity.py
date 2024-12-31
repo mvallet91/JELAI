@@ -18,11 +18,20 @@ class NotebookCellActivity(NotebookActivity):
     def check_invariants(self):
         super().check_invariants()
 
+        # Check that all cells have the same index
+        indexes = self.get_cell_indexes()
+        assert len(indexes) == 1, "All cells should have the same index"
+
         # Check that there is exactly one cell id
         ids = self.get_cell_ids()
-        assert len(ids) == 1, "There should be exactly one cell id"
+        assert len(ids) == 1, "There should be one cell id"
 
     def get_cell_id(self):
         ids = self.get_cell_ids()
-        assert len(ids) == 1, "There should be exactly one cell id"
+        assert len(ids) == 1, "There should be one cell id"
         return ids.pop()
+    
+    def get_cell_index(self):
+        indexes = self.get_cell_indexes()
+        assert len(indexes) == 1, "All cells should have the same index"
+        return indexes.pop()
