@@ -10,7 +10,9 @@ from log_processor.notebook_log.notebook_log_entry import NotebookLogEntry
 
 
 class NotebookLog(NotebookActivity):
-    """A processed notebook log containing log entries."""
+    """
+    A processed notebook log containing log entries.
+    """
 
     @staticmethod
     def load_from_file(file_path: str):

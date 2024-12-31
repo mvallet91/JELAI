@@ -7,7 +7,9 @@ from log_processor.chat_log.chat_user import ChatUser
 
 
 class ChatLog(ChatActivity):
-    """A processed chat log containing messages and users."""
+    """
+    A processed chat log containing messages and users.
+    """
 
     processed_log: Optional[Any]
 
@@ -29,3 +31,4 @@ class ChatLog(ChatActivity):
     def __init__(self, messages, users, processed_log):
         super().__init__(messages, users)
         self.processed_log = processed_log
+        

@@ -2,7 +2,9 @@ from typing import Optional
 
 
 class ChatUser:
-    """A user in the chat log."""
+    """
+    User in the chat log.
+    """
 
     initials: str
     avatar_url: Optional[str]

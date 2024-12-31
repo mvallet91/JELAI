@@ -17,14 +17,17 @@ class Log:
 
         notebook_activities = self.notebook_log.get_notebook_cell_activity_composites()
         for notebook_activity in notebook_activities:
-            chat_activity = ChatActivity([], {})
+            messages = []
+            users = {}
             for notebook_sub_activity in notebook_activity.cell_activities:
                 activity = self.chat_log.get_activity_between(
                     notebook_sub_activity.get_start_time(),
                     notebook_sub_activity.get_end_time(),
                 )
-                chat_activity.messages.extend(activity.messages)
-                chat_activity.users.update(activity.users)
-            activities.append(CellActivity(notebook_activity, chat_activity))
+                messages.extend(activity._messages)
+                users.update(activity._users)
+            activities.append(
+                CellActivity(notebook_activity, ChatActivity(messages, users))
+            )
 
         return activities
