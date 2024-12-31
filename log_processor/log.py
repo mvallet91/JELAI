@@ -8,6 +8,13 @@ class Log:
     chat_log: ChatLog
     notebook_log: NotebookLog
 
+    @staticmethod
+    def load_from_files(chat_log_file_path: str, notebook_log_file_path: str):
+        chat_log = ChatLog.load_from_file(chat_log_file_path)
+        notebook_log = NotebookLog.load_from_file(notebook_log_file_path)
+        log = Log(chat_log, notebook_log)
+        return log
+
     def __init__(self, chat_log: ChatLog, notebook_log: NotebookLog):
         self.chat_log = chat_log
         self.notebook_log = notebook_log

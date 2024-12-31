@@ -23,3 +23,10 @@ class ChatInteraction(ChatActivity):
 
     def get_waiting_time(self):
         return self._messages[1].time - self._messages[0].time
+    
+    def get_summary(self) -> str:
+        return (
+            f"Question: {self._messages[0].body}\n"
+            f"Answer: {self._messages[1].body}\n"
+            f"Waiting time: {self.get_waiting_time()}"
+        )

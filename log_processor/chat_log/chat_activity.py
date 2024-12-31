@@ -63,7 +63,7 @@ class ChatActivity:
                 )
                 for match in matches:
                     code_snippet = match.group(2)
-                    codes.append(code_snippet)
+                    codes.append(code_snippet.strip())
 
         return codes
 
@@ -102,9 +102,12 @@ class ChatActivity:
         return interactions
 
     def get_summary(self) -> str:
+        interactions = "\n".join([interaction.get_summary() for interaction in self.get_interactions()])
         return (
             "## Chat activity\n"
             f"Amount of questions = {self.get_amount_of_messages()}\n"
-            f"Interactions = {self.get_list_of_messages()}\n"
-            f"Generated code = {self.get_generated_code_snippets()}"
+            f"Chat messages = {self.get_list_of_messages()}\n"
+            f"Generated code = {self.get_generated_code_snippets()}\n"
+            f"### Interactions\n"
+            f"{interactions}"
         )

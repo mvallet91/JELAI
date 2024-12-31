@@ -1,4 +1,3 @@
-from difflib import SequenceMatcher
 from typing import List, Optional
 
 from log_processor.notebook_log.notebook_log_entry import NotebookLogEntry
@@ -33,10 +32,16 @@ class NotebookActivity:
             ), "Log entries should be sorted by event time"
 
     def get_start_time(self):
-        return self._log_entries[0].eventDetail.eventTime
-
+        for entry in self._log_entries:
+            if entry.eventDetail.eventName not in ["NotebookVisibleEvent", "NotebookHiddenEvent"]:
+                return entry.eventDetail.eventTime
+        assert False, "No event found"
+            
     def get_end_time(self):
-        return self._log_entries[-1].eventDetail.eventTime
+        for entry in reversed(self._log_entries):
+            if entry.eventDetail.eventName not in ["NotebookVisibleEvent", "NotebookHiddenEvent"]:
+                return entry.eventDetail.eventTime
+        assert False, "No event found"
 
     def get_completion_time(self):
         return self.get_end_time() - self.get_start_time()
@@ -58,7 +63,6 @@ class NotebookActivity:
 
         return ids
 
-
     def get_cell_ids(self):
         """Get ids of cells with indexes found in get cell indexes"""
         ids = set()
@@ -72,9 +76,8 @@ class NotebookActivity:
                 for cell in eventInfo.cells:
                     if cell.index in indexes:
                         ids.add(cell.id)
-        
-        return ids
 
+        return ids
 
     def get_amount_of_executions(self):
         total = 0
@@ -120,17 +123,3 @@ class NotebookActivity:
                         final_state = cell.source
 
         return final_state
-
-    def get_text_similarity(self, other: str):
-        similarity_scores = []
-        for entry in self._log_entries:
-            eventInfo = entry.eventDetail.eventInfo
-            if eventInfo and hasattr(eventInfo, "text"):
-                similarity = SequenceMatcher(None, eventInfo.text, other).ratio()
-                similarity_scores.append(similarity)
-
-        if similarity_scores:
-            return max(similarity_scores)
-        return 0.0
-
-        # return SequenceMatcher(None, self.body, other).ratio()
