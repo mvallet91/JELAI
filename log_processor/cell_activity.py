@@ -22,8 +22,10 @@ class CellActivity:
 
     def get_used_ai_code(self):
         generated_codes = self.chat_activity.get_generated_code_snippets()
-        code = self.notebook_activity.get_state_of_cell_at(self.notebook_activity.get_cell_id(), self.notebook_activity.get_end_time())
-        
+        code = self.notebook_activity.get_state_of_cell_at(
+            self.notebook_activity.get_cell_id(), self.notebook_activity.get_end_time()
+        )
+
         if code is None:
             return []
 
@@ -32,7 +34,7 @@ class CellActivity:
         for generated_code in generated_codes:
             if generated_code in code:
                 snippets.append(generated_code)
-        
+
         return snippets
 
     def get_summary(self, level=1):
@@ -42,4 +44,3 @@ class CellActivity:
             f"{self.notebook_activity.get_summary(level + 1)}\n"
             f"{self.chat_activity.get_summary(level + 1)}"
         )
-

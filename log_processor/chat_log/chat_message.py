@@ -6,6 +6,7 @@ class ChatMessage:
     """
     A single chat message
     """
+
     type: str
     time: float
     id: str

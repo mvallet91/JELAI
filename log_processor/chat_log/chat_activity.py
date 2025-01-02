@@ -69,7 +69,7 @@ class ChatActivity:
 
     def get_generated_code_snippets(self):
         return self.get_code_snippets(False, True)
-    
+
     def get_send_code_snippets(self):
         return self.get_code_snippets(True, False)
 
@@ -102,7 +102,12 @@ class ChatActivity:
         return interactions
 
     def get_summary(self, level=1):
-        interactions = "\n".join([interaction.get_summary(level + 1) for interaction in self.get_interactions()])
+        interactions = "\n".join(
+            [
+                interaction.get_summary(level + 1)
+                for interaction in self.get_interactions()
+            ]
+        )
         return (
             f"{'#' * level} Chat activity\n"
             f"Amount of questions = {self.get_amount_of_messages()}\n\n"

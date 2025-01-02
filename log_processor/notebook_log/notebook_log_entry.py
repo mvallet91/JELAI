@@ -79,6 +79,7 @@ class NotebookEventDetail:
     eventTime: int
     eventInfo: Optional[NotebookEventInfo]
 
+
 @dataclass
 class NotebookContentCell:
     @staticmethod
@@ -99,6 +100,7 @@ class NotebookContentCell:
     outputs: List[Dict[str, Any]]
     execution_count: Optional[int]
 
+
 @dataclass
 class NotebookContent:
     @staticmethod
@@ -114,6 +116,7 @@ class NotebookContent:
     nbformat: int
     nbformat_minor: int
     cells: List[NotebookContentCell]
+
 
 @dataclass
 class NotebookState:
@@ -132,8 +135,6 @@ class NotebookState:
     sessionID: str
     notebookPath: str
     notebookContent: Optional[NotebookContent]
-
-
 
 
 @dataclass

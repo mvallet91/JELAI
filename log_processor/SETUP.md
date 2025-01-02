@@ -1,4 +1,5 @@
 Use the following config file saved at: jupyterlab\etc\jupyter\jupyter_jupyterlab_pioneer_config.py
+
 ```python
 # This file should be saved into one of the config directories provided by `jupyter --path`.
 
@@ -73,7 +74,7 @@ c.JupyterLabPioneerApp.exporters = [
 """An array of active events.
 This is a global config. It could be override by `activeEvents` defined inside of individual exporter configs
 The extension would only generate and export data for valid events (
-    1. that have an id associated with the event class, 
+    1. that have an id associated with the event class,
     2. the event name is included in `activeEvents`
 ).
 The extension will export the entire notebook content only for valid events with the logWholeNotebook flag == True

@@ -39,18 +39,15 @@ class NotebookCellActivityComposite(NotebookActivityComposite, NotebookCellActiv
         id = self.get_cell_id()
         end_result = self.get_state_of_cell_at(id, time1)
         current_result = self.get_state_of_cell_at(id, time2)
-        if end_result is None or current_result is None:
-            print("None result")
-            return 0
         return SequenceMatcher(None, end_result, current_result).ratio()
 
     def get_summary(self, level=1) -> str:
-        code = self.get_state_of_cell_at(self.get_cell_id(), self.get_end_time())
-        if (code is not None):
-            code = code.strip()
         return (
             f"{'#' * level} Notebook summary of cell {self.get_cell_id()}\n"
-            f"Final state: ```python\n{code}```\n"
-            f"Times executed = {self.get_amount_of_executions()} times with {self.get_amount_of_execution_errors()} errors\n\\"
-            f"Completion time = {round(self.get_completion_time(), 1)}s\n\\"
+            f"Completion time = {round(self.get_completion_time(), 1)}s\\\n"
+            f"Times executed = {self.get_amount_of_executions()} times\\\n"
+            f"Runtime errors = {self.get_amount_of_runtime_errors()}\\\n"
+            f"Similarity between initial and final state = {round(self.get_similarity_between_cell_states(self.get_start_time(), self.get_end_time()), 2)}\\\n"
+            f"{'#' * (level+1)} Initial state\n```python\n{self.get_state_of_cell_at(self.get_cell_id(), self.get_start_time())}\n```\n\n"
+            f"{'#' * (level+1)} Final state\n```python\n{self.get_state_of_cell_at(self.get_cell_id(), self.get_end_time())}\n```\n\n"
         )

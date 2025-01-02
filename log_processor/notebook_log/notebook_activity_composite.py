@@ -40,11 +40,11 @@ class NotebookActivityComposite(NotebookActivity):
             total += sub_activity.get_amount_of_executions()
         return total
 
-    def get_amount_of_execution_errors(self):
+    def get_amount_of_runtime_errors(self):
         """Get the total amount of execution errors of this activity"""
         total = 0
         for sub_activity in self._activities:
-            total += sub_activity.get_amount_of_execution_errors()
+            total += sub_activity.get_amount_of_runtime_errors()
         return total
 
     def get_cell_ids(self):

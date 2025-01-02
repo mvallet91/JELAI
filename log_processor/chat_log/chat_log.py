@@ -31,4 +31,3 @@ class ChatLog(ChatActivity):
     def __init__(self, messages, users, processed_log):
         super().__init__(messages, users)
         self.processed_log = processed_log
-        

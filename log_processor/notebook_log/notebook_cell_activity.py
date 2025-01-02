@@ -30,7 +30,7 @@ class NotebookCellActivity(NotebookActivity):
         ids = self.get_cell_ids()
         assert len(ids) == 1, "There should be one cell id"
         return ids.pop()
-    
+
     def get_cell_index(self):
         indexes = self.get_cell_indexes()
         assert len(indexes) == 1, "All cells should have the same index"

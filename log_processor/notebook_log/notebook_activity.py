@@ -33,13 +33,19 @@ class NotebookActivity:
 
     def get_start_time(self):
         for entry in self._log_entries:
-            if entry.eventDetail.eventName not in ["NotebookVisibleEvent", "NotebookHiddenEvent"]:
+            if entry.eventDetail.eventName not in [
+                "NotebookVisibleEvent",
+                "NotebookHiddenEvent",
+            ]:
                 return entry.eventDetail.eventTime
         assert False, "No event found"
-            
+
     def get_end_time(self):
         for entry in reversed(self._log_entries):
-            if entry.eventDetail.eventName not in ["NotebookVisibleEvent", "NotebookHiddenEvent"]:
+            if entry.eventDetail.eventName not in [
+                "NotebookVisibleEvent",
+                "NotebookHiddenEvent",
+            ]:
                 return entry.eventDetail.eventTime
         assert False, "No event found"
 
@@ -96,7 +102,7 @@ class NotebookActivity:
             return self._log_entries[index]
         return None
 
-    def get_amount_of_execution_errors(self):
+    def get_amount_of_runtime_errors(self):
         total = 0
         for entry in self._log_entries:
             event_name = entry.eventDetail.eventName
@@ -109,7 +115,7 @@ class NotebookActivity:
         return total
 
     def get_state_of_cell_at(self, cell_id: str, time: int):
-        final_state = None
+        final_state = ""
         for entry in self._log_entries:
             event_name = entry.eventDetail.eventName
             if event_name == "CellExecuteEvent" and entry.eventDetail.eventTime <= time:

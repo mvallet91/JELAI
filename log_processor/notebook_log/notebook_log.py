@@ -43,7 +43,7 @@ class NotebookLog(NotebookActivity):
             if eventInfo is None:
                 print(f"No event info found for {event_name}")
                 continue
-            
+
             if eventInfo.cells is not None:
                 cells = eventInfo.cells
                 cell_ids = [cell.index for cell in cells]
@@ -52,14 +52,16 @@ class NotebookLog(NotebookActivity):
                 if cell_ids[0] is None:
                     print(f"No cell index found for {event_name}")
                     continue
-            
+
             for cell_id in cell_ids:
                 if cell_id not in cell_index_to_activity:
                     cell_index_to_activity[cell_id] = []
 
                 cell_index_to_activity[cell_id].append(entry)
 
-        return [NotebookCellActivity(subtask) for subtask in cell_index_to_activity.values()]
+        return [
+            NotebookCellActivity(subtask) for subtask in cell_index_to_activity.values()
+        ]
 
     def get_notebook_cell_activity_composites(
         self,
@@ -74,9 +76,6 @@ class NotebookLog(NotebookActivity):
             tasks[cell_id].append(notebook_cell_sub_activity)
 
         return [NotebookCellActivityComposite(task) for task in tasks.values()]
-    
+
     def get_summary(self, level=1):
-        return (
-            f"{'#' * level} Notebook activity\n"
-            f"None yet"
-        )
+        return f"{'#' * level} Notebook activity\n" f"None yet"
