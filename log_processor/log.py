@@ -38,3 +38,15 @@ class Log:
             )
 
         return activities
+
+    def get_summary(self, level=1):
+        activities = "\n".join(
+            [activity.get_summary(level + 2) for activity in self.get_cell_activities()]
+        )
+        return (
+            f"{'#' * level} Log summary\n"
+            f"{self.chat_log.get_summary(level + 1)}\n"
+            f"{self.notebook_log.get_summary(level + 1)}\n"
+            f"{'#' * (level + 1)} Cell activities\n"
+            f"{activities}"
+        )

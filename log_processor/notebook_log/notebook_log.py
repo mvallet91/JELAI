@@ -74,3 +74,9 @@ class NotebookLog(NotebookActivity):
             tasks[cell_id].append(notebook_cell_sub_activity)
 
         return [NotebookCellActivityComposite(task) for task in tasks.values()]
+    
+    def get_summary(self, level=1):
+        return (
+            f"{'#' * level} Notebook activity\n"
+            f"None yet"
+        )

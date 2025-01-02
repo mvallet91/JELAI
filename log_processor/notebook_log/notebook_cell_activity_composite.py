@@ -44,13 +44,13 @@ class NotebookCellActivityComposite(NotebookActivityComposite, NotebookCellActiv
             return 0
         return SequenceMatcher(None, end_result, current_result).ratio()
 
-    def get_summary(self) -> str:
+    def get_summary(self, level=1) -> str:
+        code = self.get_state_of_cell_at(self.get_cell_id(), self.get_end_time())
+        if (code is not None):
+            code = code.strip()
         return (
-            f"## Notebook summary of cell {self.get_cell_id()}\n"
-            f"Final state: ```python\n{self.get_state_of_cell_at(self.get_cell_id(), self.get_end_time())}```\n"
-            f"Times executed = {self.get_amount_of_executions()} times with {self.get_amount_of_execution_errors()} errors.\n"
-            f"Completion time = {round(self.get_completion_time(), 1)}s"
+            f"{'#' * level} Notebook summary of cell {self.get_cell_id()}\n"
+            f"Final state: ```python\n{code}```\n"
+            f"Times executed = {self.get_amount_of_executions()} times with {self.get_amount_of_execution_errors()} errors\n\\"
+            f"Completion time = {round(self.get_completion_time(), 1)}s\n\\"
         )
-
-    def __str__(self):
-        return f"Activity in cell {self.get_cell_id()} with {len(self.cell_activities)} sub activities"

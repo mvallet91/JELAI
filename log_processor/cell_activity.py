@@ -35,13 +35,11 @@ class CellActivity:
         
         return snippets
 
-    def get_summary(self) -> str:
+    def get_summary(self, level=1):
         return (
-            f"# Summary for cell {self.notebook_activity.get_cell_id()} with index {self.notebook_activity.get_cell_index()}\n"
+            f"{'#' * level} Summary for cell {self.notebook_activity.get_cell_id()} with index {self.notebook_activity.get_cell_index()}\n"
             f"Used AI code: {self.get_used_ai_code()}\n"
-            f"{self.notebook_activity.get_summary()}\n"
-            f"{self.chat_activity.get_summary()}"
+            f"{self.notebook_activity.get_summary(level + 1)}\n"
+            f"{self.chat_activity.get_summary(level + 1)}"
         )
 
-    def __str__(self):
-        return f"Cell activity for cell {self.notebook_activity.get_cell_id()}"

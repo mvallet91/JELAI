@@ -101,13 +101,12 @@ class ChatActivity:
 
         return interactions
 
-    def get_summary(self) -> str:
-        interactions = "\n".join([interaction.get_summary() for interaction in self.get_interactions()])
+    def get_summary(self, level=1):
+        interactions = "\n".join([interaction.get_summary(level + 1) for interaction in self.get_interactions()])
         return (
-            "## Chat activity\n"
-            f"Amount of questions = {self.get_amount_of_messages()}\n"
-            f"Chat messages = {self.get_list_of_messages()}\n"
-            f"Generated code = {self.get_generated_code_snippets()}\n"
-            f"### Interactions\n"
+            f"{'#' * level} Chat activity\n"
+            f"Amount of questions = {self.get_amount_of_messages()}\n\n"
+            f"Generated code = {self.get_generated_code_snippets()}\n\n"
+            f"{'#' * level} Interactions\n"
             f"{interactions}"
         )
