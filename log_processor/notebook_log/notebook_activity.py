@@ -129,3 +129,28 @@ class NotebookActivity:
                         final_state = cell.source
 
         return final_state
+
+    def get_amount_of_tab_switches(self):
+        total = 0
+        for entry in self._log_entries:
+            event_name = entry.eventDetail.eventName
+            if event_name == "NotebookHiddenEvent":  # Or count NotebookVisibleEvent
+                total += 1
+
+        return total
+
+    def get_amount_of_edit_cycles(self):
+        """
+        How many times is the program run and then edited
+        """
+        total = 0
+        edited = False
+        for entry in self._log_entries:
+            event_name = entry.eventDetail.eventName
+            if event_name == "CellExecuteEvent" and edited:
+                total += 1
+                edited = False
+            if event_name in ["CellEditEvent", "NotebookVisibleEvent"]:
+                edited = True
+
+        return total

@@ -111,7 +111,6 @@ class ChatActivity:
         return (
             f"{'#' * level} Chat activity\n"
             f"Amount of questions = {self.get_amount_of_messages()}\n\n"
-            f"Generated code = {self.get_generated_code_snippets()}\n\n"
             f"{'#' * level} Interactions\n"
             f"{interactions}"
         )
