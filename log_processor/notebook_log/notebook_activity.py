@@ -134,7 +134,8 @@ class NotebookActivity:
         total = 0
         for entry in self._log_entries:
             event_name = entry.eventDetail.eventName
-            if event_name == "NotebookHiddenEvent":  # Or count NotebookVisibleEvent
+            time = entry.eventDetail.eventTime
+            if event_name == "NotebookVisibleEvent" and time > self.get_start_time() and time < self.get_end_time():
                 total += 1
 
         return total

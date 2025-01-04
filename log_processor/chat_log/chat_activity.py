@@ -53,7 +53,7 @@ class ChatActivity:
     def get_code_snippets(
         self, include_questions: bool = True, include_answers: bool = True
     ):
-        codes = []
+        codes: List[str] = []
         for message in self._messages:
             if (include_questions and message.is_question()) or (
                 include_answers and message.is_answer()
@@ -104,13 +104,16 @@ class ChatActivity:
     def get_summary(self, level=1):
         interactions = "\n".join(
             [
-                interaction.get_summary(level + 1)
+                interaction.get_summary(level + 2)
                 for interaction in self.get_interactions()
             ]
         )
+        generated_code = "\n\n".join(["```python\n"+x+"\n```" for x in self.get_generated_code_snippets()])
         return (
-            f"{'#' * level} Chat activity\n"
+            f"{'#' * level} Chat activity\n\n"
             f"Amount of questions = {self.get_amount_of_messages()}\n\n"
-            f"{'#' * level} Interactions\n"
+            f"{'#' * (level + 1)} Generated code snippets\n\n"
+            f"{generated_code}\n\n"
+            f"{'#' * (level + 1)} Interactions\n\n"
             f"{interactions}"
         )

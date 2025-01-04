@@ -26,8 +26,8 @@ class ChatInteraction(ChatActivity):
 
     def get_summary(self, level=1):
         return (
-            f"{'#' * level} Chat interaction\n"
-            f"Waiting time: {round(self.get_waiting_time(), 1)}s\n"
-            f"{'#' * (level + 1)} Question\n {self._messages[0].body}\n"
+            f"{'#' * level} Chat interaction\n\n"
+            f"Waiting time: {round(self.get_waiting_time(), 1)}s\n\n"
+            f"{'#' * (level + 1)} Question\n {self._messages[0].body}\n\n"
             f"{'#' * (level + 1)} Answer\n {self._messages[1].body}"
         )
