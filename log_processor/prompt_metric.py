@@ -1,4 +1,4 @@
-from log_processor.cell_activity import CellActivity
+from log_processor.activity.cell_activity import CellActivity
 from log_processor.chat_log.chat_message import ChatMessage
 
 
