@@ -1,3 +1,4 @@
+from datetime import datetime
 from difflib import SequenceMatcher
 from typing import Sequence
 
@@ -35,7 +36,7 @@ class NotebookCellActivityComposite(NotebookActivityComposite, NotebookCellActiv
         for sub_activity in self.cell_activities:
             sub_activity.check_invariants()
 
-    def get_similarity_between_cell_states(self, time1: int, time2: int):
+    def get_similarity_between_cell_states(self, time1: datetime, time2: datetime):
         id = self.get_cell_id()
         end_result = self.get_state_of_cell_at(id, time1)
         current_result = self.get_state_of_cell_at(id, time2)
@@ -44,7 +45,8 @@ class NotebookCellActivityComposite(NotebookActivityComposite, NotebookCellActiv
     def get_summary(self, level=1) -> str:
         return (
             f"{'#' * level} Notebook summary of cell {self.get_cell_id()}\n\n"
-            f"Completion time = {round(self.get_completion_time(), 1)}s\\\n"
+            f"Worked on from {self.get_start_time()} to {self.get_end_time()}\\\n"
+            f"Completion time = {self.get_completion_time()}\\\n"
             f"Tab switches = {self.get_amount_of_tab_switches()}\\\n"
             f"Times executed = {self.get_amount_of_executions()} times\\\n"
             f"Runtime errors = {self.get_amount_of_runtime_errors()}\\\n"

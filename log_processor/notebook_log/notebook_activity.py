@@ -1,7 +1,7 @@
 from typing import List, Optional
 
 from log_processor.notebook_log.notebook_log_entry import NotebookLogEntry
-
+from datetime import datetime
 
 class NotebookActivity:
     """
@@ -114,7 +114,7 @@ class NotebookActivity:
 
         return total
 
-    def get_state_of_cell_at(self, cell_id: str, time: int):
+    def get_state_of_cell_at(self, cell_id: str, time: datetime):
         final_state = ""
         for entry in self._log_entries:
             event_name = entry.eventDetail.eventName
@@ -135,7 +135,7 @@ class NotebookActivity:
         for entry in self._log_entries:
             event_name = entry.eventDetail.eventName
             time = entry.eventDetail.eventTime
-            if event_name == "NotebookVisibleEvent" and time > self.get_start_time() and time < self.get_end_time():
+            if event_name == "NotebookVisibleEvent" and time >= self.get_start_time() and time <= self.get_end_time():
                 total += 1
 
         return total

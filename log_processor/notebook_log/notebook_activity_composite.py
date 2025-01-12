@@ -1,7 +1,7 @@
 from typing import Sequence
 
 from log_processor.notebook_log.notebook_activity import NotebookActivity
-
+from datetime import timedelta
 
 class NotebookActivityComposite(NotebookActivity):
     """
@@ -27,7 +27,7 @@ class NotebookActivityComposite(NotebookActivity):
         
         Note: Different from NotebookActivity, because this one does not count breaks between editing sessions
         """
-        total = 0
+        total = timedelta(seconds=0)
         for sub_activity in self._activities:
             total += sub_activity.get_completion_time()
         return total

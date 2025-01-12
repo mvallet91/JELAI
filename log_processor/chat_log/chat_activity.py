@@ -1,3 +1,4 @@
+from datetime import datetime
 import re
 from typing import List
 
@@ -44,7 +45,7 @@ class ChatActivity:
             length += message.get_message_length()
         return length
 
-    def get_activity_between(self, start: float, end: float):
+    def get_activity_between(self, start: datetime, end: datetime):
         return ChatActivity(
             [message for message in self._messages if start <= message.time <= end],
             self._users,

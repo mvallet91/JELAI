@@ -58,7 +58,7 @@ class CellActivity:
         ]
         return (
             f"{'#' * level} Summary for cell {self.notebook_activity.get_cell_id()} with index {self.notebook_activity.get_cell_index()}\n\n"
-            f"Similarities between generated code snippets and cell state at end time: {similarities}\\\n"
+            f"Similarities between generated code snippets and final cell state: {similarities}\\\n"
             f"Used AI code: {self.get_used_ai_code()}\\\n"
             f"{self.notebook_activity.get_summary(level + 1)}\n"
             f"{self.chat_activity.get_summary(level + 1)}"

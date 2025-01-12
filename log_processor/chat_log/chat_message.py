@@ -1,3 +1,4 @@
+from datetime import datetime
 from difflib import SequenceMatcher
 from typing import Optional
 
@@ -8,7 +9,7 @@ class ChatMessage:
     """
 
     type: str
-    time: float
+    time: datetime
     id: str
     raw_time: bool
     body: str
@@ -26,7 +27,7 @@ class ChatMessage:
         automated: Optional[bool] = None,
     ):
         self.type = type
-        self.time = time
+        self.time = datetime.fromtimestamp(time)
         self.id = id
         self.raw_time = raw_time
         self.body = body
@@ -45,9 +46,6 @@ class ChatMessage:
 
     def is_answer(self):
         return self.sender == "Juno"
-
-    def get_text_similarity(self, other: str):
-        return SequenceMatcher(None, self.body, other).ratio()
 
     def __str__(self):
         return f"{self.sender} ({self.time}): {self.body}"

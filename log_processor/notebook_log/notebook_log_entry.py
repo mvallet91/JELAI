@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from datetime import datetime
 from typing import Any, Dict, List, Optional, Union
 
 
@@ -69,14 +70,17 @@ class NotebookEventDetail:
         if dict["eventInfo"] is not None:
             eventInfo = NotebookEventInfo.load(dict["eventInfo"])
 
+        seconds = dict["eventTime"] / 1000
+        eventTime = datetime.fromtimestamp(seconds)
+
         return NotebookEventDetail(
             dict["eventName"],
-            dict["eventTime"] / 1000,
+            eventTime,
             eventInfo,
         )
 
     eventName: str
-    eventTime: int
+    eventTime: datetime
     eventInfo: Optional[NotebookEventInfo]
 
 
