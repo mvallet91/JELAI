@@ -111,3 +111,8 @@ For the Ollama server, see the steps above.
     - `python process_logs.py path-to-log-file path-to-output-directory`
     - This script will process the logs in the **logs** file (the one configured in step 6 **jupyter_jupyterlab_pioneer_config.py**) and create a JSON file with the processed logs for each notebook in the given directory.
     - For the LLM to see the logs as context, <ins>the notebook and the chat file must have the same name</ins>. 
+
+### Run local development after everything has been installed for windows
+1. Create new terminal, type `chatbot\Scripts\activate`, type `python history_app.py`
+2. Create new terminal, type `chatbot\Scripts\activate`, type `python .\jupyterhub-docker\user-notebook\chat_interact.py working-directory`
+3. Create new terminal, type `jupyterlab\Scripts\activate`, type `jupyter lab`
