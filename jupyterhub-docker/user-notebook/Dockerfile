@@ -14,7 +14,7 @@ RUN mkdir /home/jovyan/logs/processed && \
 COPY jupyter_jupyterlab_pioneer_config.py /etc/jupyter/
 
 # Install additional packages
-RUN pip install --no-cache-dir jupyterlab_collaborative_chat jupyterlab_pioneer
+RUN pip install --no-cache-dir jupyterlab-chat jupyterlab_pioneer
 
 # Install Fluent Bit
 # Install td-agent-bit
@@ -48,6 +48,32 @@ USER jovyan
 # Set up the work directory
 WORKDIR /home/jovyan/work
 
+
+################# Workspace Configuration #################
+
+# # COPY data files into the directory
+# For this, you need to have the data files in the same directory as the Dockerfile
+# COPY sharks.csv /home/jovyan/work/	
+
+# # Copy files in notebooks folder into work directory
+# For this, you need to have the notebook files in the same directory as the Dockerfile, for example, notebooks/Task1.ipynb
+# COPY notebooks/* /home/jovyan/work/
+
+# Set the default chat directory as an environment variable
+# For example, to set the default chat directory to "chats", simply write "chats" in the CHAT_DIR environment variable
+ENV CHAT_DIR ""
+
+# Change default chat location 
+RUN mkdir -p /home/jovyan/.jupyter/lab/user-settings/jupyterlab-chat-extension && \
+   echo '{"defaultDirectory": "'"${CHAT_DIR}"'"}' > /home/jovyan/.jupyter/lab/user-settings/jupyterlab-chat-extension/factory.jupyterlab-settings
+
+# # Create chat files
+# RUN mkdir /home/jovyan/work/chats
+# RUN touch /home/jovyan/work/chats/Task1.chat
+# RUN touch /home/jovyan/work/chats/Task2.chat
+
+################# Workspace Configuration #################
+
 # Create a virtual environment
 RUN python -m venv /home/jovyan/venv
 
@@ -68,7 +94,7 @@ CMD ["/bin/bash", "-c", "\
 source /home/jovyan/.bashrc && \
 /opt/td-agent-bit/bin/td-agent-bit -c /etc/td-agent-bit/td-agent-bit.conf  & \
 . /home/jovyan/venv/bin/activate && \
-python /home/jovyan/chat_interact.py /home/jovyan/work /home/jovyan/logs/processed > /home/jovyan/chat_interact.log 2>&1 & \
+python /home/jovyan/chat_interact.py /home/jovyan/work/${CHAT_DIR} /home/jovyan/logs/processed > /home/jovyan/chat_interact.log 2>&1 & \
 . /home/jovyan/venv/bin/activate && \
 python /home/jovyan/process_logs.py /home/jovyan/logs/log /home/jovyan/logs/processed > /home/jovyan/process_logs.log 2>&1 & \
 start-notebook.py"]
