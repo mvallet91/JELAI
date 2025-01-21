@@ -65,17 +65,14 @@ def reconstruct_cell_contents(log_data):
             event_time_str = datetime.fromtimestamp(event_time / 1000).strftime('%Y-%m-%d %H:%M:%S')
 
         if event_name == 'NotebookOpenEvent':
-            continue
             events.append(f"Opened notebook '{notebook_path}' at {event_time_str}")
             event_dict.append(OrderedDict({'event': 'Opened notebook', 'notebook': notebook_path, 'time': event_time_str}))
         
         elif event_name == 'NotebookHiddenEvent':
-            continue
             events.append(f"Closed notebook '{notebook_path}' at {event_time_str}")
             event_dict.append(OrderedDict({'event': 'Closed notebook', 'notebook': notebook_path, 'time': event_time_str}))
 
         elif event_name == 'NotebookVisibleEvent':
-            continue
             events.append(f"Notebook '{notebook_path}' became visible at {event_time_str}")
             event_dict.append(OrderedDict({'event': 'Notebook became visible', 'notebook': notebook_path, 'time': event_time_str}))
 
