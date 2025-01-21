@@ -48,24 +48,15 @@ USER jovyan
 # Set up the work directory
 WORKDIR /home/jovyan/work
 
-
 ################# Workspace Configuration #################
 
 # # COPY data files into the directory
-# For this, you need to have the data files in the same directory as the Dockerfile
+# # For this, you need to have the data files in the same directory as the Dockerfile
 # COPY sharks.csv /home/jovyan/work/	
 
 # # Copy files in notebooks folder into work directory
-# For this, you need to have the notebook files in the same directory as the Dockerfile, for example, notebooks/Task1.ipynb
+# # For this, you need to have the notebook files in the same directory as the Dockerfile, for example, notebooks/Task1.ipynb
 # COPY notebooks/* /home/jovyan/work/
-
-# Set the default chat directory as an environment variable
-# For example, to set the default chat directory to "chats", simply write "chats" in the CHAT_DIR environment variable
-ENV CHAT_DIR ""
-
-# Change default chat location 
-RUN mkdir -p /home/jovyan/.jupyter/lab/user-settings/jupyterlab-chat-extension && \
-   echo '{"defaultDirectory": "'"${CHAT_DIR}"'"}' > /home/jovyan/.jupyter/lab/user-settings/jupyterlab-chat-extension/factory.jupyterlab-settings
 
 # # Create chat files
 # RUN mkdir /home/jovyan/work/chats
@@ -73,6 +64,14 @@ RUN mkdir -p /home/jovyan/.jupyter/lab/user-settings/jupyterlab-chat-extension &
 # RUN touch /home/jovyan/work/chats/Task2.chat
 
 ################# Workspace Configuration #################
+
+# Sets the default chat directory as an environment variable, obtained from the docker-compose file
+ARG CHAT_DIR=""
+ENV CHAT_DIR=${CHAT_DIR}
+
+# Change default chat location 
+RUN mkdir -p /home/jovyan/.jupyter/lab/user-settings/jupyterlab-chat-extension && \
+   echo '{"defaultDirectory": "'"${CHAT_DIR}"'"}' > /home/jovyan/.jupyter/lab/user-settings/jupyterlab-chat-extension/factory.jupyterlab-settings
 
 # Create a virtual environment
 RUN python -m venv /home/jovyan/venv

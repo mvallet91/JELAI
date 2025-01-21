@@ -44,6 +44,10 @@ services:
     build:
       context: ./user-notebook
       dockerfile: Dockerfile
+      args:
+        - CHAT_DIR=${CHAT_DIR}
+    environment:
+      - CHAT_DIR=chats
     image: user-notebook
     networks:
       - jupyterhub-network
