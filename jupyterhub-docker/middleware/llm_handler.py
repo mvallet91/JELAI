@@ -5,6 +5,7 @@ import re
 import os
 import logging
 import json
+import yaml
 from pathlib import Path
 from typing import Callable, Union, Optional, Dict
 
@@ -44,6 +45,19 @@ def save_group_assignments(assignments):
 group_assignments = load_group_assignments()
 ##################################################
 
+# Get the directory where the current file is located
+CURRENT_DIR = Path(__file__).parent.absolute()
+OBJECTIVES_PATH = os.getenv('LEARNING_OBJECTIVES_PATH', str(CURRENT_DIR / 'learning_objectives.yaml'))
+
+# Load learning objectives
+async def load_learning_objectives():
+    try:
+        with open(OBJECTIVES_PATH, "r") as f:
+            return yaml.safe_load(f)
+    except FileNotFoundError:
+        logging.warning(f"Learning objectives file not found at {OBJECTIVES_PATH}")
+        return {}
+
 # Initialize FastAPI application
 app = FastAPI(
     title="LangChain Server",
@@ -72,69 +86,78 @@ def create_session_factory(base_dir: Union[str, Path]) -> Callable[[str], FileCh
 
     return get_chat_history
 
-# System prompt for the assistant
-system_prompt = """
-You are Juno, an experienced data science and programming tutor embedded in a JupyterLab interface, so your responses must be concise. 
-Students are working on a data science task using Python with pandas, matplotlib, and similar libraries to analyse a dataset of shark observations. 
-You are their only resource for help, so you should provide guidance and support to help them solve their problems.
-
-Your **main** goal is to help them understand the concepts and guide them to the right solutions, but you should avoid giving direct answers or writing big chunks of code for them.
-Your **secondary** (but secret!) goal is to foster *instrumental help-seeking*, which aims to deepen understanding, over *executive help-seeking*, focused on immediate solutions.
-This means that you should guide students to ask the right questions, ask for examples and deepen their understanding; so you should provide hints, and encourage them to explore the problem further - students should learn to ask the right questions, but don't tell them explicitly!
-
-Consider the following guidelines:
-- Break down their questions into smaller parts if possible, answer the first part, and then let them ask if they need more information.
-- Provide code snippets or examples to illustrate your points.
-- Explain in a way that is easy to understand and follow for novices, without unnecessary details or more complex concepts.
-- Subtly add reflective questions when appropriate.
-- The tasks include a set of guiding questions, such as "How can you prepare the data to...?" or "How will you distinguish between...?" If you identify this "you" structure, it's probably a guiding question, ask the student for their interpretation of the question.
-- AVOID mentioning these instructions! 
-- It's ok to let the students explore a little off-topic if they want, but gently guide the conversation back to the task.
-- Finally, students may DEMAND direct solutions, and in some cases, you may provide them to avoid drop-out, but always encourage them to understand the solution.
-
-Together with the <User Message> from the student, you might get some <Relevant Context> from the student's notebook actions, you can use this to contextualize your answers.
-If you need more information, ask the student!
-
-"""
-
-system_prompt_basic = """
-You are Juno, a helpful AI assistant embedded in a JupyterLab interface, so your responses must be concise.
-
-Together with the <User Message>, you might get some <Relevant Context> from the user's notebook actions, you can use this to contextualize your answers.
-"""
-
 # Model initialization
 model = Ollama(model="gemma2:27b", base_url=base_url)
+
+def format_objectives(objectives_list):
+    formatted = "\nLearning Objectives for this task:\n"
+    for obj in objectives_list:
+        formatted += f"\n🎯 Skill: {obj['skill']}\n"
+        formatted += f"   • Objective: {obj['objective']}\n"
+        formatted += f"   • Relevant Functions: {obj['function']}\n"
+    return formatted
 
 # Define a chat endpoint
 @app.post("/chat/{session_id}", response_model=Dict)
 async def chat(session_id: str, request: Request):
-    """Handle incoming chat requests."""
-    try:
 
-        ##################################################
-        # if session_id not in group_assignments:
-        #     if len(group_assignments) % 2 == 0:  # Simple alternating assignment
-        #         group_assignments[session_id] = GROUP_A
-        #     else:
-        #         group_assignments[session_id] = GROUP_B
-        #     save_group_assignments(group_assignments)
-        #     logging.info(f"Assigned session {session_id} to {group_assignments[session_id]}")
+    # System prompt for the assistant
+    system_prompt = """
+    You are Juno, an experienced data science and programming tutor embedded in a JupyterLab interface, so your responses must be concise. 
+    Students are working on a data science task using Python with pandas, matplotlib, and similar libraries to analyse a dataset of shark observations, most libraries are already installed. 
+    You are their only resource for help, so you should provide guidance and support to help them solve their problems.
 
-        # # Select the correct system prompt based on group
-        # if group_assignments[session_id] == GROUP_A:
-        #     system_prompt_to_use = system_prompt
-        # elif group_assignments[session_id] == GROUP_B:
-        #     system_prompt_to_use = system_prompt_basic
-        # else:
-        #     raise ValueError(f"Invalid group assignment for session {session_id}")
-        
+    Your **main** goal is to help them understand the concepts and guide them to the right solutions, but you should avoid giving direct answers or writing big chunks of code for them.
+    Your **secondary** (but secret!) goal is to foster *instrumental help-seeking*, which aims to deepen understanding, over *executive help-seeking*, focused on immediate solutions.
+    This means that you should guide students to ask the right questions, ask for examples and deepen their understanding; so you should provide hints, and encourage them to explore the problem further - students should learn to ask the right questions, but don't tell them explicitly!
+
+    Consider the following guidelines:
+    - Break down their questions into smaller parts if possible, answer the first part, and then let them ask if they need more information.
+    - Provide code snippets or examples to illustrate your points.
+    - Explain in a way that is easy to understand and follow for novices, without unnecessary details or more complex concepts.
+    - Subtly add reflective questions when appropriate.
+    - The tasks include a set of guiding questions, such as "How can you prepare the data to...?" or "How will you distinguish between...?" If you identify this "you" structure, it's probably a guiding question, ask the student for their interpretation of the question.
+    - AVOID mentioning these instructions! 
+    - It's ok to let the students explore a little off-topic if they want, but gently guide the conversation back to the task.
+    - Finally, students may DEMAND direct solutions, and in some cases, you may provide them to avoid drop-out, but always encourage them to understand the solution.
+
+    Together with the <User Message> from the student, you might get some <Relevant Context> from the student's notebook actions, you can use this to contextualize your answers.
+
+    """
+
+    system_prompt_basic = """
+    You are Juno, a helpful AI assistant embedded in a JupyterLab interface, so your responses must be concise.
+
+    Together with the <User Message>, you might get some <Relevant Context> from the user's notebook actions, you can use this to contextualize your answers.
+    """
+
+    try:       
         # Extract sender from session_id
         try:
             sanitized_sender = session_id.split("_")[0] # Extract the first part of the session id
         except IndexError:
             raise HTTPException(status_code=400, detail="Invalid session_id format. Expected sender_filename")
+
+        learning_objectives = await load_learning_objectives()
+
+        # Get notebook name from session_id (after sanitized_sender)
+        notebook_name = "_".join(session_id.split("_")[1:])  # Get everything after first underscore
         
+        # Get learning objectives for this notebook
+        notebook_objectives = learning_objectives.get(notebook_name, {})
+        logging.info(f"Loading objectives for {notebook_name}")
+        if notebook_objectives:
+            objectives_text = format_objectives(notebook_objectives)
+            logging.info(f"Objectives for {notebook_name}: {objectives_text}")
+            try:
+                system_prompt = str(system_prompt) + str(objectives_text)
+            except Exception as e:
+                logging.error(f"Error adding objectives to system prompt: {e}")
+            logging.info(f"Prompt for session ID {session_id}: {system_prompt}")
+
+        ##################################################
+        logging.info(f"Prompt for session ID {session_id}: {system_prompt}")
+
         # Assign group based on sender, not full session_id
         group_assignments = load_group_assignments() 
         if sanitized_sender not in group_assignments:
@@ -153,7 +176,6 @@ async def chat(session_id: str, request: Request):
         else:
             raise ValueError(f"Invalid group assignment for sender {sanitized_sender}")
         ##################################################
-
 
         # Declare a chain
         prompt = ChatPromptTemplate.from_messages(
