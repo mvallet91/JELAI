@@ -1,25 +1,46 @@
 # DS Tutor Notebook Image
-# 
+#
 # This image is based on the Jupyter Scipy Notebook image and includes additional packages and configurations for DS Tutor.
-#
-# The image includes the following packages:
-# - jupyterlab_collaborative_chat
-# - jupyterlab_pioneer
-#
-# The image also includes a configuration for the JupyterLab Pioneer app to log telemetry data to a file.
-# The image is built from the Jupyter Scipy Notebook image.
 
 FROM quay.io/jupyter/scipy-notebook:latest
 
 # Create logs folder
 RUN mkdir /home/jovyan/logs && \
     chown -R jovyan:users /home/jovyan/logs
+RUN mkdir /home/jovyan/logs/processed && \
+    chown -R jovyan:users /home/jovyan/logs/processed
 
 # Copy jupyterlab_pioneer config
 COPY jupyter_jupyterlab_pioneer_config.py /etc/jupyter/
 
 # Install additional packages
-RUN pip install --no-cache-dir jupyterlab_collaborative_chat jupyterlab_pioneer 
+RUN pip install --no-cache-dir jupyterlab-chat jupyterlab_pioneer
+
+# Install Fluent Bit
+# Install td-agent-bit
+USER root
+RUN set -ex && \
+    apt-get update && \
+    apt-get install -y ca-certificates curl gnupg2 lsb-release apt-utils && \
+    mkdir -p /etc/apt/keyrings && \
+    curl -fsSL https://packages.fluentbit.io/fluentbit.key | gpg --dearmor -o /etc/apt/keyrings/fluentbit.gpg && \
+    echo "deb [signed-by=/etc/apt/keyrings/fluentbit.gpg] https://packages.fluentbit.io/ubuntu/jammy jammy main" > /etc/apt/sources.list.d/fluent-bit.list && \
+    apt-get update && \
+    apt-get install -y td-agent-bit && \
+    find / -name "td-agent-bit" && \
+    /opt/td-agent-bit/bin/td-agent-bit --version && \
+    rm -rf /var/lib/apt/lists/*
+
+
+# Copy td-agent-bit configuration files
+COPY fluent-bit.conf /etc/td-agent-bit/td-agent-bit.conf
+COPY parsers.conf /etc/td-agent-bit/parsers.conf
+
+
+# Set permissions
+RUN chown root:root /etc/td-agent-bit/td-agent-bit.conf && \
+    chown root:root /etc/td-agent-bit/parsers.conf
+
 
 # Switch back to jovyan to avoid running the container as root
 USER jovyan
@@ -27,20 +48,52 @@ USER jovyan
 # Set up the work directory
 WORKDIR /home/jovyan/work
 
-## Attempt to run the chat_interact.py script in the container
+################# Workspace Configuration #################
+
+# # COPY data files into the directory
+# # For this, you need to have the data files in the same directory as the Dockerfile
+# COPY sharks.csv /home/jovyan/work/	
+
+# # Copy files in notebooks folder into work directory
+# # For this, you need to have the notebook files in the same directory as the Dockerfile, for example, notebooks/Task1.ipynb
+# COPY notebooks/* /home/jovyan/work/
+
+# # Create chat files
+# RUN mkdir /home/jovyan/work/chats
+# RUN touch /home/jovyan/work/chats/Task1.chat
+# RUN touch /home/jovyan/work/chats/Task2.chat
+
+################# Workspace Configuration #################
+
+# Sets the default chat directory as an environment variable, obtained from the docker-compose file
+ARG CHAT_DIR=""
+ENV CHAT_DIR=${CHAT_DIR}
+
+# Change default chat location 
+RUN mkdir -p /home/jovyan/.jupyter/lab/user-settings/jupyterlab-chat-extension && \
+   echo '{"defaultDirectory": "'"${CHAT_DIR}"'"}' > /home/jovyan/.jupyter/lab/user-settings/jupyterlab-chat-extension/factory.jupyterlab-settings
+
 # Create a virtual environment
 RUN python -m venv /home/jovyan/venv
 
 # Activate the virtual environment and install requirements
 COPY chat_interact_requirements.txt /home/jovyan/
-RUN . /home/jovyan/venv/bin/activate && \
-   pip install --no-cache-dir -r /home/jovyan/chat_interact_requirements.txt
+RUN /home/jovyan/venv/bin/pip install --no-cache-dir -r /home/jovyan/chat_interact_requirements.txt
 
 # Copy the chat_interact.py script
 COPY chat_interact.py /home/jovyan/
+COPY process_logs.py /home/jovyan/
+COPY utils.py /home/jovyan/
 
-# TODO Try this with nohup and maybe a log text
-# Add the command to run chat_interact.py to the container startup script
-CMD ["/bin/bash", "-c", ". /home/jovyan/venv/bin/activate && python /home/jovyan/chat_interact.py /home/jovyan/work > /home/jovyan/chat_interact.log 2>&1 & start-notebook.py"]
+# Get container ID and export it as an environment variable
+RUN echo 'export CONTAINER_ID=$(cat /proc/self/cgroup | grep "docker" | sed "s/^.*\///" | tail -n1)' >> /home/jovyan/.bashrc
 
-# CMD [""]
+# Start Fluent Bit, chat_interact.py, and Jupyter Notebook
+CMD ["/bin/bash", "-c", "\
+source /home/jovyan/.bashrc && \
+/opt/td-agent-bit/bin/td-agent-bit -c /etc/td-agent-bit/td-agent-bit.conf  & \
+. /home/jovyan/venv/bin/activate && \
+python /home/jovyan/chat_interact.py /home/jovyan/work/${CHAT_DIR} /home/jovyan/logs/processed >> /home/jovyan/chat_interact.log 2>&1 & \
+. /home/jovyan/venv/bin/activate && \
+python /home/jovyan/process_logs.py /home/jovyan/logs/log /home/jovyan/logs/processed >> /home/jovyan/process_logs.log 2>&1 & \
+start-notebook.py"]

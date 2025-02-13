@@ -37,6 +37,9 @@ c.DockerSpawner.extra_host_config = {
 # We follow the same convention.
 notebook_dir = os.environ.get("DOCKER_NOTEBOOK_DIR", "/home/jovyan/work")
 c.DockerSpawner.notebook_dir = notebook_dir
+default_notebook = os.environ.get("DEFAULT_NOTEBOOK")
+if default_notebook:
+    c.DockerSpawner.default_url = default_notebook
 
 # Mount the real user's Docker volume on the host to the notebook user's
 # notebook directory in the container
@@ -63,7 +66,7 @@ c.Authenticator.allow_all = True
 c.JupyterHub.authenticator_class = "nativeauthenticator.NativeAuthenticator"
 
 # Allow anyone to sign-up without approval
-c.NativeAuthenticator.open_signup = True
+c.NativeAuthenticator.open_signup = False
 
 # Allowed admins
 admin = os.environ.get("JUPYTERHUB_ADMIN")

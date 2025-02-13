@@ -1,6 +1,3 @@
-# Copyright (c) Jupyter Development Team.
-# Distributed under the terms of the Modified BSD License.
-
 # JupyterHub docker compose configuration file
 
 services:
@@ -36,10 +33,48 @@ services:
       DOCKER_NOTEBOOK_IMAGE: user-notebook
       # Notebook directory inside user image
       DOCKER_NOTEBOOK_DIR: /home/jovyan/work
+      # Default startup notebook, must start with /lab/tree
+      # The notebook should be in the user's home directory, see the Dockerfile in user-notebook
+      # DEFAULT_NOTEBOOK: /lab/tree/Welcome.ipynb
+
+  user-notebook:
+    build:
+      context: ./user-notebook
+      dockerfile: Dockerfile
+      args:
+        - CHAT_DIR=${CHAT_DIR}
+    environment:
+      - CHAT_DIR=chats
+    image: user-notebook
+    networks:
+      - jupyterhub-network
+
+  middleware:
+    build:
+      context: ./middleware
+      dockerfile: Dockerfile
+    image: middleware
+    container_name: middleware
+    networks:
+      - jupyterhub-network
+    volumes:
+      - "middleware-data:/var/log/jelai"
+      - "chat-histories:/app/chat_histories"
+      - "./middleware/learning_objectives.yaml:/app/learning_objectives.yaml"
+    ports:
+      - "24224:24224"
+      - "8002:8002"  # Expose LLM handler server
+    depends_on:
+      - hub
+    environment:
+      - LEARNING_OBJECTIVES_PATH=/app/learning_objectives.yaml
 
 volumes:
   jupyterhub-data:
+  middleware-data:
+  chat-histories:
 
 networks:
   jupyterhub-network:
     name: jupyterhub-network
+    driver: bridge
