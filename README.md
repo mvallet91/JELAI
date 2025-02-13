@@ -1,6 +1,6 @@
 # JELAI: a Jupyter Environment for Learning Analytics and AI
 ## System Architecture
-![ds-tutor architecture](./images/JELAIOctober.jpg)
+![ds-tutor architecture](./images/Architecture.jpg)
 <a href="https://www.flaticon.com/free-icons/" title="icons" style="font-size: 0.5em;">Icons created by juicy_fish - Flaticon</a>
 
 ## Overview
