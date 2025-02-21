@@ -6,17 +6,17 @@ from typing import Any, Dict, List, Optional, Union
 @dataclass
 class NotebookCell:
     @staticmethod
-    def load(dict: Any):
-        return NotebookCell(dict["id"], dict["index"])
+    def load(dict: Dict[str, Any]):
+        return NotebookCell(dict.get("id"), dict["index"])
 
-    id: str
+    id: Optional[str]
     index: int
 
 
 @dataclass
 class NotebookKernelError:
     @staticmethod
-    def load(dict: Any):
+    def load(dict: Dict[str, Any]):
         return NotebookKernelError(
             dict["errorName"],
             dict["errorValue"],
@@ -87,14 +87,14 @@ class NotebookEventDetail:
 @dataclass
 class NotebookContentCell:
     @staticmethod
-    def load(dict: Any):
+    def load(dict: Dict[str, Any]):
         return NotebookContentCell(
             dict["id"],
             dict["cell_type"],
             dict["source"],
             dict["metadata"],
-            dict["outputs"],
-            dict["execution_count"],
+            dict.get("outputs", []),
+            dict.get("execution_count", 0),
         )
 
     id: str
@@ -131,12 +131,12 @@ class NotebookState:
             notebookContent = NotebookContent.load(dict["notebookContent"])
 
         return NotebookState(
-            dict["sessionID"],
+            dict.get("sessionID"),
             dict["notebookPath"],
             notebookContent,
         )
 
-    sessionID: str
+    sessionID: Optional[str]
     notebookPath: str
     notebookContent: Optional[NotebookContent]
 

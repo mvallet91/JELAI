@@ -8,7 +8,7 @@ from log_processor.notebook_log.notebook_cell_activity_composite import (
 
 class CellActivity:
     """
-    All chat and notebook logs of a single cell.
+    All chat and notebook logs related to a single cell.
     """
 
     notebook_activity: NotebookCellActivityComposite
@@ -49,7 +49,7 @@ class CellActivity:
 
         return similarities
 
-    def get_summary(self, level=1):
+    def get_overview(self, level=1):
         similarities = [
             round(x, 2)
             for x in self.get_similirities_between_ai_code_and_cell(
@@ -60,6 +60,6 @@ class CellActivity:
             f"{'#' * level} Summary for cell {self.notebook_activity.get_cell_id()} with index {self.notebook_activity.get_cell_index()}\n\n"
             f"Similarities between generated code snippets and final cell state: {similarities}\\\n"
             f"Used AI code: {self.get_used_ai_code()}\\\n"
-            f"{self.notebook_activity.get_summary(level + 1)}\n"
-            f"{self.chat_activity.get_summary(level + 1)}"
+            f"{self.notebook_activity.get_overview(level + 1)}\n"
+            f"{self.chat_activity.get_overview(level + 1)}"
         )

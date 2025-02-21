@@ -1,20 +1,10 @@
 from datetime import datetime
-from difflib import SequenceMatcher
-from typing import Optional
 
 
 class ChatMessage:
     """
     A single chat message
     """
-
-    type: str
-    time: datetime
-    id: str
-    raw_time: bool
-    body: str
-    sender: str
-    automated: Optional[bool] = None
 
     def __init__(
         self,
@@ -24,7 +14,9 @@ class ChatMessage:
         raw_time: bool,
         body: str,
         sender: str,
-        automated: Optional[bool] = None,
+        automated: bool = False,
+        deleted: bool = False,
+        edited: bool = False,
     ):
         self.type = type
         self.time = datetime.fromtimestamp(time)
@@ -33,6 +25,8 @@ class ChatMessage:
         self.body = body
         self.sender = sender
         self.automated = automated
+        self.deleted = deleted
+        self.edited = edited
 
     def get_message_length(self):
         return len(self.body)

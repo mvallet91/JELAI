@@ -14,25 +14,22 @@ class NotebookLog(NotebookActivity):
     A processed notebook log containing log entries.
     """
 
-    @staticmethod
-    def load_from_file(file_path: str):
+    def __init__(self):
+        super().__init__()
+
+    def load_file(self, file_path: str):
         with open(file_path, "r") as file:
             data = file.read()
             data = "[" + data[:-1] + "]"
             data = json.loads(data)
 
-        return NotebookLog.load(data)
+        self.load_data(data)
 
-    @staticmethod
-    def load(dict: Any):
+    def load_data(self, dict: Any):
         log_entries = [NotebookLogEntry.load(entry) for entry in dict]
+        self.add_log_entries(log_entries)
 
-        return NotebookLog(log_entries)
-
-    def __init__(self, log_entries: List[NotebookLogEntry]):
-        super().__init__(log_entries)
-
-    # TODO make protection againgt changes the index of a cell
+    # TODO make protection against changes the index of a cell
     def get_notebook_cell_activities(self) -> List[NotebookCellActivity]:
         cell_index_to_activity = {}
 
@@ -77,5 +74,5 @@ class NotebookLog(NotebookActivity):
 
         return [NotebookCellActivityComposite(task) for task in tasks.values()]
 
-    def get_summary(self, level=1):
+    def get_overview(self, level=1):
         return f"{'#' * level} Notebook activity\n\n" f"None yet"

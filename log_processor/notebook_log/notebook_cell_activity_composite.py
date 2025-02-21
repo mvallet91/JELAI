@@ -23,7 +23,7 @@ class NotebookCellActivityComposite(NotebookActivityComposite, NotebookCellActiv
     def check_invariants(self):
         super().check_invariants()
 
-        # Check that sub activities do not onverlap
+        # Check that sub activities do not overlap
         for i in range(len(self.cell_activities)):
             for j in range(i + 1, len(self.cell_activities)):
                 assert (
@@ -42,7 +42,7 @@ class NotebookCellActivityComposite(NotebookActivityComposite, NotebookCellActiv
         current_result = self.get_state_of_cell_at(id, time2)
         return SequenceMatcher(None, end_result, current_result).ratio()
 
-    def get_summary(self, level=1) -> str:
+    def get_overview(self, level=1) -> str:
         return (
             f"{'#' * level} Notebook summary of cell {self.get_cell_id()}\n\n"
             f"Worked on from {self.get_start_time()} to {self.get_end_time()}\\\n"

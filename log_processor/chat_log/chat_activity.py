@@ -1,5 +1,5 @@
-from datetime import datetime
 import re
+from datetime import datetime
 from typing import List
 
 from log_processor.chat_log.chat_message import ChatMessage
@@ -15,12 +15,23 @@ class ChatActivity:
     _messages: list[ChatMessage]
     _users: dict[str, ChatUser]
 
-    def __init__(self, messages: list[ChatMessage], users: dict[str, ChatUser]):
+    def __init__(
+        self, messages: list[ChatMessage] = [], users: dict[str, ChatUser] = {}
+    ):
         self._messages = messages
         self._users = users
 
         self._messages.sort(key=lambda x: x.time)
 
+        self.check_invariants()
+
+    def add_messages(self, messages: list[ChatMessage]):
+        self._messages.extend(messages)
+        self._messages.sort(key=lambda x: x.time)
+        self.check_invariants()
+
+    def add_users(self, users: dict[str, ChatUser]):
+        self._users.update(users)
         self.check_invariants()
 
     def check_invariants(self):
@@ -102,14 +113,16 @@ class ChatActivity:
 
         return interactions
 
-    def get_summary(self, level=1):
+    def get_overview(self, level=1):
         interactions = "\n".join(
             [
-                interaction.get_summary(level + 2)
+                interaction.get_overview(level + 2)
                 for interaction in self.get_interactions()
             ]
         )
-        generated_code = "\n\n".join(["```python\n"+x+"\n```" for x in self.get_generated_code_snippets()])
+        generated_code = "\n\n".join(
+            ["```python\n" + x + "\n```" for x in self.get_generated_code_snippets()]
+        )
         return (
             f"{'#' * level} Chat activity\n\n"
             f"Amount of questions = {self.get_amount_of_messages()}\n\n"

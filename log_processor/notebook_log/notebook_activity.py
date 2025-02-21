@@ -12,18 +12,20 @@ class NotebookActivity:
 
     def __init__(
         self,
-        log_entries: List[NotebookLogEntry],
+        log_entries: List[NotebookLogEntry] = [],
     ):
         self._log_entries = log_entries
 
         self._log_entries.sort(key=lambda x: x.eventDetail.eventTime)
 
         self.check_invariants()
+    
+    def add_log_entries(self, log_entries: List[NotebookLogEntry]):
+        self._log_entries.extend(log_entries)
+        self._log_entries.sort(key=lambda x: x.eventDetail.eventTime)
+        self.check_invariants()
 
     def check_invariants(self):
-        # Check that the log entries are not empty
-        assert len(self._log_entries) > 0, "Log entries should not be empty"
-
         # Check that the log entries are sorted by time
         for i in range(1, len(self._log_entries)):
             assert (
