@@ -13,23 +13,23 @@ class ChatInteraction(ChatActivity):
         super().check_invariants()
 
         # Check if the first message is a question
-        assert self._messages[0].is_question(), "First message should be a question"
+        assert self.messages[0].is_question(), "First message should be a question"
 
         # Check if the second message is an answer
-        assert self._messages[1].is_answer(), "Second message should be an answer"
+        assert self.messages[1].is_answer(), "Second message should be an answer"
 
         # Check if there are only two messages
-        assert len(self._messages) == 2, "There should be only two messages"
+        assert len(self.messages) == 2, "There should be only two messages"
 
     def get_waiting_time(self):
-        return self._messages[1].time - self._messages[0].time
+        return self.messages[1].time - self.messages[0].time
 
     def get_overview(self, level=1):
         return (
             f"{'#' * level} Chat interaction\n\n"
             f"Waiting time: {self.get_waiting_time()}\\\n"
-            f"Message length: {self._messages[0].get_message_length()}\\\n"
-            f"Response length: {self._messages[1].get_message_length()}\\\n"
-            f"{'#' * (level + 1)} Question\n {self._messages[0].body}\n\n"
-            f"{'#' * (level + 1)} Answer\n {self._messages[1].body}"
+            f"Message length: {self.messages[0].get_message_length()}\\\n"
+            f"Response length: {self.messages[1].get_message_length()}\\\n"
+            f"{'#' * (level + 1)} Question\n {self.messages[0].body}\n\n"
+            f"{'#' * (level + 1)} Answer\n {self.messages[1].body}"
         )

@@ -1,6 +1,7 @@
 import json
 from typing import Any
 
+from log_processor.chat_log.analyser.chat_message_analyser import ChatMessageAnalyser
 from log_processor.chat_log.chat_activity import ChatActivity
 from log_processor.chat_log.chat_message import ChatMessage
 from log_processor.chat_log.chat_user import ChatUser
@@ -11,12 +12,13 @@ class ChatLog(ChatActivity):
     A processed chat log containing messages and users.
     """
 
-    def __init__(self):
+    def __init__(self, chat_message_analyser: ChatMessageAnalyser):
         super().__init__()
+        self.chat_message_analyser = chat_message_analyser
 
     def load_file(self, file_path: str):
         with open(file_path, "r") as file:
-            if file.read(1) == '':
+            if file.read(1) == "":
                 return []
             else:
                 file.seek(0)
@@ -25,7 +27,10 @@ class ChatLog(ChatActivity):
         self.load(data)
 
     def load(self, data: Any):
-        messages = [ChatMessage(**msg) for msg in data["messages"]]
+        messages = [
+            ChatMessage(**msg, chat_message_analyser=self.chat_message_analyser)
+            for msg in data["messages"]
+        ]
         users = {key: ChatUser(**value) for key, value in data["users"].items()}
         self.add_messages(messages)
         self.add_users(users)

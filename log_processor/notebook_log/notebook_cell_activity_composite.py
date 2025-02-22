@@ -13,8 +13,6 @@ class NotebookCellActivityComposite(NotebookActivityComposite, NotebookCellActiv
     All notebook activities that happend in a single notebook cell.
     """
 
-    cell_activities: Sequence[NotebookCellActivity]
-
     def __init__(self, cell_activities: Sequence[NotebookCellActivity]):
         self.cell_activities = cell_activities
 

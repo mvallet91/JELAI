@@ -11,9 +11,6 @@ class CellActivity:
     All chat and notebook logs related to a single cell.
     """
 
-    notebook_activity: NotebookCellActivityComposite
-    chat_activity: ChatActivity
-
     def __init__(
         self,
         notebook_activity: NotebookCellActivityComposite,

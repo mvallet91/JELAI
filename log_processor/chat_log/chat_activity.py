@@ -1,6 +1,6 @@
 import re
 from datetime import datetime
-from typing import List
+from typing import List, Optional
 
 from log_processor.chat_log.chat_message import ChatMessage
 from log_processor.chat_log.chat_user import ChatUser
@@ -12,61 +12,60 @@ class ChatActivity:
 
     """
 
-    _messages: list[ChatMessage]
-    _users: dict[str, ChatUser]
-
     def __init__(
-        self, messages: list[ChatMessage] = [], users: dict[str, ChatUser] = {}
+        self,
+        messages: Optional[list[ChatMessage]] = None,
+        users: Optional[dict[str, ChatUser]] = None,
     ):
-        self._messages = messages
-        self._users = users
+        self.messages: list[ChatMessage] = messages if messages is not None else []
+        self.users: dict[str, ChatUser] = users if users is not None else {}
 
-        self._messages.sort(key=lambda x: x.time)
+        self.messages.sort(key=lambda x: x.time)
 
         self.check_invariants()
 
     def add_messages(self, messages: list[ChatMessage]):
-        self._messages.extend(messages)
-        self._messages.sort(key=lambda x: x.time)
+        self.messages.extend(messages)
+        self.messages.sort(key=lambda x: x.time)
         self.check_invariants()
 
     def add_users(self, users: dict[str, ChatUser]):
-        self._users.update(users)
+        self.users.update(users)
         self.check_invariants()
 
     def check_invariants(self):
         # Check if messages are sorted by time
-        for i in range(len(self._messages) - 1):
-            assert self._messages[i].time <= self._messages[i + 1].time
+        for i in range(len(self.messages) - 1):
+            assert self.messages[i].time <= self.messages[i + 1].time
 
     def get_questions(self):
-        messages = [message for message in self._messages if message.is_question()]
-        return ChatActivity(messages, self._users)
+        messages = [message for message in self.messages if message.is_question()]
+        return ChatActivity(messages, self.users)
 
     def get_answers(self):
-        messages = [message for message in self._messages if message.is_answer()]
-        return ChatActivity(messages, self._users)
+        messages = [message for message in self.messages if message.is_answer()]
+        return ChatActivity(messages, self.users)
 
     def get_amount_of_messages(self):
-        return len(self._messages)
+        return len(self.messages)
 
     def get_messages_length(self):
         length = 0
-        for message in self._messages:
+        for message in self.messages:
             length += message.get_message_length()
         return length
 
     def get_activity_between(self, start: datetime, end: datetime):
         return ChatActivity(
-            [message for message in self._messages if start <= message.time <= end],
-            self._users,
+            [message for message in self.messages if start <= message.time <= end],
+            self.users,
         )
 
     def get_code_snippets(
         self, include_questions: bool = True, include_answers: bool = True
     ):
         codes: List[str] = []
-        for message in self._messages:
+        for message in self.messages:
             if (include_questions and message.is_question()) or (
                 include_answers and message.is_answer()
             ):
@@ -87,12 +86,12 @@ class ChatActivity:
 
     def get_list_of_messages(self):
         messages = []
-        for message in self._messages:
+        for message in self.messages:
             if message.is_question():
-                text = f"{self._users[message.sender].name} asked: {message.body}"
+                text = f"{self.users[message.sender].name} asked: {message.body}"
                 messages.append(text)
             elif message.is_answer():
-                text = f"{self._users[message.sender].name} answered: {message.body}"
+                text = f"{self.users[message.sender].name} answered: {message.body}"
                 messages.append(text)
 
         return messages
@@ -103,11 +102,11 @@ class ChatActivity:
         )  # avoid circular import
 
         interactions: List[ChatInteraction] = []
-        for i in range(0, len(self._messages) - 1):
-            if self._messages[i].is_question() and self._messages[i + 1].is_answer():
+        for i in range(0, len(self.messages) - 1):
+            if self.messages[i].is_question() and self.messages[i + 1].is_answer():
                 interactions.append(
                     ChatInteraction(
-                        [self._messages[i], self._messages[i + 1]], self._users
+                        [self.messages[i], self.messages[i + 1]], self.users
                     )
                 )
 

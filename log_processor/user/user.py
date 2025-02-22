@@ -1,18 +1,14 @@
 from log_processor.activity.cell_activity import CellActivity
+from log_processor.chat_log.analyser.chat_message_analyser import ChatMessageAnalyser
 from log_processor.chat_log.chat_activity import ChatActivity
 from log_processor.chat_log.chat_log import ChatLog
 from log_processor.notebook_log.notebook_log import NotebookLog
 
 
 class User:
-    username: str
-    chat_logs: ChatLog
-    notebook_logs: NotebookLog
-    notebook_files: list[str]
-
-    def __init__(self, username: str):
+    def __init__(self, username: str, chat_message_analyser: ChatMessageAnalyser):
         self.username = username
-        self.chat_log = ChatLog()
+        self.chat_log = ChatLog(chat_message_analyser)
         self.notebook_log = NotebookLog()
         self.notebook_files = []
 
@@ -39,8 +35,8 @@ class User:
                     notebook_sub_activity.get_start_time(),
                     notebook_sub_activity.get_end_time(),
                 )
-                messages.extend(activity._messages)
-                users.update(activity._users)
+                messages.extend(activity.messages)
+                users.update(activity.users)
             activities.append(
                 CellActivity(notebook_activity, ChatActivity(messages, users))
             )

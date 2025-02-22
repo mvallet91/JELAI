@@ -6,13 +6,6 @@ class ChatUser:
     User in the chat log.
     """
 
-    initials: str
-    avatar_url: Optional[str]
-    color: str
-    name: str
-    username: str
-    display_name: str
-
     def __init__(
         self,
         initials: str,

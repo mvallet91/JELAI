@@ -1,25 +1,24 @@
+from datetime import datetime
 from typing import List, Optional
 
 from log_processor.notebook_log.notebook_log_entry import NotebookLogEntry
-from datetime import datetime
+
 
 class NotebookActivity:
     """
     A collection of notebook log entries.
     """
 
-    _log_entries: List[NotebookLogEntry]
-
     def __init__(
         self,
-        log_entries: List[NotebookLogEntry] = [],
+        log_entries: Optional[List[NotebookLogEntry]] = None,
     ):
-        self._log_entries = log_entries
+        self._log_entries = log_entries if log_entries is not None else []
 
         self._log_entries.sort(key=lambda x: x.eventDetail.eventTime)
 
         self.check_invariants()
-    
+
     def add_log_entries(self, log_entries: List[NotebookLogEntry]):
         self._log_entries.extend(log_entries)
         self._log_entries.sort(key=lambda x: x.eventDetail.eventTime)
@@ -137,7 +136,11 @@ class NotebookActivity:
         for entry in self._log_entries:
             event_name = entry.eventDetail.eventName
             time = entry.eventDetail.eventTime
-            if event_name == "NotebookVisibleEvent" and time >= self.get_start_time() and time <= self.get_end_time():
+            if (
+                event_name == "NotebookVisibleEvent"
+                and time >= self.get_start_time()
+                and time <= self.get_end_time()
+            ):
                 total += 1
 
         return total

@@ -3,10 +3,6 @@ from log_processor.chat_log.chat_message import ChatMessage
 
 
 class PromptMetric:
-    task: CellActivity
-    prompt: ChatMessage
-    response: ChatMessage
-
     def __init__(self, task: CellActivity, prompt: ChatMessage, response: ChatMessage):
         self.task = task
         self.prompt = prompt

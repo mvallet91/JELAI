@@ -5,21 +5,23 @@ import requests
 
 
 class Chatbot:
-    instance = None
-
-    cache: dict[str, str]
-    url = "https://webui.learn.ewi.tudelft.nl/api/chat/completions"
-    key = os.getenv("OPEN_WEB_UI_API_KEY")
-
     def __init__(self):
-        self.cache = {}
+        self.cache: dict[str, str] = {}
+        server = os.getenv("OPEN_WEB_UI_SERVER")
+        if server is None:
+            raise ValueError("OPEN_WEB_UI_SERVER is not set")
+        self.url = f"{server}/api/chat/completions"
+        key = os.getenv("OPEN_WEB_UI_API_KEY")
+        if key is None:
+            raise ValueError("OPEN_WEB_UI_API_KEY is not set")
+        self.key: str = key
 
     def ask_question(self, question):
         if question in self.cache:
             return self.cache[question]
 
         return self.ask_question_without_cache(question)
-    
+
     def ask_question_without_cache(self, question):
         headers = {
             "Authorization": f"Bearer {self.key}",
@@ -41,5 +43,6 @@ class Chatbot:
             file.write(json.dumps(self.cache))
 
     def load_cache(self, path: str):
-        with open(path, "r") as file:
-            self.cache = json.load(file)
+        if os.path.exists(path):
+            with open(path, "r") as file:
+                self.cache = json.load(file)
