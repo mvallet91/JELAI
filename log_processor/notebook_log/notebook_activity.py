@@ -118,18 +118,21 @@ class NotebookActivity:
     def get_state_of_cell_at(self, cell_id: str, time: datetime):
         final_state = ""
         for entry in self._log_entries:
-            event_name = entry.eventDetail.eventName
-            if event_name == "CellExecuteEvent" and entry.eventDetail.eventTime <= time:
-                notebook_content = entry.notebookState.notebookContent
-                assert (
-                    notebook_content is not None
-                ), "notebook_content should not be None"
+            notebook_content = entry.notebookState.notebookContent
+            if notebook_content is not None and entry.eventDetail.eventTime <= time:
                 cells = notebook_content.cells
                 for cell in cells:
                     if cell.id == cell_id:
                         final_state = cell.source
 
         return final_state
+    
+    def get_state_of_notebook_at(self, time: datetime):
+        state = []
+        for entry in self._log_entries:
+            notebook_content = entry.notebookState.notebookContent
+            if notebook_content is not None and entry.eventDetail.eventTime <= time:
+                state = notebook_content.cells
 
     def get_amount_of_tab_switches(self):
         total = 0
@@ -149,6 +152,7 @@ class NotebookActivity:
         """
         How many times is the program run and then edited
         """
+
         total = 0
         edited = False
         for entry in self._log_entries:
@@ -160,3 +164,14 @@ class NotebookActivity:
                 edited = True
 
         return total
+
+    def get_event_sequence(self):
+        """
+        Return a list of tuples with the event time and event name.
+        """
+
+        return [
+            (entry.eventDetail.eventTime, entry.eventDetail.eventName)
+            for entry in self._log_entries
+        ]
+

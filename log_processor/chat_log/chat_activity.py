@@ -111,6 +111,18 @@ class ChatActivity:
                 )
 
         return interactions
+    
+    def get_event_sequence(self):
+        '''Get sequence of events in the chat log.
+        Each event is a tuple with the time and the type of event.
+        '''
+        sequence = []
+        for message in self.messages:
+            if message.is_question():
+                sequence.append((message.time, "Question"))
+            elif message.is_answer():
+                sequence.append((message.time, "Answer"))
+        return sequence
 
     def get_overview(self, level=1):
         interactions = "\n".join(

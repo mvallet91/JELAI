@@ -1,3 +1,4 @@
+from math import e
 import os
 
 import pandas as pd
@@ -7,6 +8,9 @@ from log_processor.chat_log.analyser.chatbot_chat_message_analyser import (
     ChatbotChatMessageAnalyser,
 )
 from log_processor.chatbot import Chatbot
+from log_processor.processor import questions_analyser
+from log_processor.processor.event_sequence_analysis import EventSequenceAnalysis
+from log_processor.processor.questions_analyser import QuestionsAnalyser
 from log_processor.user.users import Users
 from log_processor.user.users_builder import UsersBuilder
 
@@ -36,31 +40,16 @@ class Processor:
             )
             self.users = builder.build(self.chat_message_analyser)
             self.users.save_to_file(self.users_cache)
-
-    def generate_analysed_questions_report(self):
-        data = []
-        for user in self.users.users:
-            print(f"Processing user {user.username}")
-            messages = user.chat_log.get_questions().messages
-            for question in messages:
-                print(f"Processing question {question.id}")
-                body = question.body
-                purpose = question.get_question_purpose()
-                question_type = question.get_question_type()
-                data.append(
-                    {
-                        "user": user.username,
-                        "question": body,
-                        "question_type": question_type,
-                        "purpose": purpose,
-                    }
-                )
-
-        df = pd.DataFrame(data)
-        df.to_csv("output/question_type_report.csv", index=False)
-    
+        
     def run(self):
-        self.generate_analysed_questions_report()
+        # print("Analyzing questions")
+        # questions_analyser = QuestionsAnalyser(self.users)
+        # questions_analyser.generate_report()
+
+        print("Analyzing event sequences")
+        event_sequence_analyser = EventSequenceAnalysis(self.users)
+        event_sequence_analyser.generate_report()
+
         self.stop()
 
     def stop(self):

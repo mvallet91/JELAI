@@ -42,6 +42,13 @@ class User:
             )
 
         return activities
+    
+    def get_event_sequence(self):
+        sequence = self.notebook_log.get_event_sequence()
+        sequence2 = self.chat_log.get_event_sequence()
+        sequence.extend(sequence2)
+        sequence.sort(key=lambda x: x[0])
+        return sequence
 
     def get_overview(self, level=1):
         activities = "\n".join(

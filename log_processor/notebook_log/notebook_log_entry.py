@@ -2,6 +2,8 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Union
 
+from log_processor.chat_log.notebook_content.notebook_content import NotebookContent
+
 
 @dataclass
 class NotebookCell:
@@ -84,48 +86,9 @@ class NotebookEventDetail:
     eventInfo: Optional[NotebookEventInfo]
 
 
-@dataclass
-class NotebookContentCell:
-    @staticmethod
-    def load(dict: Dict[str, Any]):
-        return NotebookContentCell(
-            dict["id"],
-            dict["cell_type"],
-            dict["source"],
-            dict["metadata"],
-            dict.get("outputs", []),
-            dict.get("execution_count", 0),
-        )
-
-    id: str
-    cell_type: str
-    source: str
-    metadata: Dict[str, Any]
-    outputs: List[Dict[str, Any]]
-    execution_count: Optional[int]
-
-
-@dataclass
-class NotebookContent:
-    @staticmethod
-    def load(dict: Any):
-        return NotebookContent(
-            dict["metadata"],
-            dict["nbformat"],
-            dict["nbformat_minor"],
-            [NotebookContentCell.load(cell) for cell in dict["cells"]],
-        )
-
-    metadata: Dict[str, Any]
-    nbformat: int
-    nbformat_minor: int
-    cells: List[NotebookContentCell]
-
-
-@dataclass
 class NotebookState:
     @staticmethod
-    def load(dict: Any):
+    def load(dict: dict[str, Any]):
         notebookContent = None
         if dict["notebookContent"] is not None:
             notebookContent = NotebookContent.load(dict["notebookContent"])
@@ -136,9 +99,15 @@ class NotebookState:
             notebookContent,
         )
 
-    sessionID: Optional[str]
-    notebookPath: str
-    notebookContent: Optional[NotebookContent]
+    def __init__(
+        self,
+        sessionID: Optional[str],
+        notebookPath: str,
+        notebookContent: Optional[NotebookContent],
+    ):
+        self.sessionID = sessionID
+        self.notebookPath = notebookPath
+        self.notebookContent = notebookContent
 
 
 @dataclass
