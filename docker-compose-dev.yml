@@ -1,10 +1,13 @@
+# JupyterLab and middleware development environment
+# For single-user experimentation or development, use this docker-compose file to start a JupyterLab and middleware development environment.
+
 services:
   notebook-dev:
     build:
       context: ./jupyterhub-docker/user-notebook
       dockerfile: Dockerfile
       args:
-        - CHAT_DIR=${CHAT_DIR:-chats}
+        - CHAT_DIR=${CHAT_DIR}
     image: user-notebook-dev
     container_name: notebook-dev
     ports:
@@ -15,12 +18,11 @@ services:
       # Mount notebooks directory if needed
       - "./notebooks:/home/jovyan/notebooks"
     environment:
-      - JUPYTER_ENABLE_LAB=yes
       - CHAT_DIR=chats
       - JUPYTER_TOKEN=dev  # Simple token for development access
     networks:
       - jelai-dev-network
-    command: "start.sh jupyter lab --LabApp.token=dev"
+    # command: "start.sh jupyter lab --LabApp.token=dev"
 
   middleware-dev:
     build:
@@ -32,6 +34,7 @@ services:
       - jelai-dev-network
     volumes:
       # Mount middleware code for development
+      - "middleware-dev-data:/var/log/jelai"
       - "./jupyterhub-docker/middleware:/app"
       - "chat-histories:/app/chat_histories"
       - "./jupyterhub-docker/middleware/learning_objectives.yaml:/app/learning_objectives.yaml"
@@ -44,6 +47,7 @@ services:
 
 volumes:
   chat-histories:
+  middleware-dev-data:
 
 networks:
   jelai-dev-network:
