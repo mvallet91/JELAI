@@ -28,7 +28,7 @@ c.DockerSpawner.network_name = network_name
 
 # Allow access to the host's network
 c.DockerSpawner.extra_host_config = {
-    'extra_hosts': {'host.docker.internal': 'host-gateway'}
+    "extra_hosts": {"host.docker.internal": "host-gateway"}
 }
 
 # Explicitly set notebook directory because we'll be mounting a volume to it.
@@ -72,3 +72,9 @@ c.NativeAuthenticator.open_signup = False
 admin = os.environ.get("JUPYTERHUB_ADMIN")
 if admin:
     c.Authenticator.admin_users = [admin]
+
+# Limit resources per-user
+c.Spawner.mem_limit = "400M"
+c.Spawner.cpu_limit = 0.5
+c.Spawner.stop_timeout = 30
+c.Spawner.idle_timeout = 60

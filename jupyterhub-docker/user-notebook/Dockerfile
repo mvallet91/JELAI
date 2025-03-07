@@ -2,7 +2,7 @@
 #
 # This image is based on the Jupyter Scipy Notebook image and includes additional packages and configurations for DS Tutor.
 
-FROM quay.io/jupyter/scipy-notebook:latest
+FROM quay.io/jupyter/minimal-notebook:latest
 
 # Create logs folder
 RUN mkdir /home/jovyan/logs && \
@@ -12,6 +12,10 @@ RUN mkdir /home/jovyan/logs/processed && \
 
 # Copy jupyterlab_pioneer config
 COPY jupyter_jupyterlab_pioneer_config.py /etc/jupyter/
+
+# Copy jupyter_notebook_config.py
+COPY jupyter_notebook_config.py /etc/jupyter/
+
 
 # Install additional packages
 RUN pip install --no-cache-dir jupyterlab-chat jupyterlab_pioneer
