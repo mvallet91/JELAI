@@ -39,7 +39,9 @@ notebook_dir = os.environ.get("DOCKER_NOTEBOOK_DIR", "/home/jovyan/work")
 c.DockerSpawner.notebook_dir = notebook_dir
 default_notebook = os.environ.get("DEFAULT_NOTEBOOK")
 if default_notebook:
-    c.DockerSpawner.default_url = default_notebook
+    c.DockerSpawner.default_url = default_notebook + "?reset" # added reset to always open with zero files open
+else:
+    c.DockerSpawner.default_url =  "lab?reset" # added reset to always open with zero files open
 
 # Mount the real user's Docker volume on the host to the notebook user's
 # notebook directory in the container
