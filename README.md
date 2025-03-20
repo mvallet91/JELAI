@@ -84,7 +84,7 @@ To access JupyterHub from outside the local network, follow the official [Jupyte
 
 ## FAQ:
 - Where can I edit the system prompt for the assistant?
-    - The system prompt for the assistant can be set in the `llm_handler.py` file in the `jupyterhub-docker/middleware` directory.
+    - The system prompt for the assistant can be set in the **llm_handler.py** file in the **jupyterhub-docker/middleware** directory.
 - Can I add notebooks or materials so they are available to all users?
     - Yes, you can add course materials to the **working-directory** in the user-notebook image, using the Dockerfile.
 - What if I can't run Ollama locally?
@@ -98,6 +98,19 @@ This does not require Docker, but it needs Python 3.12.
 
 For the Ollama server, see the steps above.
 
+- Clone this repository to your local machine
+- Run the Ollama server (see above)
+- Create an **.env** file in the **jupyterhub-docker/middleware** directory and add the Ollama server address:
+    - `ollama_url=http://localhost:11434` if you have it local, otherwise the address of your Ollama server
+- Run `docker compose -f 'docker-compose-dev.yml' build` to create all the images
+- Run `docker compose -f 'docker-compose-dev.yml' up -d` to start the images
+- Run `docker compose -f 'docker-compose-dev.yml' down` to stop them
+- If you make changes, like trying a different prompt in the **llm_handler.py** file in the **jupyterhub-docker/middleware** directory, you can rebuild the middleware container only: 
+    - Run `docker compose -f 'docker-compose-dev.yml' up -d --build middleware-dev`
+    - Or just do `down` and `up` for the whole thing 
+
+ 
+### For Step-by-step individual services:
 1. Create a venv and install the necessary packages for the LLM Handler:
     - Navigate to the Middleware directory in the terminal: `cd jupyterhub-docker/middleware`
     - `python -m venv llm-handler`
@@ -115,8 +128,7 @@ For the Ollama server, see the steps above.
     - `python.exe -m pip install -r chat_interact_requirements.txt`
 4. Create your environment variables file, where you will add the address of the Ollama server you're using (you must setup Ollama before this step, see above):
     - Create an **.env** file in the **jupyterhub-docker/middleware** directory
-    - Add the following line to the **.env** file: `ollama_url=http://localhost:11434` if you have it local or the address of your Ollama server
-5. On the first terminal, still running the **llm-handler** environment and run the LLM-handler server:
+    - Add the following line to the **.env** file: `ollama_url=http://localhost:11434` if you have it local or the address of your Ollama server5. On the first terminal, still running the **llm-handler** environment and run the LLM-handler server:
     - `python llm_handler.py`
     - Type `Ctrl+C` to stop the server. This server must be active to process the chat messages.
 6. On the terminal running the **chatbot** environment, run the chatbot handler:
