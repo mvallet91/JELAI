@@ -59,7 +59,7 @@ WORKDIR /home/jovyan/work
 # COPY notebooks/* /home/jovyan/work/
 
 # # Create chat files
-# RUN mkdir /home/jovyan/work/chats
+RUN mkdir /home/jovyan/work/chats
 # RUN touch /home/jovyan/work/chats/Task1.chat
 # RUN touch /home/jovyan/work/chats/Task2.chat
 
