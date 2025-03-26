@@ -8,11 +8,10 @@ services:
       dockerfile: Dockerfile
       args:
         - CHAT_DIR=chats
-    # volumes:
-    #   # Mount code directories for development
-    #   - "./jupyterhub-docker/user-notebook:/home/jovyan/work"
-    #   # Mount notebooks directory if needed
-    #   - "./notebooks:/home/jovyan/notebooks"
+    volumes:
+        # Mount notebook workspace and log data for development
+        - "notebook-workspace:/home/jovyan/work"
+        - "log-data:/home/jovyan/logs" 
     environment:
       - JUPYTER_TOKEN=dev  # Simple token for development access
     image: user-notebook-dev
@@ -21,7 +20,6 @@ services:
       - "8888:8888"  # Expose JupyterLab directly
     networks:
       - jelai-dev-network
-    # command: "start.sh jupyter lab --LabApp.token=dev"
 
   middleware-dev:
     build:
@@ -34,19 +32,19 @@ services:
     volumes:
       # Mount middleware code for development
       - "middleware-dev-data:/var/log/jelai"
-      # - "./jupyterhub-docker/middleware:/app"
       - "chat-histories:/app/chat_histories"
       - "./jupyterhub-docker/middleware/learning_objectives.yaml:/app/learning_objectives.yaml"
     ports:
       - "24224:24224"
       - "8002:8002"  # LLM handler server
     environment:
-      # - PYTHONPATH=/app
       - LEARNING_OBJECTIVES_PATH=/app/learning_objectives.yaml
 
 volumes:
   chat-histories:
   middleware-dev-data:
+  notebook-workspace:
+  log-data:
 
 networks:
   jelai-dev-network:
