@@ -4,3 +4,4 @@ fastapi
 asyncio
 watchdog
 watchgod
+uvicorn
