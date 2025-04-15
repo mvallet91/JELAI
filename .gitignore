@@ -13,6 +13,8 @@ jupyterlab/
 __pycache__/
 venv/
 chatbot/
+analysis/
+dspy-eval/
 
 /jupyterhub-docker/middleware/venv/
 /jupyterhub-docker/middleware/llm-handler/

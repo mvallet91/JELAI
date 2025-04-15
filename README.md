@@ -72,10 +72,12 @@ The [Jupyter-chat](https://github.com/jupyterlab/jupyter-chat) extension used to
 Now the directory can be specified in the Dockerfile of the user-notebook image, for example by setting ``{"defaultDirectory": "chats/"}'`.
 
 ### Ollama Server
-For a local LLM server, you can use [Ollama](https://ollama.com/). Follow the instructions in the [Ollama server documentation](https://github.com/varunvasudeva1/ollama-server-docs?tab=readme-ov-file) to install and run Ollama as a service.
-Performance will depend on the host server's capability, we have achieved acceptable responses with basic conversations in English using Llama 3.1 8b (the smallest model) and great answers within 15 seconds with the 70b model on an Nvidia A40 GPU. 
-Ollama can also be containerized. To run the Ollama server in a container, run the following command:
-- `docker run -d -p 11434:11434 ollama/ollama:latest`
+For a local LLM server, you can use [Ollama](https://ollama.com/). 
+- To run Ollama in one machine and access it from a different one, follow the instructions in the [Ollama server documentation](https://github.com/varunvasudeva1/ollama-server-docs?tab=readme-ov-file) to install and run Ollama as a service.
+- To run it locally for experimentation, just install it following the steps in [Ollama](https://ollama.com/). 
+- Ollama can also run in a Docker container, so you don't have to install it. To run the Ollama server in a container, run the following command:
+    - `docker run -d -p 11434:11434 ollama/ollama:latest`
+Performance will depend on the host server's capability, we have achieved acceptable responses with basic conversations in English using Gemma3:4b and Llama3.2 (pretty small models) and great answers within 15 seconds with the Llama3.1:70b, Gemma2:27b and Gemma3:27b on an Nvidia A40 GPU. 
 
 Third-party services (cloud LLM providers) have not been evaluated, but in theory, they can be used as long as they provide a REST API for the chatbot server to interact with.
 
@@ -94,9 +96,9 @@ To access JupyterHub from outside the local network, follow the official [Jupyte
 
 ## Development and Local Experimentation
 To run the system locally for development and experimentation, you can use **JupyterLab** (instead of JupyterHub) and the chatbot server in your local environment.
-This does not require Docker, but it needs Python 3.12. 
+For this setup you only need Docker Desktop, it's been tested on iOS and Windows (via WSL). 
 
-For the Ollama server, see the steps above.
+For the local Ollama server, see the steps above, if you have access to a webui or ollama server, you can add the info to the **.env**, see below.
 
 - Clone this repository to your local machine
 - Run the Ollama server (see above)
@@ -111,6 +113,7 @@ For the Ollama server, see the steps above.
 
  
 ### For Step-by-step individual services:
+This workflow does not require Docker, but it needs Python 3.12. 
 1. Create a venv and install the necessary packages for the LLM Handler:
     - Navigate to the Middleware directory in the terminal: `cd jupyterhub-docker/middleware`
     - `python -m venv llm-handler`

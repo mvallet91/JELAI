@@ -7,6 +7,7 @@ import json
 import logging
 import uuid
 import asyncio
+import random
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 import httpx
@@ -191,14 +192,14 @@ class ChatHandler(FileSystemEventHandler):
        # (Same as before)
        event_type = log.get('event', 'Unknown Event')
        cell_index = log.get('cell_index', 'N/A')
-       timestamp = log.get('timestamp', '')
+       timestamp = log.get('time', '')
        details = ""
-       if event_type == "Executed cells": details = f"Input: {log.get('input', '')[:30]}... Output: {log.get('output', '')[:30]}..."
-       elif event_type == "Edited cell": details = f"Content: {log.get('content', '')[:30]}..."
+       if event_type == "Executed cells": details = f"Input: {log.get('input', '')[:100]}... Output: {log.get('output', '')[:100]}..."
+       if event_type == "Executed cells with error": details = f"Input: {log.get('content', '')[:100]}... Error: {log.get('error', '')[:100]}..."
+       if event_type in ["Edited cell", "Pasted content"]: details = f"Content: {log.get('content', '')[:100]}..."
        return f"{timestamp} - {event_type} (Cell {cell_index}): {details}"
 
     def get_processed_log_data(self, session_id: str) -> Optional[str]:
-        # (Same as before)
         logging.debug(f"Looking for logs matching session_id: {session_id} in {self.processed_logs_dir}")
         try:
             matching_log_files = [ f for f in os.listdir(self.processed_logs_dir) if f.endswith('.json') ]
@@ -224,7 +225,7 @@ class ChatHandler(FileSystemEventHandler):
             if not matching_logs: logging.info(f"No matching logs for '{session_id}' in {log_file_path}"); return None
 
             last_n_logs = matching_logs[-10:]
-            formatted_logs = [self.format_log_entry(log) for log in last_n_logs]
+            formatted_logs = [self.format_log_entry(log) for log in last_n_logs if log.get('event') not in ["Notebook became visible", "Closed notebook"]]
             log_context = "\n".join(formatted_logs)
             logging.info(f"Found {len(formatted_logs)} relevant log entries.")
             return log_context
@@ -245,7 +246,7 @@ class ChatHandler(FileSystemEventHandler):
                 }
                 self.update_working_message(working_message, content, file_path)
                 idx += 1
-                await asyncio.sleep(7)
+                await asyncio.sleep(random.uniform(3, 5.5)) # Random delay 
         except asyncio.CancelledError: logging.info(f"Stopped working messages for {file_path} (ID: {message_id})")
         except Exception as e: logging.error(f"Error in send_working_messages loop for {file_path}: {e}", exc_info=True)
 
