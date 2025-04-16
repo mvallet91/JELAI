@@ -18,9 +18,9 @@ def is_running_in_docker():
 
 # Set the URL based on the environment
 if is_running_in_docker():
-    base_url = "http://host.docker.internal:8002"
+    base_url = "http://host.docker.internal:8004"
 else:
-    base_url = "http://localhost:8002"
+    base_url = "http://localhost:8004"
 
 # Set up the RemoteRunnable for the chat_chain
 chat_chain_url = f"{base_url}/chat"  # Update to use the correct endpoint

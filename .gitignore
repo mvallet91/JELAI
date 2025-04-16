@@ -15,6 +15,10 @@ venv/
 chatbot/
 analysis/
 dspy-eval/
+__pycache__
+.python-version
+*.egg-info/
+*.egg
 
 /jupyterhub-docker/middleware/venv/
 /jupyterhub-docker/middleware/llm-handler/

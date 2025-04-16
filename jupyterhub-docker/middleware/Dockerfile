@@ -1,39 +1,35 @@
 # Base Image
-FROM python:3.12-slim
+FROM ghcr.io/astral-sh/uv:python3.13-alpine
 
-# Install Fluentd
-RUN apt-get update && \
-    apt-get install -y build-essential ruby-full && \
+# Set the working directory
+WORKDIR /app
+
+# Copy pyproject
+COPY pyproject.toml /app/
+
+# Create venv + install dependencies
+RUN uv venv && uv pip install .
+
+# Copy code
+COPY ea-handler.py ta-handler.py utils.py start.sh td-agent.conf .env /app/
+RUN chmod +x /app/start.sh
+
+RUN apk add --no-cache \
+    build-base \
+    ruby \
+    ruby-dev \
+    linux-headers \
+    bash \
+    curl && \
     gem install fluentd --no-document && \
     fluentd --setup /fluent
 
-# Copy Fluentd configuration
+# Fluentd config
+RUN mkdir -p /fluent/etc
 COPY td-agent.conf /fluent/etc/td-agent.conf
 
-# Install LLM Handler requirements
-COPY requirements.txt /app/
-RUN pip install --no-cache-dir -r /app/requirements.txt
-
-# Copy LLM Handler code
-COPY llm_handler.py /app/llm_handler.py
-
-# Copy any other necessary files (e.g., prompts, utils)
-COPY utils.py /app/utils.py
-
-# Copy .env file if needed (be cautious with sensitive data)
-COPY .env /app/.env
-
-# Copy the start.sh script and set permissions
-COPY start.sh /app/start.sh
-RUN chmod +x /app/start.sh
-
-# Expose ports
-EXPOSE 24224 8002
-
-# Start Fluentd and LLM Handler
-# CMD ["bash", "-c", "\
-# fluentd -c /fluent/etc/td-agent.conf -p /fluent/plugins & \
-# # uvicorn llm_handler:app --host 0.0.0.0 --port 8002 "]
+# Expose ports 
+EXPOSE 24224 8003 8004
 
 # Set the CMD to run start.sh
 CMD ["/app/start.sh"]

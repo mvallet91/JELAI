@@ -63,7 +63,7 @@ services:
       - "./middleware/learning_objectives.yaml:/app/learning_objectives.yaml"
     ports:
       - "24224:24224"
-      - "8002:8002"  # Expose LLM handler server
+      - "8004:8004"  # Expose TA handler server
     depends_on:
       - hub
     environment:

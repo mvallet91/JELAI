@@ -489,4 +489,5 @@ def verify():
 
 if __name__ == "__main__":
     # Runs on port 8004
+    import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8004)
