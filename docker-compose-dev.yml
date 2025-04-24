@@ -35,9 +35,10 @@ services:
       - "chat-histories:/app/chat_histories"
       - "./jupyterhub-docker/middleware/learning_objectives.yaml:/app/learning_objectives.yaml"
     # Mount learning objectives file for development
-      - "./jupyterhub-docker/middleware/ea_handler.py:/app/ea_handler.py"
-      - "./jupyterhub-docker/middleware/ta_handler.py:/app/ta_handler.py"
+      - "./jupyterhub-docker/middleware/ea-handler.py:/app/ea-handler.py"
+      - "./jupyterhub-docker/middleware/ta-handler.py:/app/ta-handler.py"
       - "./jupyterhub-docker/middleware/utils.py:/app/utils.py"
+      - "./jupyterhub-docker/middleware/inputs:/app/inputs"
     ports:
       - "24224:24224"
       - "8003:8003"  # EA handler server

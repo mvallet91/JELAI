@@ -7,6 +7,7 @@ import httpx
 import os
 import json
 from dotenv import load_dotenv
+from typing import Optional # Added Optional
 
 # --- Configuration ---
 load_dotenv() # Load environment variables from .env file
@@ -18,14 +19,25 @@ WEBUI_API_KEY = os.getenv("webui_api_key", "")
 OLLAMA_API_BASE = os.getenv("ollama_url", "http://localhost:11434") # Ollama API URL
 # Use a specific model for EA if defined, otherwise fallback to a default
 EA_MODEL_NAME = os.getenv("ollama_ea_model", "gemma3:4b") # Model for EA tasks
+# Define path for EA system prompt (relative to where ea-handler.py is run)
+EA_SYSTEM_PROMPT_FILE = "./inputs/ea_system_prompt.txt"
+
+# --- Updated EA System Prompt ---
+EA_SYSTEM_PROMPT_DEFAULT = """You are an Expert Agent (EA). Your primary role is to provide concise, factual, technical information ONLY in direct response to the specific 'Student Question' provided, using the Assignment, LO, History, and Logs as context.
+"""
 
 logging.info(f"EA Using WebUI Base URL: {WEBUI_API_BASE}")
 logging.info(f"EA Using Model: {EA_MODEL_NAME}")
 
 app = FastAPI(title="Expert Agent (LLM-Powered)")
 
-class ExpertQuery(BaseModel):
-    prompt: str # This prompt comes structured from the TA
+# --- Updated Pydantic Model ---
+class ExpertQueryPayload(BaseModel): # Renamed and updated model
+    student_question: str
+    assignment_description: str
+    learning_objective: str
+    history: str # Expecting the formatted string from TA
+    logs: str
     session_id: str
 
 # --- LLM Calling Helper ---
@@ -75,40 +87,62 @@ async def call_ea_llm(messages: list) -> str:
 
 
 @app.post("/expert_query")
-async def expert_query(query: ExpertQuery):
+async def expert_query(payload: ExpertQueryPayload): # Use the updated payload model
     """
-    Receives a structured prompt from the TA, calls an LLM for a technical answer,
-    and returns the concise response.
+    Receives context from the TA, calls an LLM for a technical answer,
+    and returns the concise response, handling vague questions appropriately.
     """
-    logging.info(f"Received query for session {query.session_id}. TA Prompt: '{query.prompt[:150]}...'")
+    logging.info(f"Received query for session {payload.session_id}. Student Question: '{payload.student_question[:150]}...'")
 
-    # Construct messages for the EA's LLM
-    # The system prompt defines the EA's role.
-    # The user message IS the prompt received from the TA.
+    # --- Load EA System Prompt ---
+    try:
+        with open(EA_SYSTEM_PROMPT_FILE, "r") as f:
+            ea_system_prompt = f.read().strip()
+        if not ea_system_prompt:
+            raise FileNotFoundError # Treat empty file as not found
+        logging.info(f"Loaded EA system prompt from {EA_SYSTEM_PROMPT_FILE}")
+    except FileNotFoundError:
+        logging.warning(f"EA System prompt file not found at {EA_SYSTEM_PROMPT_FILE} or empty. Using default prompt.")
+        ea_system_prompt = EA_SYSTEM_PROMPT_DEFAULT
+    except Exception as e:
+        logging.error(f"Error loading EA system prompt from {EA_SYSTEM_PROMPT_FILE}: {e}. Using default.")
+        ea_system_prompt = EA_SYSTEM_PROMPT_DEFAULT
+
+    # --- Construct Prompt for EA's internal LLM using payload fields ---
+    prompt_context = f"""Assignment: {payload.assignment_description}
+    LO: {payload.learning_objective}
+
+    Recent Logs:
+    {payload.logs}
+
+    Conversation History:
+    {payload.history}
+
+    Student Question: {payload.student_question}
+
+    ---
+    Based *only* on the 'Student Question' above and using the other information strictly as context, provide the concise technical information needed. If the question is not a specific technical query, follow the instructions in your system prompt precisely.
+    """
+
     ea_llm_messages = [
-        {"role": "system", "content": """You are an expert in Python programming, data science libraries (like pandas, matplotlib), and general computer science concepts.
-        You will receive a structured request containing a student's question, the relevant learning objective (LO), the overall assignment task, and potentially context like recent notebook activity or conversation history.
-        Your task is to provide a CONCISE, technically accurate answer or explanation based ONLY on the information provided in the request.
-        Focus solely on the technical aspects relevant to the student's question within the given context.
-        Do NOT adopt a tutor persona. Do NOT add conversational filler, greetings, or explanations beyond the core technical information needed.
-        Do NOT refer to the student directly. Provide only the essential technical facts, code snippets (if applicable and concise), or function names needed to address the core of the student's query.
-        Example: If asked how to count items, respond with something like: "Use the `.value_counts()` method on the pandas Series." or "Group by the relevant column using `.groupby()` then apply `.size()` or `.count()`."
-        Keep your response brief and factual."""},
-        {"role": "user", "content": query.prompt} # Pass the TA's structured prompt directly
+        {"role": "system", "content": ea_system_prompt},
+        {"role": "user", "content": prompt_context}
     ]
+    logging.debug(f"EA LLM Messages: {ea_llm_messages}")
 
+    # --- Call EA's internal LLM ---
     try:
         llm_response = await call_ea_llm(ea_llm_messages)
-        logging.info(f"EA LLM generated response: '{llm_response[:100]}...'")
-        return {"response": llm_response}
+        logging.info(f"EA LLM generated response for session {payload.session_id}: '{llm_response[:100]}...'")
+        return {"response": llm_response} # Return in the format TA expects
     except HTTPException as e:
         # Re-raise HTTPExceptions from the LLM call to inform the TA
         raise e
     except Exception as e:
         # Catch any other unexpected errors during processing
-        logging.error(f"Error processing expert query after LLM call setup: {e}", exc_info=True)
+        logging.error(f"Error processing expert query after LLM call setup for session {payload.session_id}: {e}", exc_info=True)
         # Return a generic error response to the TA
-        return {"response": "Expert Agent encountered an internal error."}
+        raise HTTPException(status_code=500, detail="Expert Agent encountered an internal error processing the request.")
 
 
 @app.get("/verify_ea")

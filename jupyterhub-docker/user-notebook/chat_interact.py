@@ -194,9 +194,9 @@ class ChatHandler(FileSystemEventHandler):
        cell_index = log.get('cell_index', 'N/A')
        timestamp = log.get('time', '')
        details = ""
-       if event_type == "Executed cells": details = f"Input: {log.get('input', '')[:100]}... Output: {log.get('output', '')[:100]}..."
-       if event_type == "Executed cells with error": details = f"Input: {log.get('content', '')[:100]}... Error: {log.get('error', '')[:100]}..."
-       if event_type in ["Edited cell", "Pasted content"]: details = f"Content: {log.get('content', '')[:100]}..."
+       if event_type == "Executed cells": details = f"Input: {log.get('input', '')[:200]} Output: {log.get('output', '')[:200]}"
+       if event_type == "Executed cells with error": details = f"Input: {log.get('content', '')[:200]} Error: {log.get('error', '')[:200]}"
+       if event_type in ["Edited cell", "Pasted content"]: details = f"Content: {log.get('content', '')[:200]}"
        return f"{timestamp} - {event_type} (Cell {cell_index}): {details}"
 
     def get_processed_log_data(self, session_id: str) -> Optional[str]:

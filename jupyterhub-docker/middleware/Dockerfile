@@ -13,6 +13,8 @@ RUN uv venv && uv pip install .
 # Copy code
 COPY ea-handler.py ta-handler.py utils.py start.sh td-agent.conf .env /app/
 RUN chmod +x /app/start.sh
+# Copy all contents of inputs directory
+COPY inputs/ /app/inputs/
 
 RUN apk add --no-cache \
     build-base \

@@ -12,5 +12,6 @@ dependencies = [
     "rapidfuzz",
     "thefuzz",        
     "fluent-logger",
-    "httpx"  
+    "httpx",
+    "sentence-transformers"  
 ]
