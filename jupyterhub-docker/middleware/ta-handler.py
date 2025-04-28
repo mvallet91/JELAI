@@ -95,8 +95,10 @@ def init_db():
             # Create student profiles table (if not exists)
             cursor.execute("""
                 CREATE TABLE IF NOT EXISTS student_profiles (
-                    student_id TEXT PRIMARY KEY,
-                    profile_data TEXT NOT NULL -- Store profile as JSON string
+                    student_id TEXT NOT NULL,
+                    file_name TEXT NOT NULL, -- Add file_name column
+                    profile_data TEXT NOT NULL, -- Store profile as JSON string
+                    PRIMARY KEY (student_id, file_name) -- Composite key
                 )
             """)
             conn.commit()
@@ -132,35 +134,36 @@ DEFAULT_PROFILE = {
 }
 
 
-def get_student_profile(student_id: str) -> dict:
-    """Retrieves student profile from DB or returns default."""
-    profile = DEFAULT_PROFILE.copy() # Start with default
-    profile["student_id"] = student_id # Ensure student_id is set
+def get_student_profile(student_id: str, file_name: str) -> dict: # Add file_name
+    """Retrieves student profile for a specific file from DB or returns default."""
+    profile = DEFAULT_PROFILE.copy()
+    profile["student_id"] = student_id
+    profile["file_name"] = file_name # Add file_name to default profile context if needed
     try:
         with sqlite3.connect(DATABASE_FILE) as conn:
             cursor = conn.cursor()
-            cursor.execute("SELECT profile_data FROM student_profiles WHERE student_id = ?", (student_id,))
+            # Query using both student_id and file_name
+            cursor.execute("SELECT profile_data FROM student_profiles WHERE student_id = ? AND file_name = ?", (student_id, file_name))
             result = cursor.fetchone()
             if result:
                 try:
-                    # Update default profile with stored data
                     stored_profile = json.loads(result[0])
                     profile.update(stored_profile)
-                    logging.debug(f"Loaded profile for {student_id}")
+                    logging.debug(f"Loaded profile for {student_id} (file: {file_name})")
                 except json.JSONDecodeError:
-                    logging.error(f"Failed to decode profile JSON for {student_id}. Using default.")
+                    logging.error(f"Failed to decode profile JSON for {student_id} (file: {file_name}). Using default.")
             else:
-                logging.debug(f"No profile found for {student_id}. Using default.")
+                logging.debug(f"No profile found for {student_id} (file: {file_name}). Using default.")
     except sqlite3.Error as e:
-        logging.error(f"DB error getting profile for {student_id}: {e}. Using default.")
+        logging.error(f"DB error getting profile for {student_id} (file: {file_name}): {e}. Using default.")
     return profile
 
-def update_student_profile_sync(student_id: str, classification: str, timestamp: float, question_text: str): # Add question_text
-    """Updates profile counts, flags, and example questions based on the last interaction."""
-    logging.info(f"Background task: Updating profile for {student_id} based on classification: {classification}")
+def update_student_profile_sync(student_id: str, file_name: str, classification: str, timestamp: float, question_text: str):
+    """Updates profile counts, flags, and example questions for a specific file."""
+    logging.info(f"Background task: Updating profile for {student_id} (file: {file_name}) based on classification: {classification}")
     try:
-        # Get current profile (or default if first time)
-        profile = get_student_profile(student_id) # Re-fetch within task
+        # Pass file_name when getting the profile
+        profile = get_student_profile(student_id, file_name)
 
         # Update counts
         profile["total_questions"] = profile.get("total_questions", 0) + 1
@@ -172,7 +175,6 @@ def update_student_profile_sync(student_id: str, classification: str, timestamp:
             profile["last_executive_example"] = question_text # Store example
         else:
             profile["other_count"] = profile.get("other_count", 0) + 1
-            # Optionally clear examples if 'other'? Or leave them? Let's leave them for now.
 
         # Update timestamp
         profile["last_interaction_timestamp"] = timestamp
@@ -180,16 +182,15 @@ def update_student_profile_sync(student_id: str, classification: str, timestamp:
         # Update heuristic flag
         non_other_total = profile["instrumental_count"] + profile["executive_count"]
         if non_other_total > 5 and profile["executive_count"] / non_other_total > 0.6:
-             if not profile.get("needs_guidance_flag", False): # Log only when changing to True
+             if not profile.get("needs_guidance_flag", False): 
                  logging.info(f"Profile update for {student_id}: Setting needs_guidance_flag to True.")
              profile["needs_guidance_flag"] = True
         else:
-             if profile.get("needs_guidance_flag", False): # Log only when changing to False
+             if profile.get("needs_guidance_flag", False): 
                  logging.info(f"Profile update for {student_id}: Setting needs_guidance_flag to False.")
              profile["needs_guidance_flag"] = False 
 
         # Save updated profile back to DB
-        # Ensure examples don't make JSON too large (optional: truncate if needed)
         if profile.get("last_instrumental_example") and len(profile["last_instrumental_example"]) > 500:
             profile["last_instrumental_example"] = profile["last_instrumental_example"][:500] + "..."
         if profile.get("last_executive_example") and len(profile["last_executive_example"]) > 500:
@@ -198,17 +199,18 @@ def update_student_profile_sync(student_id: str, classification: str, timestamp:
         profile_json = json.dumps(profile)
         with sqlite3.connect(DATABASE_FILE) as conn:
             cursor = conn.cursor()
+            # Include file_name in the query
             cursor.execute("""
-                INSERT OR REPLACE INTO student_profiles (student_id, profile_data)
-                VALUES (?, ?)
-            """, (student_id, profile_json))
+                INSERT OR REPLACE INTO student_profiles (student_id, file_name, profile_data)
+                VALUES (?, ?, ?)
+            """, (student_id, file_name, profile_json))
             conn.commit()
-            logging.info(f"Successfully updated profile for {student_id}")
+            logging.info(f"Successfully updated profile for {student_id} (file: {file_name})")
 
     except sqlite3.Error as e:
-        logging.error(f"DB error updating profile for {student_id}: {e}")
+        logging.error(f"DB error updating profile for {student_id} (file: {file_name}): {e}")
     except Exception as e:
-        logging.error(f"Unexpected error updating profile for {student_id}: {e}", exc_info=True)
+        logging.error(f"Unexpected error updating profile for {student_id} (file: {file_name}): {e}", exc_info=True)
 
 
 # --- Helper Functions ---
@@ -372,7 +374,7 @@ def format_history_for_prompt(history_messages: list) -> str:
 
 
 # --- Background Task Function ---
-async def classify_and_update_profile(student_id: str, question_text: str, timestamp: float):
+async def classify_and_update_profile(student_id: str, file_name: str, question_text: str, timestamp: float):
     """Background task to classify a question and update the student profile."""
     logging.info(f"Background task started: Classify and update profile for {student_id}")
     classification_result = "other" # Default classification
@@ -416,7 +418,7 @@ async def classify_and_update_profile(student_id: str, question_text: str, times
 
     # Update profile using the synchronous function
     try:
-        update_student_profile_sync(student_id, classification_result, timestamp, question_text)
+        update_student_profile_sync(student_id, file_name, classification_result, timestamp, question_text)
     except Exception as e:
         logging.error(f"Background task: Failed during update_student_profile_sync for {student_id}: {e}", exc_info=True)
 
@@ -437,7 +439,8 @@ async def receive_student_message(message: StudentMessage, background_tasks: Bac
     logging.info(f"TA received message from {message.student_id} (file: {message.file_name}): '{message.message_text[:100]}...'")
 
     # --- 0. Get Context ---
-    student_profile = get_student_profile(message.student_id)
+    # Pass file_name to get_student_profile
+    student_profile = get_student_profile(message.student_id, message.file_name)
     needs_guidance = student_profile.get("needs_guidance_flag", False)
     last_exec_example = student_profile.get("last_executive_example")
     last_instr_example = student_profile.get("last_instrumental_example")
@@ -523,8 +526,14 @@ async def receive_student_message(message: StudentMessage, background_tasks: Bac
                     Recent Activity Logs:
                     {logs_context}
                     Expert info based on student's question and context: "{ea_response}"
-                    Student originally asked: "{message.message_text}"
-                    Formulate your response as Juno, considering profile hints, conversation history, recent logs, and instructions."""}
+
+                    ---
+                    Student Question: "{message.message_text}"
+                    ---
+
+                    Based on the context above (including profile hints and history), formulate your pedagogical response as Juno, focusing directly on answering or guiding the student regarding their specific **Student Question**."""
+
+                    }
             )
 
             final_response = await call_llm(
@@ -548,6 +557,7 @@ async def receive_student_message(message: StudentMessage, background_tasks: Bac
         background_tasks.add_task(
             classify_and_update_profile,
             message.student_id,
+            message.file_name, 
             message.message_text,
             current_timestamp
         )

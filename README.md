@@ -25,9 +25,11 @@ The system consists of a JupyterHub server, individual user Jupyter servers, a m
     - The [Jupyter-chat](https://github.com/jupyterlab/jupyter-chat) Extension is used to integrate a chat interface into the notebook.
     - The `chat_interact.py` script in the notebook image is used to interact with the LLM-handler server by watching the chat files for changes and sending the messages to the server.
     - The `process_logs.py` script in the notebook image processes the telemetry logs from the JupyterLab-Pioneer extension to create a JSON file with the processed logs for each notebook.
-- The **middleware** container runs the LLM-handler server and the LA module.
-    - The LLM-handler server (in `llm_handler.py`) is a LangChain-based server that provides a REST API for the chatbot. It uses the FileChatMessageHistory class to process the chat history for each conversation, stored in the `chat_histories` directory and calls the Ollama server to generate responses.
-    - The LA module (in progress) processes the telemetry logs from the JupyterLab-Pioneer to generate insights and visualizations for instructors and researchers, and trigger interventions based on user actions.
+- The **middleware** container runs the backend services:
+    - The Tutor Agent (`ta-handler.py`) receives student messages, orchestrates calls to the Expert Agent and the LLM, manages student profiles, and maintains chat history using an SQLite database (`chat_histories` volume).
+    - The Expert Agent (`ea-handler.py`) provides concise, factual technical information based on context provided by the TA.
+    - Both agents are started via the `start.sh` script.
+    - The LA module (in progress) processes telemetry logs to generate insights.
 - **Fluent** is used to collect logs from the individual containers and send them to the middleware container for storage and processing with the LA module.
 - The **Ollama** server can run locally in the host machine or on a separate one. Cloud or third-party services can also be used, but the system is designed to work with a self-hosted server. 
 
@@ -53,9 +55,13 @@ Build and run the JupyterHub server using docker compose. This will create a Jup
 - To stop the system, run `docker compose down`.
 
 ### Pedagogical Configuration
-The two basic adjustments to the system are the system prompt for the assistant and the learning objectives for the course and per notebook.
-- **System Prompt**: The system prompt for the assistant can be set in the `ta-system-prompt.txt` file in the **jupyterhub-docker/middleware/inputs** directory.
-- **Learning Objectives**: The learning objectives for the course and per notebook can be set in the `learning_objectives.txt` file in the **jupyterhub-docker/middleware/inputs** directory.
+Several aspects of the AI tutor's behavior and context can be configured by editing files in the **jupyterhub-docker/middleware/inputs** directory. Changes to these files take effect immediately for new messages (no container restart needed) when using the production setup with the volume mount.
+- **Tutor Agent System Prompt**: `ta-system-prompt.txt` defines the main persona and instructions for the Tutor Agent (Juno).
+- **Expert Agent System Prompt**: `ea-system-prompt.txt` defines the specific role and constraints for the Expert Agent.
+- **Learning Objectives**: `learning_objectives.txt` lists the course/assignment learning objectives used for context and matching.
+- **Assignment Description**: `assignment_description.txt` provides the overall assignment context for the agents.
+- **Classification Prompt**: `classification_prompt.txt` instructs the LLM on how to classify student questions (e.g., instrumental vs. executive).
+- **Classification Options**: `classification_options.txt` lists the valid classification categories the LLM should use.
 
 ### Individual User Servers
 The individual user servers are automatically created (or *spawned*) when a user is created in the JupyterHub server. These servers include the necessary configuration for the JupyterLab-Pioneer and Jupyter-Chat extensions to log telemetry data and enable chat functionality in the notebook. The image is built automatically using the Dockerfile in the user-notebook directory.
@@ -86,7 +92,7 @@ To access JupyterHub from outside the local network, follow the official [Jupyte
 
 ## FAQ:
 - Where can I edit the system prompt for the assistant?
-    - The system prompt for the assistant can be set in the **llm_handler.py** file in the **jupyterhub-docker/middleware** directory.
+    - The main system prompt for the Tutor Agent (Juno) can be edited in the **jupyterhub-docker/middleware/inputs/ta-system-prompt.txt** file. See the *Pedagogical Configuration* section for other related files.
 - Can I add notebooks or materials so they are available to all users?
     - Yes, you can add course materials to the **working-directory** in the user-notebook image, using the Dockerfile.
 - What if I can't run Ollama locally?
@@ -109,43 +115,54 @@ For the local Ollama server, see the steps above, if you have access to a webui 
 - Run `docker compose -f 'docker-compose-dev.yml' down` to stop them
 - If you make changes, like trying a different prompt in the **llm_handler.py** file in the **jupyterhub-docker/middleware** directory, you can rebuild the middleware container only: 
     - Run `docker compose -f 'docker-compose-dev.yml' up -d --build middleware-dev`
-    - Or just do `down` and `up` for the whole thing 
+- If you make changes to the Python code (e.g., in `ta-handler.py` or `ea-handler.py` in the **jupyterhub-docker/middleware** directory), you need to rebuild the middleware container:
+    - Run `docker compose -f 'docker-compose-dev.yml' up -d --build middleware-dev`
+- Changes to files in the **jupyterhub-docker/middleware/inputs** directory (like prompts or learning objectives) do **not** require a rebuild in the dev environment; they are reflected immediately because the directory is mounted as a volume.
+- Or just do `down` and `up` for the whole thing 
 
  
 ### For Step-by-step individual services:
-This workflow does not require Docker, but it needs Python 3.12. 
-1. Create a venv and install the necessary packages for the LLM Handler:
-    - Navigate to the Middleware directory in the terminal: `cd jupyterhub-docker/middleware`
-    - `python -m venv llm-handler`
-    - `source llm-handler/bin/activate`, on Windows use `llm-handler\Scripts\activate`
-    - `python.exe -m pip install -r requirements.txt`
-2. On a different terminal, create a venv for the interface that will run JupyterLab:
-    - Stay in the home directory of the repository
-    - `python -m venv jupyterlab`
-    - `source jupyterlab/bin/activate`, on Windows use `jupyterlab\Scripts\activate`
-    - `python.exe -m pip install -r requirements.txt`
-3. On a third terminal, create a venv for the chat handler server:
-    - Navigate to the user-notebook directory in the terminal: `cd jupyterhub-docker/user-notebook`
-    - `python -m venv chatbot`
-    - `source chatbot/bin/activate`, on Windows use `chatbot\Scripts\activate`
-    - `python.exe -m pip install -r chat_interact_requirements.txt`
-4. Create your environment variables file, where you will add the address of the Ollama server you're using (you must setup Ollama before this step, see above):
-    - Create an **.env** file in the **jupyterhub-docker/middleware** directory
-    - Add the following line to the **.env** file: `ollama_url=http://localhost:11434` if you have it local or the address of your Ollama server5. On the first terminal, still running the **llm-handler** environment and run the LLM-handler server:
-    - `python llm_handler.py`
-    - Type `Ctrl+C` to stop the server. This server must be active to process the chat messages.
-6. On the terminal running the **chatbot** environment, run the chatbot handler:
-    - `python .\jupyterhub-docker\user-notebook\chat_interact.py [working-directory] [processed-logs-directory]` and this will check for any new chats created in the directory provided and send them to the chatbot server. Here, the `working-directory` is where the chats are stored, and `processed-logs` is where you keep the output of the log processing script, see step 9 below.
-    - Type `Ctrl+C` to stop the chatbot handler. This script must be active to send the chat messages to the chatbot server.
-7. Add the jupyterlab-pioneer [configuration](https://jupyter-server.readthedocs.io/en/latest/operators/configuring-extensions.html) file to the JupyterLab configuration directory:
-    - On the terminal with the **jupyterlab** environment, run `jupyter --path`
+This workflow does not require Docker, but it needs Python 3.11+ and `uv` (or `pip`).
+1. Create a virtual environment and install dependencies for the Middleware (TA & EA):
+    - Navigate to the Middleware directory: `cd jupyterhub-docker/middleware`
+    - `python -m venv .venv` (or your preferred venv name)
+    - `source .venv/bin/activate` (on Windows use `.venv\Scripts\activate`)
+    - `uv pip install .` (This reads `pyproject.toml` and installs dependencies)
+       *(Alternatively, if not using `uv`, use `pip install -r requirements.txt` if you maintain one)*
+2. On a different terminal, create a venv and install dependencies for JupyterLab:
+    - Navigate to the repository root: `cd ../..`
+    - `python -m venv .venv-lab`
+    - `source .venv-lab/bin/activate` (on Windows use `.venv-lab\Scripts\activate`)
+    - `uv pip install jupyterlab notebook` *(Install other necessary lab extensions)*
+       *(Or use `pip install -r requirements.txt` if you have one at the root)*
+3. On a third terminal, create a venv and install dependencies for the chat interaction script:
+    - Navigate to the user-notebook directory: `cd jupyterhub-docker/user-notebook`
+    - `python -m venv .venv-chat`
+    - `source .venv-chat/bin/activate` (on Windows use `.venv-chat\Scripts\activate`)
+    - `uv pip install -r chat_interact_requirements.txt`
+       *(Or use `pip install -r chat_interact_requirements.txt`)*
+4. Create your environment variables file for the Middleware:
+    - Ensure you are in the **jupyterhub-docker/middleware** directory.
+    - Create an **.env** file.
+    - Add the following line: `ollama_url=http://localhost:11434` (or the address of your Ollama/WebUI server). Add `webui_url` and `webui_api_key` if using WebUI.
+5. Run the Middleware services (TA and EA):
+    - **Terminal 1 (Middleware venv):** Run the Expert Agent:
+        - `uvicorn ea-handler:app --host localhost --port 8003`
+    - **Terminal 1a (Another Middleware venv, or run EA in background):** Run the Tutor Agent:
+        - `uvicorn ta-handler:app --host localhost --port 8004`
+    - *These servers must remain active.*
+6. On the terminal running the **chat interaction** environment (from step 3), run the chat handler script:
+    - `python chat_interact.py /path/to/your/notebooks/chats /path/to/your/processed/logs`
+    - Replace the paths with the actual directories where your chat files will be saved by JupyterLab and where `process_logs.py` outputs its JSON files.
+    - *This script must remain active.*
+7. Add the jupyterlab-pioneer configuration file:
+    - On the terminal with the **JupyterLab** environment, run `jupyter --path`
     - Copy the config file (see the [examples](https://github.com/educational-technology-collective/jupyterlab-pioneer/tree/main/configuration_examples)), named **jupyter_jupyterlab_pioneer_config.py** to the appropriate path. For development, use the **file_exporter** and set the correct path. See the config in **jupyterhub-docker/user-notebook/jupyter_jupyterlab_pioneer_config.py**.
     - You only have to do this once, the configuration will be saved in the JupyterLab configuration directory.
-8. On the terminal with the **jupyterlab** environment, run the JupyterLab interface:
-    - `jupyter lab`
-    - The JupyterLab interface will open in your browser. You can now interact with the chatbot and use the JupyterLab-Pioneer extension to log telemetry data.
-    - Close JupyterLab by navigating to **File > Shut Down** in the interface.
-9. To run the :construction: experimental :construction: log processing script, activate the **chatbot** environment and run the script:
+8. On the terminal with the **JupyterLab** environment (from step 2), run JupyterLab:
+    - `jupyter lab --notebook-dir=/path/to/your/notebooks`
+    - *Ensure the chat extension saves files to the directory monitored in step 6.*
+9. To run the experimental log processing script, activate the **chat interaction** environment and run the script:
     - `python process_logs.py path-to-log-file path-to-output-directory`
-    - This script will process the logs in the **logs** file (the one configured in step 6 **jupyter_jupyterlab_pioneer_config.py**) and create a JSON file with the processed logs for each notebook in the given directory.
-    - For the LLM to see the logs as context, <ins>the notebook and the chat file must have the same name</ins>. 
+    - This script will process the logs in the **logs** file (the one configured in step 7 **jupyter_jupyterlab_pioneer_config.py**) and create a JSON file with the processed logs for each notebook in the given directory.
+    - For the LLM to see the logs as context, <ins>the notebook and the chat file must have the same name</ins>.
