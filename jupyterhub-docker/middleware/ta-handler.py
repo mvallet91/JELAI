@@ -17,6 +17,8 @@ import torch # May be needed depending on sentence-transformers version/setup
 # --- Configuration ---
 load_dotenv()
 DATABASE_FILE = "chat_history.db" 
+DATABASE_FILE = "/app/chat_histories/chat_history.db" 
+
 WEBUI_API_BASE = os.getenv("webui_url", "http://localhost:3000") # Your WebUI URL
 WEBUI_API_KEY = os.getenv("webui_api_key", "")
 OLLAMA_API_BASE = os.getenv("ollama_url", "http://localhost:11434") # Ollama API URL

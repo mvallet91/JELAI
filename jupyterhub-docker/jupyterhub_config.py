@@ -20,6 +20,9 @@ c.DockerSpawner.environment.update({"JUPYTERHUB_SINGLEUSER_APP": "jupyter-server
 
 # Spawn containers from this image
 c.DockerSpawner.image = os.environ["DOCKER_NOTEBOOK_IMAGE"]
+c.DockerSpawner.environment = {
+    'TA_MIDDLEWARE_URL': 'http://middleware:8004'
+}
 
 # Connect containers to this Docker network
 network_name = os.environ["DOCKER_NETWORK_NAME"]

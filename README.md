@@ -54,8 +54,8 @@ Build and run the JupyterHub server using docker compose. This will create a Jup
 
 ### Pedagogical Configuration
 The two basic adjustments to the system are the system prompt for the assistant and the learning objectives for the course and per notebook.
-- **System Prompt**: The system prompt for the assistant can be set in the `llm_handler.py` file in the **jupyterhub-docker/middleware** directory.
-- **Learning Objectives**: The learning objectives for the course and per notebook can be set in the `learning_objectives.yaml` file in the **jupyterhub-docker/middleware** directory.
+- **System Prompt**: The system prompt for the assistant can be set in the `ta-system-prompt.txt` file in the **jupyterhub-docker/middleware/inputs** directory.
+- **Learning Objectives**: The learning objectives for the course and per notebook can be set in the `learning_objectives.txt` file in the **jupyterhub-docker/middleware/inputs** directory.
 
 ### Individual User Servers
 The individual user servers are automatically created (or *spawned*) when a user is created in the JupyterHub server. These servers include the necessary configuration for the JupyterLab-Pioneer and Jupyter-Chat extensions to log telemetry data and enable chat functionality in the notebook. The image is built automatically using the Dockerfile in the user-notebook directory.

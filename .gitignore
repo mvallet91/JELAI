@@ -25,3 +25,4 @@ __pycache__
 /jupyterhub-docker/user-notebook/user-venv/
 *group_assignments.json
 
+wiki/

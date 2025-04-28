@@ -39,7 +39,6 @@ Configuration is primarily handled via environment variables, mainly loaded from
 *   `WEBUI_API_KEY`: API key if using WebUI.
 *   `OLLAMA_MODEL`/`OLLAMA_CLASSIFICATION_MODEL`/`OLLAMA_RESPONSE_MODEL`/`OLLAMA_EA_MODEL`: Names of the specific Ollama models to use for different tasks.
 *   `EA_URL`: The internal URL the TA uses to reach the EA (e.g., `http://localhost:8003` when running in the same container).
-*   `LEARNING_OBJECTIVES_PATH`: Path to the `learning_objectives.yaml` file (used by TA).
 
 ## Database
 

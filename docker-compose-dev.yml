@@ -14,6 +14,7 @@ services:
         - "log-data:/home/jovyan/logs" 
     environment:
       - JUPYTER_TOKEN=dev  # Simple token for development access
+      - TA_MIDDLEWARE_URL=http://middleware-dev:8004
     image: user-notebook-dev
     container_name: notebook-dev
     ports:
@@ -33,7 +34,6 @@ services:
       # Mount middleware code for development
       - "middleware-dev-data:/var/log/jelai"
       - "chat-histories:/app/chat_histories"
-      - "./jupyterhub-docker/middleware/learning_objectives.yaml:/app/learning_objectives.yaml"
     # Mount learning objectives file for development
       - "./jupyterhub-docker/middleware/ea-handler.py:/app/ea-handler.py"
       - "./jupyterhub-docker/middleware/ta-handler.py:/app/ta-handler.py"
@@ -43,8 +43,6 @@ services:
       - "24224:24224"
       - "8003:8003"  # EA handler server
       - "8004:8004"  # TA handler server
-    environment:
-      - LEARNING_OBJECTIVES_PATH=/app/learning_objectives.yaml
 
 volumes:
   chat-histories:

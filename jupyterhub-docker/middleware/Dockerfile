@@ -1,5 +1,5 @@
 # Base Image
-FROM ghcr.io/astral-sh/uv:python3.13-alpine
+FROM ghcr.io/astral-sh/uv:python3.11-bookworm
 
 # Set the working directory
 WORKDIR /app
@@ -16,11 +16,12 @@ RUN chmod +x /app/start.sh
 # Copy all contents of inputs directory
 COPY inputs/ /app/inputs/
 
-RUN apk add --no-cache \
-    build-base \
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+    build-essential \
     ruby \
     ruby-dev \
-    linux-headers \
+    # linux-headers \
     bash \
     curl && \
     gem install fluentd --no-document && \

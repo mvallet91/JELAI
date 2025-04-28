@@ -60,14 +60,13 @@ services:
     volumes:
       - "middleware-data:/var/log/jelai"
       - "chat-histories:/app/chat_histories"
-      - "./middleware/learning_objectives.yaml:/app/learning_objectives.yaml"
+      - "./middleware/inputs:/app/inputs:ro"
     ports:
       - "24224:24224"
-      - "8004:8004"  # Expose TA handler server
+      - "8004:8004" 
+      - "8003:8003"  
     depends_on:
       - hub
-    environment:
-      - LEARNING_OBJECTIVES_PATH=/app/learning_objectives.yaml
 
 volumes:
   jupyterhub-data:

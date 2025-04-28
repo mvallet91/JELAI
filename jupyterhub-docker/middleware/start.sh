@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 # Create log directory if it doesn't exist
 mkdir -p /var/log/llm-handler/

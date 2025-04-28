@@ -16,14 +16,16 @@ from typing import Optional, Dict, Any
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - CHAT_INTERACT - %(message)s')
 
 # --- Configuration ---
-def is_running_in_docker():
-    return os.path.exists('/.dockerenv')
+# def is_running_in_docker():
+#     return os.path.exists('/.dockerenv')
 
-if is_running_in_docker():
-    TA_URL = "http://host.docker.internal:8004/receive_student_message"
-else:
-    TA_URL = "http://localhost:8004/receive_student_message"
+# if is_running_in_docker():
+#     TA_URL = "http://host.docker.internal:8004/receive_student_message"
+# else:
+#     TA_URL = "http://localhost:8004/receive_student_message"
 
+TA_URL_BASE = os.getenv("TA_MIDDLEWARE_URL", "http://localhost:8004")
+TA_URL = f"{TA_URL_BASE}/receive_student_message"
 
 class ChatHandler(FileSystemEventHandler):
     def __init__(self, chat_directory, loop, processed_logs_dir):
