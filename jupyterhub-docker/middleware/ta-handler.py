@@ -16,17 +16,18 @@ import torch # May be needed depending on sentence-transformers version/setup
 
 # --- Configuration ---
 load_dotenv()
-DATABASE_FILE = "chat_history.db" 
+
 DATABASE_FILE = "/app/chat_histories/chat_history.db" 
 
-WEBUI_API_BASE = os.getenv("webui_url", "http://localhost:3000") # Your WebUI URL
-WEBUI_API_KEY = os.getenv("webui_api_key", "")
-OLLAMA_API_BASE = os.getenv("ollama_url", "http://localhost:11434") # Ollama API URL
 EA_URL = "http://localhost:8003/expert_query" 
 
 # Use .env variables or fall back to defaults
-CLASSIFICATION_MODEL_NAME = os.getenv("OLLAMA_CLASSIFICATION_MODEL", "gemma3:4b")
-RESPONSE_MODEL_NAME = os.getenv("OLLAMA_RESPONSE_MODEL", "gemma3:4b")
+WEBUI_API_BASE = os.getenv("webui_url", "http://localhost:3000") 
+WEBUI_API_KEY = os.getenv("webui_api_key", "")
+OLLAMA_API_BASE = os.getenv("ollama_url", "http://localhost:11434") 
+
+CLASSIFICATION_MODEL_NAME = os.getenv("ollama_classification_model", "gemma3:4b")
+RESPONSE_MODEL_NAME = os.getenv("ollama_response_model", "gemma3:4b")
 
 # General Inputs from File
 ASSIGNMENT_DESC_FILE = "./inputs/assignment_description.txt"
@@ -35,23 +36,21 @@ CLASSIFICATION_PROMPT_FILE = "./inputs/classification_prompt.txt"
 POSSIBLE_CLASSIFICATIONS_FILE = "./inputs/classification_options.txt"	
 TA_SYSTEM_PROMPT_FILE = "./inputs/ta_system_prompt.txt"
 
-# --- Logging Setup ---
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - TA - %(message)s')
-logging.info(f"Using WebUI Base URL: {WEBUI_API_BASE}")
-logging.info(f"Using Classification Model: {CLASSIFICATION_MODEL_NAME}")
-logging.info(f"Using Response Model: {RESPONSE_MODEL_NAME}")
-
 # --- Default Values (used if file loading fails) ---
 DEFAULT_LEARNING_OBJECTIVES = [
     "Use Python", "Use proper syntax"
 ]
 DEFAULT_ASSIGNMENT_DESCRIPTION = "Complete the assignment using Python. Focus on syntax and logic."
 MIN_MATCH_SCORE = 70 # Minimum score (out of 100) to consider it a match
-
 DEFAULT_TA_SYSTEM_PROMPT = "You are a helpful tutor named Juno, embedded in a Jupyterlab Interface." 
-
 DEFAULT_CLASSIFICATION_PROMPT = "Classify the following question as good or bad"
 DEFAULT_POSSIBLE_CLASSIFICATIONS = ["good", "bad"]
+
+# --- Logging Setup ---
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - TA - %(message)s')
+logging.info(f"Using WebUI Base URL: {WEBUI_API_BASE}")
+logging.info(f"Using Classification Model: {CLASSIFICATION_MODEL_NAME}")
+logging.info(f"Using Response Model: {RESPONSE_MODEL_NAME}")
 
 # --- Load Content from Files (Assignment & LOs loaded once at startup) ---
 try:
@@ -128,17 +127,30 @@ DEFAULT_PROFILE = {
     "executive_count": 0,
     "other_count": 0,
     "last_interaction_timestamp": 0.0,
-    "needs_guidance_flag": False, # Example flag based on executive ratio
-    "last_executive_example": None, # Store text of last executive question
-    "last_instrumental_example": None # Store text of last instrumental question
+    "needs_guidance_flag": False, 
+    "last_executive_example": None, 
+    "last_instrumental_example": None 
 }
 
 
-def get_student_profile(student_id: str, file_name: str) -> dict: # Add file_name
-    """Retrieves student profile for a specific file from DB or returns default."""
+def get_student_profile(student_id: str, file_name: str) -> dict:
+    """Retrieves student profile for a specific file from DB or returns default.
+
+    Attempts to load the profile JSON string from the student_profiles table
+    based on the composite key (student_id, file_name). If no profile exists
+    or if the stored data is invalid JSON, it returns a default profile structure.
+
+    Args:
+        student_id: The unique identifier for the student.
+        file_name: The specific file context for the profile.
+
+    Returns:
+        A dictionary representing the student's profile, updated with stored
+        data if found, otherwise the DEFAULT_PROFILE structure.
+    """
     profile = DEFAULT_PROFILE.copy()
     profile["student_id"] = student_id
-    profile["file_name"] = file_name # Add file_name to default profile context if needed
+    profile["file_name"] = file_name 
     try:
         with sqlite3.connect(DATABASE_FILE) as conn:
             cursor = conn.cursor()
@@ -162,17 +174,16 @@ def update_student_profile_sync(student_id: str, file_name: str, classification:
     """Updates profile counts, flags, and example questions for a specific file."""
     logging.info(f"Background task: Updating profile for {student_id} (file: {file_name}) based on classification: {classification}")
     try:
-        # Pass file_name when getting the profile
         profile = get_student_profile(student_id, file_name)
 
         # Update counts
         profile["total_questions"] = profile.get("total_questions", 0) + 1
         if classification == "instrumental":
             profile["instrumental_count"] = profile.get("instrumental_count", 0) + 1
-            profile["last_instrumental_example"] = question_text # Store example
+            profile["last_instrumental_example"] = question_text 
         elif classification == "executive":
             profile["executive_count"] = profile.get("executive_count", 0) + 1
-            profile["last_executive_example"] = question_text # Store example
+            profile["last_executive_example"] = question_text 
         else:
             profile["other_count"] = profile.get("other_count", 0) + 1
 
@@ -199,7 +210,6 @@ def update_student_profile_sync(student_id: str, file_name: str, classification:
         profile_json = json.dumps(profile)
         with sqlite3.connect(DATABASE_FILE) as conn:
             cursor = conn.cursor()
-            # Include file_name in the query
             cursor.execute("""
                 INSERT OR REPLACE INTO student_profiles (student_id, file_name, profile_data)
                 VALUES (?, ?, ?)
@@ -224,14 +234,13 @@ def select_learning_objective_embeddings(question_text: str, learning_objectives
         question_embedding = embedding_model.encode(question_text, convert_to_tensor=True)
 
         # Compute cosine similarities
-        cosine_scores = util.cos_sim(question_embedding, LO_EMBEDDINGS)[0] # Get scores for the single question
+        cosine_scores = util.cos_sim(question_embedding, LO_EMBEDDINGS)[0] 
 
         # Find the index of the highest score
         best_match_idx = torch.argmax(cosine_scores).item()
         best_score = cosine_scores[best_match_idx].item()
 
-        # You might still want a threshold, but it can often be lower than fuzzy matching
-        SIMILARITY_THRESHOLD = 0.4 # Adjust as needed
+        SIMILARITY_THRESHOLD = 0.4
 
         if best_score >= SIMILARITY_THRESHOLD:
             selected_lo = learning_objectives[best_match_idx]
@@ -253,9 +262,9 @@ def extract_session_id_from_filename(file_name: str, student_id: str) -> str:
     return session_id
 
 
-async def call_llm(messages: list, model_name: str, purpose: str = "LLM call") -> str: # Added model_name parameter
+async def call_llm(messages: list, model_name: str, purpose: str = "LLM call") -> str: 
     """Calls WebUI's OpenAI-compatible API with a specific model."""
-    # WebUI is preferred for LLM calls, but Ollama is also supported
+    # WebUI is preferred for LLM calls with API key, but Ollama is also supported
     if WEBUI_API_KEY == "":
         logging.warning("No WebUI API key provided. Defaulting to Ollama API.")
         target_url = f"{OLLAMA_API_BASE}/v1/chat/completions"
@@ -336,14 +345,13 @@ def get_history(student_id: str, file_name: str, limit: int = 6) -> List[dict]: 
         with sqlite3.connect(DATABASE_FILE) as conn:
             conn.row_factory = sqlite3.Row
             cursor = conn.cursor()
-            # Fetch only necessary columns, filtered by student_id AND file_name
             cursor.execute("""
                 SELECT message_type, message_text
                 FROM chat_history
                 WHERE student_id = ? AND file_name = ?
                 ORDER BY timestamp DESC
                 LIMIT ?
-            """, (student_id, file_name, limit)) # Added file_name to query parameters
+            """, (student_id, file_name, limit)) 
             history_rows = cursor.fetchall()
             history_rows.reverse() # Chronological order
 
@@ -353,9 +361,9 @@ def get_history(student_id: str, file_name: str, limit: int = 6) -> List[dict]: 
                  content = row["message_text"]
                  history_for_llm.append({"role": role, "content": content})
 
-            logging.info(f"Retrieved and formatted {len(history_for_llm)} history entries for {student_id} (file: {file_name}).") # Updated log
+            logging.info(f"Retrieved and formatted {len(history_for_llm)} history entries for {student_id} (file: {file_name}).") 
     except sqlite3.Error as e:
-        logging.error(f"Failed to retrieve/format history for {student_id} (file: {file_name}): {e}") # Updated log
+        logging.error(f"Failed to retrieve/format history for {student_id} (file: {file_name}): {e}") 
     return history_for_llm
 
 def format_history_for_prompt(history_messages: list) -> str:
@@ -365,9 +373,7 @@ def format_history_for_prompt(history_messages: list) -> str:
 
     formatted_string = "Recent Conversation History:\n"
     for msg in history_messages:
-        # Use 'role' key from the dictionary provided by get_history
         role = "Student" if msg.get("role") == "user" else "Juno"
-        # Use 'content' key from the dictionary provided by get_history
         content = msg.get("content", "[message unavailable]")
         formatted_string += f"{role}: {content}\n"
     return formatted_string.strip()

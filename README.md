@@ -45,10 +45,15 @@ This setup has was developed and tested on Ubuntu 22.04 and 24.04.
 Build and run the JupyterHub server using docker compose. This will create a JupyterHub instance using the latest image from the JupyterHub Docker Hub repo (quay.io/jupyterhub/jupyterhub) with the volume **jupyterhub-data** to persist data for individual users and a network **jupyterhub-network** to allow communication between the JupyterHub server, the individual user servers, and the chatbot server.
 - Clone this repository to your local machine
 - Run the Ollama server (see below)
-- Create an **.env** file in the **jupyterhub-docker/middleware** directory and add the Ollama server address:
-    - `ollama_url=http://localhost:11434` if you have it local, otherwise the address of your Ollama server
-- Go to the **jupyterhub-docker** directory in the terminal
-- Run `docker compose build` to build the container
+- **Configure the middleware environment:**
+    - Navigate to the `jupyterhub-docker/middleware` directory.
+    - Copy the example environment file: `cp .env.example .env`
+    - Edit the new `.env` file with a text editor.
+    - Set `ollama_url` to the correct address of your Ollama server (e.g., `http://localhost:11434` if running locally).
+    - *(Optional)* If using an OpenAI-compatible WebUI instead of or alongside Ollama, uncomment and set `webui_url` and `webui_api_key`. Providing a `webui_api_key` will make the system prefer the WebUI.
+    - *(Optional)* Uncomment and set specific model names if you don't want to use the defaults (`gemma3:4b`).
+- Go back to the **jupyterhub-docker** directory in the terminal
+- Run `docker compose build` to build the containers
 - Run `docker compose up -d` to start the container in detached mode.
 - Access the JupyterHub server at `http://localhost:8000` in your browser (see *Nginx* below for public access). 
 - The default admin user is `admin`, create a new user called admin, with a new password, to access the system.
@@ -108,8 +113,13 @@ For the local Ollama server, see the steps above, if you have access to a webui 
 
 - Clone this repository to your local machine
 - Run the Ollama server (see above)
-- Create an **.env** file in the **jupyterhub-docker/middleware** directory and add the Ollama server address:
-    - `ollama_url=http://localhost:11434` if you have it local, otherwise the address of your Ollama server
+- **Configure the middleware environment:**
+    - Navigate to the `jupyterhub-docker/middleware` directory.
+    - Copy the example environment file: `cp .env.example .env`
+    - Edit the new `.env` file with a text editor.
+    - Set `ollama_url` to the correct address of your Ollama server (e.g., `http://localhost:11434` if running locally).
+    - *(Optional)* If using an OpenAI-compatible WebUI instead of or alongside Ollama, uncomment and set `webui_url` and `webui_api_key`. Providing a `webui_api_key` will make the system prefer the WebUI.
+    - *(Optional)* Uncomment and set specific model names if you don't want to use the defaults (`gemma3:4b`).
 - Run `docker compose -f 'docker-compose-dev.yml' build` to create all the images
 - Run `docker compose -f 'docker-compose-dev.yml' up -d` to start the images
 - Run `docker compose -f 'docker-compose-dev.yml' down` to stop them
