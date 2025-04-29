@@ -13,3 +13,9 @@ jupyterlab/
 __pycache__/
 venv/
 chatbot/
+
+/jupyterhub-docker/middleware/venv/
+/jupyterhub-docker/middleware/llm-handler/
+/jupyterhub-docker/user-notebook/user-venv/
+*group_assignments.json
+

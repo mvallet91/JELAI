@@ -57,6 +57,7 @@ class LogFileListener:
 
         # Use the notebook name to create a consistent output filename
         # This ensures alignment with the chat filenames
+        # TODO - verify that the session_id is a valid identifier and storage location
         output_filename = f"{session_id}_{notebook_name}.json"
         output_file_path = os.path.join(self.processed_logs_dir, output_filename)
 

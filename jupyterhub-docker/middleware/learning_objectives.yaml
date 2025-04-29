@@ -1,0 +1,99 @@
+# Learning Objectives YAML Template
+# Instructions:
+# - Fill in each task with skills, objectives, and functions/libraries.
+# - Always use double quotes around text (e.g., "pandas.read_csv()").
+# - Separate multiple functions with commas inside quotes.
+# - Use the following format for each task:
+#   Task_#:
+#     - skill: "Skill Name"
+#       objective: "Objective description."
+#       function: "Function1(), Function2(), Function3()"
+# - See the example below for reference.
+
+task_1: # Univariate analysis, filter, and count (Species)
+  - skill: "Data Import and Loading"
+    objective: "Load the dataset into the notebook."
+    function: "pandas.read_csv(), pandas.read_excel()"
+
+  - skill: "Basic Data Exploration"
+    objective: "Determine the number of variables and observations in the dataset."
+    function: "df.shape, df.columns, df.describe(), df.info()"
+
+  - skill: "Exploratory Data Analysis (EDA)"
+    objective: "Identify the names of the variables and determine which are relevant for analysis."
+    function: "df.describe(), df.value_counts(), df.groupby(), pandas.crosstab()"
+
+  - skill: "Data Cleaning and Preprocessing"
+    objective: "Detect and handle missing or messy values in the observations."
+    function: "df.isna(), df.dropna(), df.fillna(), pandas.to_numeric(), pandas.apply()"
+
+  - skill: "Univariate Analysis"
+    objective: "Count the number of different individual sharks observed per species."
+    function: "pandas.value_counts(), numpy.mean(), numpy.std()"
+
+task_2: # Bivariate analysis and data cleaning (Weight and Size)
+  - skill: "Data Import and Loading"
+    objective: "Load the data and verify missing or inconsistent entries in key columns."
+    function: "pandas.read_csv(), pandas.read_excel()"
+
+  - skill: "Data Cleaning and Preprocessing"
+    objective: "Identify and handle missing or inconsistent data in the key columns."
+    function: "df.isna(), df.dropna(), df.fillna(), pandas.to_numeric(), pandas.apply()"
+
+  - skill: "Transformations for Analysis"
+    objective: "Apply transformations needed to make the dataset usable, particularly for key columns."
+    function: "re.sub(), pandas.apply(), pandas.astype()"
+
+  - skill: "Univariate Analysis"
+    objective: "Analyze and visualize the gender distribution across different shark species."
+    function: "seaborn.histplot(), seaborn.boxplot(), pandas.value_counts()"
+
+  - skill: "Simple Visualization"
+    objective: "Use appropriate visualizations to represent the gender distribution of shark species."
+    function: "matplotlib.pyplot, seaborn, pandas.plot()"
+
+  - skill: "Multivariate Analysis"
+    objective: "Examine relationships between gender, size, and weight using appropriate visualizations."
+    function: "seaborn.scatterplot(), pandas.corr(), seaborn.heatmap()"
+
+  - skill: "Advanced Data Analysis"
+    objective: "Compare size and weight distributions across different species."
+    function: "seaborn.boxplot(), pandas.groupby(), scipy.stats"
+
+task_3: # Multivariate analysis and visualization of geospatial data (Locations)
+  - skill: "Exploratory Data Analysis (EDA)"
+    objective: "Understand the format of location data and prepare it for location-based analysis."
+    function: "df.describe(), df.dtypes, df.value_counts()"
+
+  - skill: "Transformations for Analysis"
+    objective: "Ensure location data is formatted correctly for analysis of spatial patterns."
+    function: "pandas.apply(), geopandas.GeoDataFrame(), pandas.astype()"
+
+  - skill: "Multivariate Analysis"
+    objective: "Determine whether to analyze individual species or clusters with similar behavior and justify the choice."
+    function: "seaborn.scatterplot(), pandas.groupby(), sklearn.cluster"
+
+  - skill: "Geospatial Analysis and Visualization"
+    objective: "Design a map visualization that clearly distinguishes between different shark species."
+    function: "geopandas.plot(), folium, plotly"
+
+  - skill: "Advanced Data Analysis"
+    objective: "Analyze species distribution patterns and identify regions with high or low shark activity."
+    function: "seaborn.scatterplot(), pandas.crosstab(), geopandas.sjoin()"
+
+task_4: # Geospatial and temporal analysis and visualizations (Movement)
+  - skill: "Transformations for Analysis"
+    objective: "Organize data to track movement paths over time."
+    function: "pandas.groupby(), pandas.resample(), datetime"
+
+  - skill: "Geospatial Analysis and Visualization"
+    objective: "Develop a method to visualize shark movement on a map."
+    function: "folium.PolyLine(), geopandas.GeoDataFrame()"
+
+  - skill: "Advanced Data Analysis"
+    objective: "Analyze movement patterns of individual sharks and their species."
+    function: "seaborn.lineplot(), pandas.groupby(), scipy.stats"
+
+  - skill: "Complex Visualizations: Animations and Interactive Widgets"
+    objective: "Enhance visualizations with interactive elements or animations to illustrate movement progression over time."
+    function: "matplotlib.animation, plotly, mpl_toolkits.mplot3d"

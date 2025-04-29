@@ -8,7 +8,7 @@ import uuid
 import asyncio
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
-from langserve import RemoteRunnable
+import httpx
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
@@ -18,16 +18,22 @@ def is_running_in_docker():
 
 # Set the URL based on the environment
 if is_running_in_docker():
-    chat_chain_url = "http://host.docker.internal:8002"
+    base_url = "http://host.docker.internal:8002"
 else:
-    chat_chain_url = "http://localhost:8002"
+    base_url = "http://localhost:8002"
 
 # Set up the RemoteRunnable for the chat_chain
-chat_chain = RemoteRunnable(chat_chain_url)
+chat_chain_url = f"{base_url}/chat"  # Update to use the correct endpoint
+# chat_chain = RemoteRunnable(chat_chain_url)
+
+
+# # Set up the RemoteRunnable for the chat_chain
+# chat_chain = RemoteRunnable(chat_chain_url)
 
 class ChatHandler(FileSystemEventHandler):
-    def __init__(self, chat_directory, loop):
+    def __init__(self, chat_directory, loop, processed_logs_dir):
         self.chat_directory = os.path.abspath(chat_directory)
+        self.processed_logs_dir = os.path.abspath(processed_logs_dir)
         self.last_processed_messages = {}
         self.working_message_ids = {}
         self.loop = loop
@@ -85,24 +91,47 @@ class ChatHandler(FileSystemEventHandler):
         session_id = re.sub(r'[^a-z0-9_]', '', session_id.replace(" ", "_").lower())
         return session_id
 
+    # def format_log_entry(self, log):
+    #     """Format a single log entry into a readable string."""
+    #     if log['event'] == "Executed cells":
+    #         return f"Executed cell {log['cell_index']} with input: {log.get('input', 'No input provided')}, output: {log.get('output', 'No output provided')}"
+    #     elif log['event'] == "Edited cell":
+    #         return f"Edited cell {log['cell_index']} with content: {log.get('content', 'No content provided')}"
+    #     elif log['event'] == "Added new cell":
+    #         return f"Added a new cell at index {log.get('cell_index', 'Unknown')}"
+    #     elif log['event'] == "Pasted content ":
+    #         return f"Pasted content at cell {log.get('cell_index', 'Unknown')}, with content: {log.get('content', 'No content provided')}"
+    #     else:
+    #         return f"Event: {log['event']} at cell {log.get('cell_index', 'Unknown')}"
+
     def format_log_entry(self, log):
         """Format a single log entry into a readable string."""
-        if log['event'] == "Executed cells":
-            return f"Executed cell {log['cell_index']} with input: {log.get('input', 'No input provided')}, output: {log.get('output', 'No output provided')}"
-        elif log['event'] == "Edited cell":
-            return f"Edited cell {log['cell_index']} with content: {log.get('content', 'No content provided')}"
-        elif log['event'] == "Added new cell":
-            return f"Added a new cell at index {log.get('cell_index', 'Unknown')}"
-        elif log['event'] == "Pasted content ":
-            return f"Pasted content at cell {log.get('cell_index', 'Unknown')}, with content: {log.get('content', 'No content provided')}"
-        else:
-            return f"Event: {log['event']} at cell {log.get('cell_index', 'Unknown')}"
+        event_type = log['event']
+        cell_index = log.get('cell_index', 'Unknown')
+        
+        event_formatters = {
+            "Executed cells": lambda: f"Executed cell {cell_index} with input: {log.get('input', 'No input provided')}, "
+                                    f"output: {log.get('output', 'No output provided')}",
+            "Edited cell": lambda: f"Edited cell {cell_index} with content: {log.get('content', 'No content provided')}",
+            "Added new cell": lambda: f"Added a new cell at index {cell_index}",
+            "Deleted cell": lambda: f"Deleted cell at index {cell_index}",
+            "Moved cell": lambda: f"Moved cell from index {log.get('from_index', 'Unknown')} to {cell_index}",
+            "Cell output": lambda: f"Output generated for cell {cell_index}: {log.get('output', 'No output provided')}",
+            "Pasted content": lambda: f"Pasted content at cell {cell_index}, content: {log.get('content', 'No content provided')}",
+            "Executed cells with error": lambda: f"Executed cell {cell_index} with error: {log.get('error', 'No error provided')}, content: {log.get('content', 'No content provided')}",
+            # "CellExecuteEvent": lambda: f"Executed cell {cell_index} with input: {log.get('input', 'No input provided')}, "
+                                    # f"output: {log.get('output', 'No output provided')}",
+            # "Opened notebook": lambda: f"Opened notebook '{log.get('notebook', 'Unknown notebook')}' at {log.get('time', 'Unknown time')}",
+            # "Closed notebook": lambda: f"Closed notebook '{log.get('notebook', 'Unknown notebook')}' at {log.get('time', 'Unknown time')}",
+            # "Notebook became visible": lambda: f"Notebook '{log.get('notebook', 'Unknown notebook')}' became visible at {log.get('time', 'Unknown time')}"
+    }
+
+        return event_formatters.get(event_type, lambda: f"Event: {event_type} at cell {cell_index}")()
 
     def get_processed_log_data(self, session_id):
-        # Locate the processed_logs directory
-        processed_logs_dir = os.path.join(self.chat_directory, 'processed_logs')
-
+        """Retrieve the processed log data for the given session ID."""
         # Check if the directory exists
+        processed_logs_dir = self.processed_logs_dir
         if not os.path.exists(processed_logs_dir):
             logging.error(f"Processed logs directory not found: {processed_logs_dir}")
             return None
@@ -127,6 +156,8 @@ class ChatHandler(FileSystemEventHandler):
 
         # Find the log with the matching notebook, strip prefix (e.g., "RTC:") and ".ipynb" suffix
         matching_logs = []
+        # TODO - improve the matching logic, verify the log file location and structure
+        
         for log in logs:
             notebook = log.get('notebook', '').lower()
             if notebook:
@@ -138,8 +169,9 @@ class ChatHandler(FileSystemEventHandler):
 
         # Send the last 6 matching logs, formatted as text
         if matching_logs:
-            last_logs = matching_logs[-6:]  # Get the last 6 logs
+            last_logs = matching_logs[-20:]  # Get the last
             formatted_logs = [self.format_log_entry(log) for log in last_logs]  # Format each log entry
+            formatted_logs = formatted_logs[-10:]
             return "\n".join(formatted_logs)  # Return as a single string, separated by newlines
         
         else:
@@ -195,14 +227,28 @@ class ChatHandler(FileSystemEventHandler):
             if isinstance(context, str):
                 context = {"notebook_events": [context]}
 
+            # Input data to be sent to the server
             input_data = {
                 "human_input": user_message,
                 "context": context or {}
             }
+
             logging.info(f"Input data: {input_data}")
-            response = await chat_chain.ainvoke(input_data, {'configurable': {'session_id': session_id}})
-            response = "".join(response)  # Convert the response from list to string if needed
-            return response
+
+            # Construct the endpoint URL directly
+            chat_chain_url = f"{base_url}/chat/{session_id}"
+
+            # Make an async POST request using httpx
+            async with httpx.AsyncClient(timeout=60.0) as client: 
+                response = await client.post(chat_chain_url, json=input_data)
+                response.raise_for_status()  # Raise an error for bad responses
+                response_data = response.json()
+                logging.info(f"Response data: {response_data}")
+                return response_data.get("response", "")
+
+        except httpx.HTTPStatusError as http_err:
+            logging.error(f"HTTP error occurred: {http_err}")
+            return None
         except Exception as e:
             logging.error(f"Error getting LLM response: {e}")
             return None
@@ -266,11 +312,15 @@ class ChatHandler(FileSystemEventHandler):
         except (FileNotFoundError, json.JSONDecodeError) as e:
             logging.error(f"Error replacing working message in {file_path}: {e}")
 
-def main(directory_path):
+def main(directory_path, processed_logs_dir=None):
     chat_directory = os.path.abspath(directory_path)
+    if not processed_logs_dir:
+        processed_logs_dir = os.path.join(chat_directory, 'processed_logs')
+    else:
+        processed_logs_dir = os.path.abspath(processed_logs_dir)
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
-    event_handler = ChatHandler(chat_directory, loop)
+    event_handler = ChatHandler(chat_directory, loop, processed_logs_dir)
     observer = Observer()
     observer.schedule(event_handler, path=chat_directory, recursive=False)
     observer.start()
@@ -284,8 +334,10 @@ def main(directory_path):
         observer.join()
 
 if __name__ == "__main__":
-    if len(sys.argv) != 2:
-        print("Usage: python chat_interact.py <directory_path>")
+    if len(sys.argv) != 3:
+        print("Usage: python chat_interact.py <directory_path> <processed_logs_dir>")
+        print(f"Current arguments: {sys.argv} with length {len(sys.argv)}")
         sys.exit(1)
     directory_path = sys.argv[1]
-    main(directory_path)
+    processed_logs_dir = sys.argv[2] if len(sys.argv) > 2 else None
+    main(directory_path, processed_logs_dir)

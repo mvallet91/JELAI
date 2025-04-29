@@ -1,0 +1,39 @@
+services:
+  middleware-dev:
+    build:
+      context: ./middleware
+      dockerfile: Dockerfile
+    image: middleware-dev
+    container_name: middleware-dev
+    volumes:
+      - "./middleware:/app"  # Mount entire middleware directory for development
+      - "chat-histories:/app/chat_histories"
+      - "./middleware/learning_objectives.yaml:/app/learning_objectives.yaml"
+    ports:
+      - "8002:8002"  # LLM handler server
+    environment:
+      - PYTHONPATH=/app
+      - ENVIRONMENT=development
+      - LEARNING_OBJECTIVES_PATH=/app/learning_objectives.yaml
+
+  notebook-dev:
+    build:
+      context: ./user-notebook
+      dockerfile: Dockerfile
+    image: notebook-dev
+    container_name: notebook-dev
+    volumes:
+      - "./user-notebook:/home/jovyan/work"  # Mount local code
+      - "./notebooks:/home/jovyan/notebooks"  # Mount notebooks directory
+      - "processed-logs:/home/jovyan/processed_logs"
+    ports:
+      - "8888:8888"  # JupyterLab
+    environment:
+      - JUPYTER_TOKEN=dev  # Easy access token for development
+      - CHAT_DIR=chats
+    depends_on:
+      - middleware-dev
+
+volumes:
+  chat-histories:
+  processed-logs:

@@ -28,7 +28,7 @@ c.DockerSpawner.network_name = network_name
 
 # Allow access to the host's network
 c.DockerSpawner.extra_host_config = {
-    'extra_hosts': {'host.docker.internal': 'host-gateway'}
+    "extra_hosts": {"host.docker.internal": "host-gateway"}
 }
 
 # Explicitly set notebook directory because we'll be mounting a volume to it.
@@ -37,6 +37,11 @@ c.DockerSpawner.extra_host_config = {
 # We follow the same convention.
 notebook_dir = os.environ.get("DOCKER_NOTEBOOK_DIR", "/home/jovyan/work")
 c.DockerSpawner.notebook_dir = notebook_dir
+default_notebook = os.environ.get("DEFAULT_NOTEBOOK")
+if default_notebook:
+    c.DockerSpawner.default_url = default_notebook + "?reset" # added reset to always open with zero files open
+else:
+    c.DockerSpawner.default_url =  "lab?reset" # added reset to always open with zero files open
 
 # Mount the real user's Docker volume on the host to the notebook user's
 # notebook directory in the container
@@ -63,9 +68,15 @@ c.Authenticator.allow_all = True
 c.JupyterHub.authenticator_class = "nativeauthenticator.NativeAuthenticator"
 
 # Allow anyone to sign-up without approval
-c.NativeAuthenticator.open_signup = True
+c.NativeAuthenticator.open_signup = False
 
 # Allowed admins
 admin = os.environ.get("JUPYTERHUB_ADMIN")
 if admin:
     c.Authenticator.admin_users = [admin]
+
+# Limit resources per-user
+c.Spawner.mem_limit = "400M"
+c.Spawner.cpu_limit = 0.5
+c.Spawner.stop_timeout = 30
+c.Spawner.idle_timeout = 60
