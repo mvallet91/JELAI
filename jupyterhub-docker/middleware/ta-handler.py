@@ -18,7 +18,8 @@ import glob
 # --- Configuration ---
 load_dotenv()
 
-DATABASE_FILE = "/app/chat_histories/chat_history.db" 
+# DATABASE_FILE = "chat_history.db" # for local testing
+DATABASE_FILE = "/app/chat_histories/chat_history.db"  # for docker
 
 EA_URL = "http://localhost:8003/expert_query" 
 
@@ -504,11 +505,11 @@ async def receive_student_message(message: StudentMessage, background_tasks: Bac
             Conversation History:
             {hist_str}
 
-            Next Steps:
+            Next Steps (suggest one for the student based on performance):
             {chr(10).join(next_steps)}
             [END INTERNAL CONTEXT]
             ---
-            Please generate a reflective performance report of the STUDENT.
+            Please generate a reflective performance report of the student, for the student.
             """}
         ]
         report = await call_llm(
