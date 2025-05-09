@@ -1,0 +1,3 @@
+- **Option A** - Practice: Review and practice specific Pandas skills like grouping (groupby) or counting unique values (nunique, value_counts) through targeted exercises. (Suggest if the student should solidify the coding skills from this task).
+- **Option B** - Proceed: Continue to the next ORI task: analyzing patterns in shark size and weight, including data cleaning. (Suggest if the student feels ready for the next stage of analysis).
+- **Option C** - Extra Challenge: Explore species counts further, by filtering the data by the earliest year in the dataset and the last year in the dataset. (Suggest if the student could benefit related but more complex challenge, if they solved the task to easily).

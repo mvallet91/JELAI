@@ -26,6 +26,7 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - CH
 
 TA_URL_BASE = os.getenv("TA_MIDDLEWARE_URL", "http://localhost:8004")
 TA_URL = f"{TA_URL_BASE}/receive_student_message"
+LOG_ENTRY_LIMIT = 10
 
 class ChatHandler(FileSystemEventHandler):
     def __init__(self, chat_directory, loop, processed_logs_dir):
@@ -99,11 +100,16 @@ class ChatHandler(FileSystemEventHandler):
 
     async def manage_interaction(self, content, file_path, student_id, message_text, processed_log_data, file_name):
         """Sends message to TA, waits for response, updates chat file."""
-        final_response_message = None
-        error_occured = False
-
+        # decide whether to send full logs or limited slice
+        session_id_for_logs = self.extract_session_id_from_filename(file_path)
+        if message_text.strip().lower() == "/report":
+            # no limit ⇒ full history
+            processed_log_data = self.get_processed_log_data(session_id_for_logs, limit=None)
         # Start "working" messages
         working_task = asyncio.create_task(self.send_working_messages(content, file_path))
+
+        final_response_message = None
+        error_occured = False
 
         try:
             # Call TA and WAIT for the response
@@ -201,7 +207,7 @@ class ChatHandler(FileSystemEventHandler):
        if event_type in ["Edited cell", "Pasted content"]: details = f"Content: {log.get('content', '')[:200]}"
        return f"{timestamp} - {event_type} (Cell {cell_index}): {details}"
 
-    def get_processed_log_data(self, session_id: str) -> Optional[str]:
+    def get_processed_log_data(self, session_id: str, limit: Optional[int] = LOG_ENTRY_LIMIT) -> Optional[str]:
         logging.debug(f"Looking for logs matching session_id: {session_id} in {self.processed_logs_dir}")
         try:
             matching_log_files = [ f for f in os.listdir(self.processed_logs_dir) if f.endswith('.json') ]
@@ -226,8 +232,16 @@ class ChatHandler(FileSystemEventHandler):
 
             if not matching_logs: logging.info(f"No matching logs for '{session_id}' in {log_file_path}"); return None
 
-            last_n_logs = matching_logs[-10:]
-            formatted_logs = [self.format_log_entry(log) for log in last_n_logs if log.get('event') not in ["Notebook became visible", "Closed notebook"]]
+            # apply limit if given, otherwise use entire session
+            if limit is not None and len(matching_logs) > limit:
+                selected = matching_logs[-limit:]
+            else:
+                selected = matching_logs
+            formatted_logs = [
+                self.format_log_entry(log)
+                for log in selected
+                if log.get('event') not in ["Notebook became visible", "Closed notebook"]
+            ]
             log_context = "\n".join(formatted_logs)
             logging.info(f"Found {len(formatted_logs)} relevant log entries.")
             return log_context

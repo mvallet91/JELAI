@@ -13,6 +13,7 @@ from typing import Optional, List
 from thefuzz import process
 from sentence_transformers import SentenceTransformer, util
 import torch # May be needed depending on sentence-transformers version/setup
+import glob
 
 # --- Configuration ---
 load_dotenv()
@@ -29,11 +30,14 @@ OLLAMA_API_BASE = os.getenv("ollama_url", "http://localhost:11434")
 CLASSIFICATION_MODEL_NAME = os.getenv("ollama_classification_model", "gemma3:4b")
 RESPONSE_MODEL_NAME = os.getenv("ollama_response_model", "gemma3:4b")
 
-# General Inputs from File
-ASSIGNMENT_DESC_FILE = "./inputs/assignment_description.txt"
-LEARNING_OBJECTIVES_FILE = "./inputs/learning_objectives.txt"
+# General Inputs from Directories
+ASSIGNMENT_DESC_DIR = "./inputs/assignment_descriptions"
+LO_DIR = "./inputs/learning_objectives"
+NEXT_STEPS_DIR = "./inputs/next_steps"
+
+TA_SYSTEM_PROMPT_FILE = "./inputs/ta_system_prompt.txt"
 CLASSIFICATION_PROMPT_FILE = "./inputs/classification_prompt.txt"
-POSSIBLE_CLASSIFICATIONS_FILE = "./inputs/classification_options.txt"	
+POSSIBLE_CLASSIFICATIONS_FILE = "./inputs/classification_options.txt"
 TA_SYSTEM_PROMPT_FILE = "./inputs/ta_system_prompt.txt"
 
 # --- Default Values (used if file loading fails) ---
@@ -52,25 +56,49 @@ logging.info(f"Using WebUI Base URL: {WEBUI_API_BASE}")
 logging.info(f"Using Classification Model: {CLASSIFICATION_MODEL_NAME}")
 logging.info(f"Using Response Model: {RESPONSE_MODEL_NAME}")
 
-# --- Load Content from Files (Assignment & LOs loaded once at startup) ---
-try:
-    with open(ASSIGNMENT_DESC_FILE, 'r') as f:
-        ASSIGNMENT_DESCRIPTION = f.read().strip()
-    logging.info(f"Loaded assignment description from {ASSIGNMENT_DESC_FILE}")
-except Exception as e:
-    logging.error(f"Failed to load assignment description from {ASSIGNMENT_DESC_FILE}: {e}. Using default.")
-    ASSIGNMENT_DESCRIPTION = DEFAULT_ASSIGNMENT_DESCRIPTION
-logging.info(f"Assignment Description: {ASSIGNMENT_DESCRIPTION}")
+# --- Load Content from Files ---
+def load_assignment_resources():
+    descs = {}
+    los = {}
+    next = {}
+    # Load assignment descriptions, learning objectives, and next steps from files
+    if not os.path.exists(ASSIGNMENT_DESC_DIR):
+        logging.error(f"Assignment descriptions directory '{ASSIGNMENT_DESC_DIR}' does not exist.")
+        raise FileNotFoundError(f"Assignment descriptions directory '{ASSIGNMENT_DESC_DIR}' does not exist.")
+    if not os.path.exists(LO_DIR):
+        logging.error(f"Learning objectives directory '{LO_DIR}' does not exist.")
+        raise FileNotFoundError(f"Learning objectives directory '{LO_DIR}' does not exist.")
+    if not os.path.exists(NEXT_STEPS_DIR):
+        logging.error(f"Next steps directory '{NEXT_STEPS_DIR}' does not exist.")
+        raise FileNotFoundError(f"Next steps directory '{NEXT_STEPS_DIR}' does not exist.")
+    for path in glob.glob(os.path.join(ASSIGNMENT_DESC_DIR, "*.txt")):
+        key = os.path.splitext(os.path.basename(path))[0]
+        with open(path) as f:
+            descs[key] = f.read().strip()
+    for path in glob.glob(os.path.join(LO_DIR, "*.txt")):
+        key = os.path.splitext(os.path.basename(path))[0]
+        with open(path) as f:
+            los[key] = [l.strip() for l in f if l.strip()]
+    for path in glob.glob(os.path.join(NEXT_STEPS_DIR, "*.txt")):
+        key = os.path.splitext(os.path.basename(path))[0]
+        with open(path) as f:
+            next[key] = [l.strip() for l in f if l.strip()]
+    return descs, los, next
+
+
+def derive_assignment_id(file_name: str) -> str:
+    # strip directory + extension
+    return os.path.splitext(os.path.basename(file_name))[0]
+
 
 try:
-    with open(LEARNING_OBJECTIVES_FILE, 'r') as f:
-        LEARNING_OBJECTIVES = [line.strip() for line in f if line.strip()]
-    if not LEARNING_OBJECTIVES:
-        raise ValueError("Learning objectives file is empty or contains only whitespace.")
-    logging.info(f"Loaded {len(LEARNING_OBJECTIVES)} learning objectives from {LEARNING_OBJECTIVES_FILE}")
+    ASSIGNMENT_DESCRIPTIONS, LEARNING_OBJECTIVES_MAP, NEXT_STEPS_MAP = load_assignment_resources()
+    logging.info(f"Loaded assignment descriptions and learning objectives from directories.")
 except Exception as e:
-    logging.error(f"Failed to load learning objectives from {LEARNING_OBJECTIVES_FILE}: {e}. Using defaults.")
-    LEARNING_OBJECTIVES = DEFAULT_LEARNING_OBJECTIVES
+    logging.error(f"Failed to load assignment resources: {e}. Using defaults.")
+    ASSIGNMENT_DESCRIPTIONS = {"default": DEFAULT_ASSIGNMENT_DESCRIPTION}
+    LEARNING_OBJECTIVES_MAP = {"default": DEFAULT_LEARNING_OBJECTIVES}
+    NEXT_STEPS_MAP = {"default": ["No next steps available."]}
 
 app = FastAPI(title="Multi-Agent Flow")
 
@@ -114,7 +142,7 @@ class StudentMessage(BaseModel):
     message_text: str
     processed_logs: Optional[str] = None
     file_name: str
-
+    
 # This model defines the response TA sends back to chat_interact
 class TutorApiResponse(BaseModel):
     final_response: str
@@ -440,6 +468,56 @@ async def receive_student_message(message: StudentMessage, background_tasks: Bac
     2. Formulates pedagogical response using LLM + context + EA answer.
     3. Schedules background task for classification & profile update.
     """
+    
+    if message.message_text.strip().lower() == "/report":
+        """
+        Generates a performance report for the student based on their recent activity logs and conversation history.
+        """
+        assignment_id = derive_assignment_id(message.file_name)
+        assignment_desc = ASSIGNMENT_DESCRIPTIONS.get(assignment_id, DEFAULT_ASSIGNMENT_DESCRIPTION)
+        learning_objs = LEARNING_OBJECTIVES_MAP.get(assignment_id, DEFAULT_LEARNING_OBJECTIVES)
+        next_steps = NEXT_STEPS_MAP.get(assignment_id, ["Proceed to next assignment.", "Ask Juno for exercises."])
+        
+        history_msgs = get_history(message.student_id, message.file_name, limit=50)
+        hist_str = format_history_for_prompt(history_msgs)
+        logs_ctx = message.processed_logs or "No activity logs."
+      
+        report_prompt = [
+            {"role":"system", "content":
+                """You are Juno, an automated coach.  
+                Using the student's recent notebook logs, conversation history and the assignment's learning objectives, produce a clear performance report for the student. 
+                For each learning objective, note strengths, weaknesses, and concrete next steps. 
+                Based on the report, suggest a personalized next step for the student.
+                Use an encouraging tone, and avoid technical jargon.
+                """},
+            {"role":"user", "content": f"""
+            [INTERNAL CONTEXT: DO NOT REVEAL SOURCES]
+            Assignment:
+            {assignment_desc}
+
+            Learning Objectives:
+            - {chr(10).join(learning_objs)}
+
+            Full Activity Logs:
+            {logs_ctx}
+
+            Conversation History:
+            {hist_str}
+
+            Next Steps:
+            {chr(10).join(next_steps)}
+            [END INTERNAL CONTEXT]
+            ---
+            Please generate a reflective performance report of the STUDENT.
+            """}
+        ]
+        report = await call_llm(
+            report_prompt,
+            model_name=RESPONSE_MODEL_NAME,
+            purpose="performance report generation"
+        )
+        return TutorApiResponse(final_response=report)
+    
     start_time = time.time()
     current_timestamp = time.time()
     logging.info(f"TA received message from {message.student_id} (file: {message.file_name}): '{message.message_text[:100]}...'")
@@ -463,14 +541,28 @@ async def receive_student_message(message: StudentMessage, background_tasks: Bac
     else:
         logging.info("No processed logs provided or logs were empty.")
 
+    assignment_id = derive_assignment_id(message.file_name)
+    # choose per-assignment context
+    assignment_description = ASSIGNMENT_DESCRIPTIONS.get(
+        assignment_id,
+        DEFAULT_ASSIGNMENT_DESCRIPTION
+    )
+    learning_objectives = LEARNING_OBJECTIVES_MAP.get(
+        assignment_id,
+        DEFAULT_LEARNING_OBJECTIVES
+    )
+
     # Default values
     ea_response = "The expert agent could not provide an answer."
     final_response = "I'm sorry, I encountered an issue processing your request. Please try again."
 
     try:
         # --- 1. Select Learning Objective ---
-        learning_objective = select_learning_objective_embeddings(message.message_text, LEARNING_OBJECTIVES)
-        logging.info(f"Selected Learning Objective: {learning_objective}")
+        learning_objective = select_learning_objective_embeddings(
+            message.message_text,
+            learning_objectives
+        )
+        logging.info(f"Selected LO: {learning_objective}")
 
         # --- 2. Store Current Question ---
         add_to_history(
@@ -484,8 +576,8 @@ async def receive_student_message(message: StudentMessage, background_tasks: Bac
         try:
             ea_payload = {
                 "student_question": message.message_text,
-                "assignment_description": ASSIGNMENT_DESCRIPTION,
-                "learning_objective": learning_objective,
+                "assignment_description": assignment_description,
+                "task_objective": learning_objective,
                 "history": formatted_history_for_ea,
                 "logs": logs_context,
                 "session_id": session_id
@@ -527,19 +619,20 @@ async def receive_student_message(message: StudentMessage, background_tasks: Bac
             if conversation_history_messages:
                 final_prompt_messages.extend(conversation_history_messages)
             final_prompt_messages.append(
-                {"role": "user", "content": f"""Assignment: {ASSIGNMENT_DESCRIPTION}
-                    LO: {learning_objective}
+                {"role": "user", "content": f"""
+                    [INTERNAL CONTEXT: DO NOT REVEAL SOURCES]
+                    Assignment: {assignment_description}
                     Recent Activity Logs:
                     {logs_context}
-                    Expert info based on student's question and context: "{ea_response}"
+                    Technical Information: "{ea_response}"
+                    [END INTERNAL CONTEXT]
 
                     ---
                     Student Question: "{message.message_text}"
                     ---
 
-                    Based on the context above (including profile hints and history), formulate your pedagogical response as Juno, focusing directly on answering or guiding the student regarding their specific **Student Question**."""
-
-                    }
+                    Based on the context above (including profile hints and history), formulate your response as Juno, focusing directly on answering or guiding the student regarding their specific question. Never reveal or mention internal information like learning objectives or the expert source."""
+                }
             )
 
             final_response = await call_llm(
@@ -589,7 +682,7 @@ try:
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     embedding_model = SentenceTransformer('all-MiniLM-L6-v2', device=device)
     logging.info(f"Sentence Transformer model loaded successfully on {device}.")
-    LO_EMBEDDINGS = embedding_model.encode(LEARNING_OBJECTIVES, convert_to_tensor=True)
+    LO_EMBEDDINGS = embedding_model.encode(LEARNING_OBJECTIVES_MAP.get("default", DEFAULT_LEARNING_OBJECTIVES), convert_to_tensor=True)
     logging.info("Pre-computed embeddings for Learning Objectives.")
 except Exception as e:
     logging.error(f"Failed to load Sentence Transformer model or encode LOs: {e}")

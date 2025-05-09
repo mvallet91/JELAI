@@ -109,14 +109,15 @@ async def expert_query(payload: ExpertQueryPayload): # Use the updated payload m
         ea_system_prompt = EA_SYSTEM_PROMPT_DEFAULT
 
     # --- Construct Prompt for EA's internal LLM using payload fields ---
-    prompt_context = f"""Assignment: {payload.assignment_description}
-    LO: {payload.learning_objective}
-
+    prompt_context = f"""[INTERNAL CONTEXT]
+    Assignment: {payload.assignment_description}
+    Task Objective: {payload.learning_objective}
     Recent Logs:
     {payload.logs}
 
     Conversation History:
     {payload.history}
+    [END INTERNAL CONTEXT]
 
     Student Question: {payload.student_question}
 
