@@ -2,7 +2,7 @@
 #
 # This image is based on the Jupyter Scipy Notebook image and includes additional packages and configurations for DS Tutor.
 
-FROM quay.io/jupyter/scipy-notebook:latest
+FROM quay.io/jupyter/datascience-notebook:latest
 
 # Create logs folder
 RUN mkdir /home/jovyan/logs && \

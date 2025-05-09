@@ -42,7 +42,7 @@ services:
       context: ./user-notebook
       dockerfile: Dockerfile
       args:
-        - CHAT_DIR=${CHAT_DIR}
+        - CHAT_DIR=chats
     environment:
       - CHAT_DIR=chats
     image: user-notebook
