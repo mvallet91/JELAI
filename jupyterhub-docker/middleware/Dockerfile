@@ -8,7 +8,7 @@ WORKDIR /app
 COPY pyproject.toml /app/
 
 # Create venv + install dependencies
-RUN uv venv && uv pip install .  --extra-index-url https://download.pytorch.org/whl/cpu
+RUN uv venv && uv pip install .  
 
 # Copy code
 COPY ea-handler.py ta-handler.py utils.py start.sh td-agent.conf .env /app/
