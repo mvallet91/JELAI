@@ -6,26 +6,28 @@ WORKDIR /app
 
 # Copy pyproject
 COPY pyproject.toml /app/
+COPY uv.lock /app/
 
 # Create venv + install dependencies
-RUN uv venv && uv pip install .  
-
-# Copy code
-COPY ea-handler.py ta-handler.py utils.py start.sh td-agent.conf .env /app/
-RUN chmod +x /app/start.sh
-# Copy all contents of inputs directory
-COPY inputs/ /app/inputs/
+ENV UV_SYSTEM_PYTHON=true
+RUN uv pip install -r uv.lock --system .
 
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
     build-essential \
     ruby \
     ruby-dev \
-    # linux-headers \
     bash \
     curl && \
-    gem install fluentd --no-document && \
-    fluentd --setup /fluent
+    rm -rf /var/lib/apt/lists/* 
+
+RUN gem install fluentd --no-document && \
+    fluentd --setup /fluent 
+
+# Copy application code
+COPY ea-handler.py ta-handler.py utils.py start.sh .env /app/
+RUN chmod +x /app/start.sh
+COPY inputs/ /app/inputs/
 
 # Fluentd config
 RUN mkdir -p /fluent/etc

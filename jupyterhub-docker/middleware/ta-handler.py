@@ -6,7 +6,9 @@ import re
 import os
 import httpx
 import logging
-import json
+import json # Added
+import hashlib # Added
+from pathlib import Path # Added
 from dotenv import load_dotenv
 import uvicorn
 from typing import Optional, List 
@@ -20,6 +22,7 @@ load_dotenv()
 
 # DATABASE_FILE = "chat_history.db" # for local testing
 DATABASE_FILE = "/app/chat_histories/chat_history.db"  # for docker
+EXPERIMENT_CONFIG_FILE = Path(__file__).parent / "inputs" / "ab_experiments.json" # Added
 
 EA_URL = "http://localhost:8003/expert_query" 
 
@@ -103,6 +106,34 @@ except Exception as e:
 
 app = FastAPI(title="Multi-Agent Flow")
 
+# --- Global variable for experiment config ---
+ACTIVE_EXPERIMENT_CONFIG = None # Added
+
+# --- Function to load experiment configuration ---
+def load_experiment_config(): # Added
+    global ACTIVE_EXPERIMENT_CONFIG
+    try:
+        with open(EXPERIMENT_CONFIG_FILE, 'r') as f:
+            config = json.load(f)
+            active_id = config.get("active_experiment_id")
+            if active_id and active_id in config.get("experiments", {}):
+                ACTIVE_EXPERIMENT_CONFIG = config["experiments"][active_id]
+                ACTIVE_EXPERIMENT_CONFIG["id"] = active_id # Store the active experiment ID itself
+                logging.info(f"Successfully loaded active A/B experiment config: {active_id}")
+            else:
+                logging.warning(f"A/B testing: active_experiment_id '{active_id}' not found or invalid in {EXPERIMENT_CONFIG_FILE}. A/B testing disabled.")
+                ACTIVE_EXPERIMENT_CONFIG = None
+    except FileNotFoundError:
+        logging.warning(f"A/B testing: Experiment config file {EXPERIMENT_CONFIG_FILE} not found. A/B testing disabled.")
+        ACTIVE_EXPERIMENT_CONFIG = None
+    except json.JSONDecodeError:
+        logging.error(f"A/B testing: Error decoding JSON from {EXPERIMENT_CONFIG_FILE}. A/B testing disabled.")
+        ACTIVE_EXPERIMENT_CONFIG = None
+    except Exception as e:
+        logging.error(f"A/B testing: Unexpected error loading experiment config: {e}. A/B testing disabled.")
+        ACTIVE_EXPERIMENT_CONFIG = None
+
+
 # --- Database Setup ---
 def init_db():
     try:
@@ -129,13 +160,24 @@ def init_db():
                     PRIMARY KEY (student_id, file_name) -- Composite key
                 )
             """)
+            # Create student experiment assignments table (if not exists) - Added
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS student_experiment_assignments (
+                    student_id TEXT NOT NULL,
+                    experiment_id TEXT NOT NULL,
+                    group_id TEXT NOT NULL,
+                    assigned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    PRIMARY KEY (student_id, experiment_id)
+                )
+            """)
             conn.commit()
-            logging.info("Database initialized (chat_history & student_profiles tables checked/created).")
+            logging.info("Database initialized (chat_history, student_profiles & student_experiment_assignments tables checked/created).")
     except sqlite3.Error as e:
         logging.error(f"Database initialization failed: {e}")
         raise
 
 init_db()
+load_experiment_config() # Added: Load experiment config on startup
 
 # --- Data Models ---
 class StudentMessage(BaseModel):
@@ -253,6 +295,61 @@ def update_student_profile_sync(student_id: str, file_name: str, classification:
 
 
 # --- Helper Functions ---
+def get_or_assign_experiment_group(student_id: str) -> Optional[dict]:
+    if not ACTIVE_EXPERIMENT_CONFIG or not ACTIVE_EXPERIMENT_CONFIG.get("groups"):
+        return None # A/B testing disabled or no groups defined
+
+    experiment_id = ACTIVE_EXPERIMENT_CONFIG["id"]
+    groups = ACTIVE_EXPERIMENT_CONFIG["groups"]
+    num_groups = len(groups)
+
+    if num_groups == 0:
+        logging.warning(f"A/B testing: No groups defined for experiment {experiment_id}.")
+        return None
+
+    try:
+        with sqlite3.connect(DATABASE_FILE) as conn:
+            cursor = conn.cursor()
+            # Check if student is already assigned
+            cursor.execute("""
+                SELECT group_id FROM student_experiment_assignments
+                WHERE student_id = ? AND experiment_id = ?
+            """, (student_id, experiment_id))
+            row = cursor.fetchone()
+
+            if row:
+                assigned_group_id = row[0]
+                for group in groups:
+                    if group["group_id"] == assigned_group_id:
+                        logging.info(f"Student {student_id} already in group '{assigned_group_id}' for experiment '{experiment_id}'.")
+                        return group # Return the full group object
+                logging.warning(f"Student {student_id} assigned to group '{assigned_group_id}' but group not found in current config for experiment '{experiment_id}'. Using default.")
+                return groups[0] # Fallback to first group if stored group_id is somehow invalid
+
+            # Assign to a group using hashing
+            hash_input = (student_id + experiment_id).encode('utf-8')
+            hash_value = hashlib.sha256(hash_input).hexdigest()
+            group_index = int(hash_value, 16) % num_groups
+            assigned_group = groups[group_index]
+            
+            # Store the new assignment
+            cursor.execute("""
+                INSERT INTO student_experiment_assignments (student_id, experiment_id, group_id)
+                VALUES (?, ?, ?)
+            """, (student_id, experiment_id, assigned_group["group_id"]))
+            conn.commit()
+            logging.info(f"Assigned student {student_id} to group '{assigned_group['group_id']}' for experiment '{experiment_id}'.")
+            return assigned_group
+
+    except sqlite3.Error as e:
+        logging.error(f"Database error during experiment group assignment for {student_id}: {e}")
+        # Fallback to a default group (e.g., the first one) in case of DB error to ensure functionality
+        return groups[0] if groups else None
+    except Exception as e:
+        logging.error(f"Unexpected error during experiment group assignment for {student_id}: {e}")
+        return groups[0] if groups else None
+
+
 def select_learning_objective_embeddings(question_text: str, learning_objectives: list) -> str:
     """Selects the most relevant LO using sentence embeddings."""
     if not embedding_model or LO_EMBEDDINGS is None:
@@ -470,6 +567,22 @@ async def receive_student_message(message: StudentMessage, background_tasks: Bac
     3. Schedules background task for classification & profile update.
     """
     
+    # --- A/B Testing: Get student's group and parameters --- Added Block
+    student_experiment_group = get_or_assign_experiment_group(message.student_id)
+    
+    # Default parameters (if A/B test not active or group has no params)
+    current_ta_system_prompt_file = TA_SYSTEM_PROMPT_FILE
+    current_profile_hint_strategy = "standard" # Default strategy
+
+    if student_experiment_group and "params" in student_experiment_group:
+        group_params = student_experiment_group["params"]
+        current_ta_system_prompt_file = group_params.get("system_prompt_file", TA_SYSTEM_PROMPT_FILE)
+        current_profile_hint_strategy = group_params.get("profile_hint_strategy", "standard")
+        logging.info(f"A/B Test: Student {message.student_id} in group '{student_experiment_group['group_id']}'. Using prompt file '{current_ta_system_prompt_file}' and hint strategy '{current_profile_hint_strategy}'.")
+    else:
+        logging.info(f"A/B Test: No specific group or params for student {message.student_id}. Using default TA prompt and hint strategy.")
+    # --- End A/B Testing Block ---
+
     if message.message_text.strip().lower() == "/report":
         """
         Generates a performance report for the student based on their recent activity logs and conversation history.
@@ -601,19 +714,26 @@ async def receive_student_message(message: StudentMessage, background_tasks: Bac
         # --- 4. LLM Call: Formulate Pedagogical Response ---
         try:
             try:
-                with open(TA_SYSTEM_PROMPT_FILE, 'r') as f:
+                # Use A/B test determined prompt file - Modified
+                with open(current_ta_system_prompt_file, 'r') as f:
                     system_prompt_content = f.read()
             except Exception as e:
-                logging.error(f"Failed to load TA system prompt: {e}. Using default.")
+                logging.error(f"Failed to load TA system prompt from '{current_ta_system_prompt_file}': {e}. Using default.")
                 system_prompt_content = DEFAULT_TA_SYSTEM_PROMPT
 
-            if needs_guidance:
-                system_prompt_content += """\n**Profile Hint (Action Required):** Student profile indicates strong executive help-seeking. Prioritize strategies that guide conceptual understanding and problem decomposition. Actively use scaffolding and reflective questions rather than direct code snippets where possible."""
-                if last_exec_example: system_prompt_content += f" E.g.: \"{last_exec_example}\". Guide towards understanding."
-            else:
-                system_prompt_content += """\n**Profile Hint (Reinforce):** Student profile indicates effective instrumental help-seeking. Reinforce this by explicitly acknowledging good questions and encouraging deeper exploration of related concepts."""
-                if last_instr_example: system_prompt_content += f" E.g.: \"{last_instr_example}\". Encourage this."
-            system_prompt_content += "\n"
+            # Apply profile hint strategy based on A/B test - Modified Block
+            if current_profile_hint_strategy == "enhanced_guidance":
+                if needs_guidance:
+                    system_prompt_content += """\n**Profile Hint (Action Required):** Student profile indicates strong executive help-seeking. Prioritize strategies that guide conceptual understanding and problem decomposition. Suggest an improved question based on their last executive request"""
+                    if last_exec_example: system_prompt_content += f" e.g.: \"{last_exec_example}\". Guide towards understanding."
+                else:
+                    system_prompt_content += """\n**Profile Hint (Reinforce):** Student profile indicates effective instrumental help-seeking. Reinforce this by explicitly acknowledging good questions"""
+                    if last_instr_example: system_prompt_content += f" e.g.: \"{last_instr_example}\". Encourage this."
+            elif current_profile_hint_strategy == "none":
+                pass 
+            # Add more strategies here if defined in ab_experiments.json
+
+            system_prompt_content += "\n" 
 
             final_prompt_messages = []
             final_prompt_messages.append({"role": "system", "content": system_prompt_content})

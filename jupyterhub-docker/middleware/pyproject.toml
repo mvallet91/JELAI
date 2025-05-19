@@ -16,8 +16,9 @@ dependencies = [
     "sentence-transformers"
 ]
 
-[tool.uv.index]
-pytorch-cpu = "https://download.pytorch.org/whl/cpu"
+[[tool.uv.index]]
+url = "https://download.pytorch.org/whl/cpu"
+name = "pytorch-cpu" 
 
 [tool.uv.sources]
 torch = { index = "pytorch-cpu" }

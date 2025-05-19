@@ -1,0 +1,24 @@
+{
+  "active_experiment_id": "exp_202505_initial_prompt_test",
+  "experiments": {
+    "exp_202505_initial_prompt_test": {
+      "description": "Test default system prompt with no hints vs. enhanced profile hints.",
+      "groups": [
+        {
+          "group_id": "control_standard_hints",
+          "params": {
+            "system_prompt_file": "./inputs/ta_system_prompt.txt",
+            "profile_hint_strategy": "none"
+          }
+        },
+        {
+          "group_id": "variant_enhanced_hints",
+          "params": {
+            "system_prompt_file": "./inputs/ta_system_prompt.txt",
+            "profile_hint_strategy": "enhanced_guidance"
+          }
+        }
+      ]
+    }
+  }
+}
