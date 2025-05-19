@@ -1,7 +1,0 @@
-Classify the type of request based on help-seeking type: 
-instrumental help-seeking refers to questions geared towards deeper understanding of a concept or a procedure.
-executive help is more about getting the task done. Executive help-seeking is also copy-pasting the original question of an assignment, the instructions, or errors without explanation.
-Other messages, such as greetings, unrelated questions, or answering a direct question are classified as <other>. 
-You should classify the message as instrumental or executive help-seeking, and if you are not sure, use other.
-Respond with a single word: instrumental, executive, or other.
-Do not add any other text or explanation.

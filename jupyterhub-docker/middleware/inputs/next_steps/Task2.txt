@@ -1,3 +1,0 @@
-- Option A (Practice): "Practice advanced data cleaning: Ask Juno for exercises involving more complex string parsing (regex) or different methods for handling missing data (imputation)."
-- Option B (Proceed): "Continue to Task 3: Investigate shark locations to identify potential hotspots using geospatial analysis techniques."
-- Option C (Challenge): "Explore how the length-weight relationship differs by species: add the species as a hue/color in the scatterplot."

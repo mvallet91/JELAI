@@ -1,7 +1,0 @@
-Load data into a pandas DataFrame: Practice using pd.read_csv() to import CSV data for analysis.
-Inspect and understand dataset structure: Learn to examine the shape, column names, and data types using .shape and .info().
-Identify relevant columns for analysis: Develop the skill to select columns needed to answer a specific research question.
-Check for missing values: Use .isna().sum() to assess data quality, especially in key columns.
-Count unique values per group: Apply .groupby() and .nunique() using the name or id (or .value_counts()) to determine the number of unique sharks per species.
-Interpret and summarize findings: Draw conclusions from the results and communicate key insights.
-Reflect on the learning process: Consider which steps or concepts were challenging and how explanations or AI assistance supported your understanding.

@@ -26,3 +26,15 @@ __pycache__
 *group_assignments.json
 
 wiki/
+
+# Files directly in inputs/
+/jupyterhub-docker/middleware/inputs/ta_system_prompt.txt
+/jupyterhub-docker/middleware/inputs/classification_prompt.txt
+/jupyterhub-docker/middleware/inputs/classification_options.txt
+/jupyterhub-docker/middleware/inputs/ea_system_prompt.txt
+
+# All .txt files in these specific subdirectories
+# This will ignore 'Task1.txt', 'Task2.txt', etc., but not 'Task1.txt.sample'
+/jupyterhub-docker/middleware/inputs/assignment_descriptions/*.txt
+/jupyterhub-docker/middleware/inputs/learning_objectives/*.txt
+/jupyterhub-docker/middleware/inputs/next_steps/*.txt

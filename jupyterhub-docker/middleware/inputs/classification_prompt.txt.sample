@@ -1,0 +1,12 @@
+Classify the message as one of the 3 phases from Zimmerman's model of self-regulated learning:
+planning, performance, or self-reflection.
+If the message is about goal setting, strategy selection, or task analysis, classify it as planning.
+If the message is about task execution, self-monitoring, or self-control, classify it as performance.
+If the message is about self-evaluation, self-judgment, or self-reaction, classify it as self-reflection.
+For example:
+- "I need to set a goal for my project" should be classified as planning.
+- "I think I'm struggling with my project" should be classified as performance.
+- "I think I did well on my project" should be classified as self-reflection.
+
+If the message is not related to self-regulated learning, classify it as other.
+Respond with a single word: planning, performance, self-reflection, or other.

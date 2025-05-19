@@ -1,0 +1,3 @@
+Load data into a pandas DataFrame: Practice using pd.read_csv() to import CSV data for analysis.
+Inspect and understand dataset structure: Learn to examine the shape, column names, and data types using .shape and .info().
+Identify relevant columns for analysis: Develop the skill to select columns needed to answer a specific research question.

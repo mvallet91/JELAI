@@ -1,1 +1,0 @@
-Analyze a shark tracking dataset to determine how many individual sharks are being monitored for each species. Load the 'sharks.csv' file, inspect its structure to identify key columns, check for data quality issues, and apply grouping operations to count unique sharks per species, ultimately interpreting what these counts reveal about research priorities.
