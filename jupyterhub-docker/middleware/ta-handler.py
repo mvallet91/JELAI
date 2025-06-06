@@ -16,6 +16,7 @@ from thefuzz import process
 from sentence_transformers import SentenceTransformer, util
 import torch # May be needed depending on sentence-transformers version/setup
 import glob
+import asyncio
 
 # --- Configuration ---
 load_dotenv()
@@ -562,9 +563,10 @@ async def classify_and_update_profile(student_id: str, file_name: str, question_
 async def receive_student_message(message: StudentMessage, background_tasks: BackgroundTasks):
     """
     Handles incoming student messages:
-    1. Calls EA directly with context (history, logs, LO, assignment, question).
-    2. Formulates pedagogical response using LLM + context + EA answer.
-    3. Schedules background task for classification & profile update.
+    1. Classifies the question type (instrumental/executive/other)
+    2. Calls EA directly with context (history, logs, LO, assignment, question).
+    3. Formulates pedagogical response using LLM + context + EA answer + classification.
+    4. Schedules background task for profile update.
     """
     
     # --- A/B Testing: Get student's group and parameters --- Added Block
@@ -637,15 +639,14 @@ async def receive_student_message(message: StudentMessage, background_tasks: Bac
     logging.info(f"TA received message from {message.student_id} (file: {message.file_name}): '{message.message_text[:100]}...'")
 
     # --- 0. Get Context ---
-    # Pass file_name to get_student_profile
     student_profile = get_student_profile(message.student_id, message.file_name)
     needs_guidance = student_profile.get("needs_guidance_flag", False)
     last_exec_example = student_profile.get("last_executive_example")
     last_instr_example = student_profile.get("last_instrumental_example")
     logging.info(f"Retrieved profile for {message.student_id}: Guidance Flag = {needs_guidance}")
 
-    conversation_history_messages = get_history(message.student_id, message.file_name, limit=6) # Pass file_name
-    formatted_history_for_ea = format_history_for_prompt(conversation_history_messages) # For EA call
+    conversation_history_messages = get_history(message.student_id, message.file_name, limit=6)
+    formatted_history_for_ea = format_history_for_prompt(conversation_history_messages)
 
     # --- Extract Processed Logs ---
     logs_context = "No recent activity logs available."
@@ -656,7 +657,6 @@ async def receive_student_message(message: StudentMessage, background_tasks: Bac
         logging.info("No processed logs provided or logs were empty.")
 
     assignment_id = derive_assignment_id(message.file_name)
-    # choose per-assignment context
     assignment_description = ASSIGNMENT_DESCRIPTIONS.get(
         assignment_id,
         DEFAULT_ASSIGNMENT_DESCRIPTION
@@ -669,13 +669,11 @@ async def receive_student_message(message: StudentMessage, background_tasks: Bac
     # Default values
     ea_response = "The expert agent could not provide an answer."
     final_response = "I'm sorry, I encountered an issue processing your request. Please try again."
+    classification_result = "other"  # Default classification
 
     try:
         # --- 1. Select Learning Objective ---
-        learning_objective = select_learning_objective_embeddings(
-            message.message_text,
-            learning_objectives
-        )
+        learning_objective = select_learning_objective_embeddings(message.message_text, learning_objectives)
         logging.info(f"Selected LO: {learning_objective}")
 
         # --- 2. Store Current Question ---
@@ -685,53 +683,129 @@ async def receive_student_message(message: StudentMessage, background_tasks: Bac
             file_name=message.file_name
         )
 
-        # --- 3. Call EA Directly with Full Context ---
-        session_id = extract_session_id_from_filename(message.file_name, message.student_id)
-        try:
-            ea_payload = {
-                "student_question": message.message_text,
-                "assignment_description": assignment_description,
-                "task_objective": learning_objective,
-                "history": formatted_history_for_ea,
-                "logs": logs_context,
-                "session_id": session_id
-            }
-            logging.info(f"Calling EA at {EA_URL} with direct context for session {session_id}")
-            logging.debug(f"EA Payload: {ea_payload}")
+        # --- 3. Parallel Classification of Question and EA Call ---
+        async def classify_question():
+            try:
+                with open(CLASSIFICATION_PROMPT_FILE, 'r') as f:
+                    classification_system_prompt = f.read()
+            except Exception as e:
+                logging.error(f"Failed to load classification prompt: {e}. Using default.")
+                classification_system_prompt = DEFAULT_CLASSIFICATION_PROMPT
 
-            async with httpx.AsyncClient() as client:
-                ea_api_response = await client.post(
-                    EA_URL,
-                    json=ea_payload,
-                    timeout=30
+            try:    
+                with open(POSSIBLE_CLASSIFICATIONS_FILE, 'r') as f:
+                    POSSIBLE_CLASSIFICATIONS = [line.strip().lower() for line in f if line.strip()]
+                if not POSSIBLE_CLASSIFICATIONS: 
+                    raise ValueError("Classification options file is empty or contains only whitespace.")
+                logging.info(f"Loaded {len(POSSIBLE_CLASSIFICATIONS)} classification options")
+            except Exception as e:
+                logging.error(f"Failed to load classification options: {e}. Using default.")
+                POSSIBLE_CLASSIFICATIONS = DEFAULT_POSSIBLE_CLASSIFICATIONS
+
+            classification_prompt_messages = [
+                {"role": "system", "content": classification_system_prompt},
+                {"role": "user", "content": f"Classify: {message.message_text}"}
+            ]
+            
+            try:
+                raw_classification = await call_llm(
+                    classification_prompt_messages,
+                    model_name=CLASSIFICATION_MODEL_NAME,
+                    purpose="question classification"
                 )
-                ea_api_response.raise_for_status()
-                ea_response = ea_api_response.json()["response"]
-                logging.info(f"EA response received: '{ea_response[:100]}...'")
-        except Exception as e:
-            logging.error(f"EA call failed: {e}. Using default EA response.")
+                clean_classification = raw_classification.strip().lower()
+                if clean_classification in POSSIBLE_CLASSIFICATIONS:
+                    return clean_classification
+                else:
+                    logging.warning(f"Unexpected classification '{raw_classification}'. Using default 'other'.")
+                    return "other"
+            except Exception as e:
+                logging.error(f"Classification failed: {e}. Using default 'other'.")
+                return "other"
+
+        async def call_expert_agent():
+            try:
+                session_id = extract_session_id_from_filename(message.file_name, message.student_id)
+                ea_payload = {
+                    "student_question": message.message_text,
+                    "assignment_description": assignment_description,
+                    "learning_objective": learning_objective,
+                    "history": formatted_history_for_ea,
+                    "logs": logs_context,
+                    "session_id": session_id
+                }
+                logging.info(f"Calling EA at {EA_URL} with direct context for session {session_id}")
+                logging.debug(f"EA Payload: {ea_payload}")
+
+                async with httpx.AsyncClient() as client:
+                    ea_api_response = await client.post(
+                        EA_URL,
+                        json=ea_payload,
+                        timeout=30
+                    )
+                    ea_api_response.raise_for_status()
+                    return ea_api_response.json()["response"]
+            except Exception as e:
+                logging.error(f"EA call failed: {e}. Using default EA response.")
+                return "The expert agent could not provide an answer."
+
+        # Run classification and EA call in parallel
+        classification_task = asyncio.create_task(classify_question())
+        ea_task = asyncio.create_task(call_expert_agent())
+        
+        # Wait for both tasks to complete
+        classification_result = await classification_task
+        ea_response = await ea_task
+        
+        logging.info(f"Question classified as: {classification_result}")
+        logging.info(f"EA response received: '{ea_response[:100]}...'")
 
         # --- 4. LLM Call: Formulate Pedagogical Response ---
         try:
             try:
-                # Use A/B test determined prompt file - Modified
                 with open(current_ta_system_prompt_file, 'r') as f:
                     system_prompt_content = f.read()
             except Exception as e:
                 logging.error(f"Failed to load TA system prompt from '{current_ta_system_prompt_file}': {e}. Using default.")
                 system_prompt_content = DEFAULT_TA_SYSTEM_PROMPT
 
-            # Apply profile hint strategy based on A/B test - Modified Block
+            # Get current question classification and profile info
+            consecutive_executive = student_profile.get("consecutive_executive_count", 0)
+            last_classification = student_profile.get("last_question_classification")
+
+            # Apply adaptive response logic based on A/B test group and question type
             if current_profile_hint_strategy == "enhanced_guidance":
-                if needs_guidance:
-                    system_prompt_content += """\n**Profile Hint (Action Required):** Student profile indicates strong executive help-seeking. Prioritize strategies that guide conceptual understanding and problem decomposition. Suggest an improved question based on their last executive request"""
-                    if last_exec_example: system_prompt_content += f" e.g.: \"{last_exec_example}\". Guide towards understanding."
-                else:
-                    system_prompt_content += """\n**Profile Hint (Reinforce):** Student profile indicates effective instrumental help-seeking. Reinforce this by explicitly acknowledging good questions"""
-                    if last_instr_example: system_prompt_content += f" e.g.: \"{last_instr_example}\". Encourage this."
+                # Treatment group gets adaptive help-seeking logic
+                if classification_result == "instrumental":
+                    if last_classification == "executive":
+                        # Shift from executive to instrumental - provide positive reinforcement
+                        system_prompt_content += """\n**Profile Hint (Positive Reinforcement):** The student has shifted from an executive to an instrumental question. Provide explicit positive reinforcement for this shift (e.g., "That's a very effective way to ask for help to understand the material.") along with standard JIT support."""
+                        logging.info(f"Adaptive Logic: Detected shift from executive to instrumental for {message.student_id}")
+                    else:
+                        # Ongoing instrumental questions - maintain standard support
+                        system_prompt_content += """\n**Profile Hint (Standard Support):** Continue providing JIT support with a positive and encouraging tone, but without explicit praise. The primary reinforcement is the answer itself."""
+                        logging.info(f"Adaptive Logic: Ongoing instrumental questions for {message.student_id}")
+
+                elif classification_result == "executive":
+                    # Incremental hints based on consecutive executive questions
+                    if consecutive_executive == 1:
+                        system_prompt_content += """\n**Profile Hint (First Executive):** This is the first executive question in sequence. Gently guide the student towards reflection. For example: "That question seems focused on getting the answer directly. For the following questions, can you think about how to rephrase them to better understand the underlying concepts?"""
+                        logging.info(f"Adaptive Logic: First executive question for {message.student_id}")
+                    elif consecutive_executive == 2:
+                        system_prompt_content += """\n**Profile Hint (Second Executive):** This is the second consecutive executive question. Provide elements of good instrumental questions. For example: "Good questions often explore the 'why' or 'how' of a concept, or compare different approaches. How might you rephrase your question with that in mind?"""
+                        logging.info(f"Adaptive Logic: Second consecutive executive question for {message.student_id}")
+                    elif consecutive_executive == 3:
+                        system_prompt_content += """\n**Profile Hint (Third Executive):** This is the third consecutive executive question. Take an example and rephrase it as a model instrumental question. For example: "If you asked '[student's executive question example]', a better version might be '[rephrased instrumental question]'. Could you try rephrasing your current request similarly?"""
+                        logging.info(f"Adaptive Logic: Third consecutive executive question for {message.student_id}")
+                    else:
+                        system_prompt_content += """\n**Profile Hint (Fourth+ Executive):** This is the fourth or subsequent consecutive executive question. Directly refer to the pedagogical rationale. For example: "Research in learning suggests that asking questions focused on understanding is more strongly linked to better learning outcomes than seeking direct solutions. It might be helpful to try and focus on understanding the process here." """
+                        logging.info(f"Adaptive Logic: Fourth+ consecutive executive question for {message.student_id}")
             elif current_profile_hint_strategy == "none":
-                pass 
-            # Add more strategies here if defined in ab_experiments.json
+                # Control group gets no adaptive hints
+                logging.info(f"Control group: No adaptive hints for {message.student_id}")
+                pass
+            else:
+                logging.warning(f"Unknown profile hint strategy '{current_profile_hint_strategy}' for {message.student_id}")
 
             system_prompt_content += "\n" 
 
@@ -746,6 +820,7 @@ async def receive_student_message(message: StudentMessage, background_tasks: Bac
                     Recent Activity Logs:
                     {logs_context}
                     Technical Information: "{ea_response}"
+                    Question Classification: {classification_result}
                     [END INTERNAL CONTEXT]
 
                     ---
@@ -773,15 +848,16 @@ async def receive_student_message(message: StudentMessage, background_tasks: Bac
             file_name=message.file_name
         )
 
-        # --- 6. Schedule Background Task ---
+        # --- 6. Schedule Background Task for Profile Update ---
         background_tasks.add_task(
-            classify_and_update_profile,
+            update_student_profile_sync,
             message.student_id,
             message.file_name, 
-            message.message_text,
-            current_timestamp
+            classification_result,
+            current_timestamp,
+            message.message_text
         )
-        logging.info(f"Scheduled background task: classify_and_update_profile for {message.student_id}")
+        logging.info(f"Scheduled background task: update_student_profile_sync for {message.student_id}")
 
         # --- 7. Return Final Response ---
         processing_time = time.time() - start_time

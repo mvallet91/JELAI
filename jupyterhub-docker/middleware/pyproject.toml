@@ -13,7 +13,8 @@ dependencies = [
     "thefuzz",
     "fluent-logger",
     "httpx",
-    "sentence-transformers"
+    "sentence-transformers",
+    "asyncio"
 ]
 
 [[tool.uv.index]]
