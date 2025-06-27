@@ -729,7 +729,7 @@ async def receive_student_message(message: StudentMessage, background_tasks: Bac
                 ea_payload = {
                     "student_question": message.message_text,
                     "assignment_description": assignment_description,
-                    "learning_objective": learning_objective,
+                    "task_objective": learning_objective,
                     "history": formatted_history_for_ea,
                     "logs": logs_context,
                     "session_id": session_id
