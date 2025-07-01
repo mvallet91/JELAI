@@ -52,16 +52,19 @@ WORKDIR /home/jovyan/work
 
 # # COPY data files into the directory
 # # For this, you need to have the data files in the same directory as the Dockerfile
-# COPY sharks.csv /home/jovyan/work/	
+COPY sharks.csv /home/jovyan/work/	
 
 # # Copy files in notebooks folder into work directory
 # # For this, you need to have the notebook files in the same directory as the Dockerfile, for example, notebooks/Task1.ipynb
 # COPY notebooks/* /home/jovyan/work/
+COPY --chown=jovyan:users notebooks/Welcome.ipynb /home/jovyan/work/
+COPY --chown=jovyan:users notebooks/Task1.ipynb   /home/jovyan/work/
+COPY --chown=jovyan:users notebooks/Task2.ipynb   /home/jovyan/work/
 
 # # Create chat files
 RUN mkdir /home/jovyan/work/chats
-# RUN touch /home/jovyan/work/chats/Task1.chat
-# RUN touch /home/jovyan/work/chats/Task2.chat
+RUN touch /home/jovyan/work/chats/Task1.chat
+RUN touch /home/jovyan/work/chats/Task2.chat
 
 ################# Workspace Configuration #################
 
