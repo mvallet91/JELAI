@@ -25,7 +25,7 @@ RUN gem install fluentd --no-document && \
     fluentd --setup /fluent 
 
 # Copy application code
-COPY ea-handler.py ta-handler.py utils.py start.sh .env /app/
+COPY ea-handler.py ta-handler.py utils.py start.sh .env analytics_cli.py /app/
 RUN chmod +x /app/start.sh
 COPY inputs/ /app/inputs/
 
