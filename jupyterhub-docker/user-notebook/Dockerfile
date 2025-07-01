@@ -56,7 +56,6 @@ COPY sharks.csv /home/jovyan/work/
 
 # # Copy files in notebooks folder into work directory
 # # For this, you need to have the notebook files in the same directory as the Dockerfile, for example, notebooks/Task1.ipynb
-# COPY notebooks/* /home/jovyan/work/
 COPY --chown=jovyan:users notebooks/Welcome.ipynb /home/jovyan/work/
 COPY --chown=jovyan:users notebooks/Task1.ipynb   /home/jovyan/work/
 COPY --chown=jovyan:users notebooks/Task2.ipynb   /home/jovyan/work/
