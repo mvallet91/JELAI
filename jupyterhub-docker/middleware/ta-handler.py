@@ -294,6 +294,20 @@ def update_student_profile_sync(student_id: str, file_name: str, classification:
     except Exception as e:
         logging.error(f"Unexpected error updating profile for {student_id} (file: {file_name}): {e}", exc_info=True)
 
+def update_question_classification(student_id, file_name, message_text, classification):
+    with sqlite3.connect(DATABASE_FILE) as conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            UPDATE chat_history
+            SET message_classification = ?
+            WHERE student_id = ? AND file_name = ? AND message_text = ? AND message_type = 'question'
+            ORDER BY timestamp DESC
+            LIMIT 1
+            """,
+            (classification, student_id, file_name, message_text)
+        )
+        conn.commit()
 
 # --- Helper Functions ---
 def get_or_assign_experiment_group(student_id: str) -> Optional[dict]:
@@ -862,6 +876,15 @@ async def receive_student_message(message: StudentMessage, background_tasks: Bac
         # --- 7. Return Final Response ---
         processing_time = time.time() - start_time
         logging.info(f"TA processing complete for {message.student_id} in {processing_time:.2f}s. Returning response.")
+
+        # --- 8. Update Question Classification ---
+        update_question_classification(
+            message.student_id,
+            message.file_name,
+            message.message_text,
+            classification_result
+        )
+
         return TutorApiResponse(final_response=final_response)
 
     except Exception as e:
