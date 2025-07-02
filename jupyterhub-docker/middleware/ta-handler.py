@@ -830,13 +830,8 @@ async def receive_student_message(message: StudentMessage, background_tasks: Bac
                     elif consecutive_executive == 3:
                         system_prompt_content += """\n**Profile Hint (Third Executive):** This is the third consecutive executive question. Take an example and rephrase it as a model instrumental question. For example: "If you asked '[student's executive question example]', a better version might be '[rephrased instrumental question]'. Could you try rephrasing your next request similarly?"""
                         logging.info(f"Adaptive Logic: Third consecutive executive question for {message.student_id}")
-<<<<<<< HEAD
                     else:
                         system_prompt_content += """\n**Profile Hint (Fourth+ Executive):** This is the fourth or subsequent consecutive executive question. Directly refer to the pedagogical rationale. For example: "Research in learning suggests that asking questions focused on understanding is more strongly linked to better learning outcomes than seeking direct solutions. It might be helpful to try and focus on understanding the process here." or "Focusing on direct solutions is not as effective as asking questions that help you understand the material. How might you rephrase your next request to focus on understanding the material?" """
-=======
-                    else:  # consecutive_executive >= 4
-                        system_prompt_content += """ \n**Profile Hint (Fourth+ Executive):** This is the fourth or subsequent consecutive executive question. Directly refer to the pedagogical rationale. For example: "Research in learning suggests that asking questions focused on understanding is more strongly linked to better learning outcomes than seeking direct solutions. It might be helpful to try and focus on understanding the process here." or "Focusing on direct solutions is not as effective as asking questions that help you understand the material. How might you rephrase your next request to focus on understanding the material?" """
->>>>>>> 3150623fba8e35de1d666aff3589af8153dc16c4
                         logging.info(f"Adaptive Logic: Fourth+ consecutive executive question for {message.student_id}")
             elif current_profile_hint_strategy == "none":
                 # Control group gets no adaptive hints
