@@ -822,16 +822,28 @@ async def receive_student_message(message: StudentMessage, background_tasks: Bac
                         # No executive streak, skip hint or use a default (no hint)
                         pass
                     elif consecutive_executive == 1:
-                        system_prompt_content += """\n**Profile Hint (First Executive):** This is the first executive question in sequence. Gently guide the student towards reflection, without requiring direct rephrasing. For example: "That question seems focused on getting the answer directly. For the following questions, can you think about how to rephrase them to better understand the underlying concepts?"""
+                        system_prompt_content += """\n**Profile Hint (First Executive):** 
+                        This is the first executive question in sequence. Gently guide the student towards reflection, without requiring direct rephrasing. 
+                        For example: "That question seems focused on getting the answer directly. For the following questions, can you think about how to rephrase them to better understand the underlying concepts?" """
                         logging.info(f"Adaptive Logic: First executive question for {message.student_id}")
                     elif consecutive_executive == 2:
-                        system_prompt_content += """\n**Profile Hint (Second Executive):** This is the second consecutive executive question. Provide elements of good instrumental questions. For example: "Good questions often explore the 'why' or 'how' of a concept, or compare different approaches. How might you rephrase following questions with that in mind?" or "Good questions decompose complex concepts into smaller, more manageable parts. How might you rephrase following questions with that in mind?" """
+                        system_prompt_content += """\n**Profile Hint (Second Executive):** 
+                        This is the second consecutive executive question. Provide elements of good instrumental questions. 
+                        For example: "Good questions often explore the 'why' or 'how' of a concept, or compare different approaches. How might you rephrase following questions with that in mind?" or "Good questions decompose complex concepts into smaller, more manageable parts. How might you rephrase following questions with that in mind?" """
                         logging.info(f"Adaptive Logic: Second consecutive executive question for {message.student_id}")
                     elif consecutive_executive == 3:
-                        system_prompt_content += """\n**Profile Hint (Third Executive):** This is the third consecutive executive question. Take an example and rephrase it as a model instrumental question. For example: "If you asked '[student's executive question example]', a better version might be '[rephrased instrumental question]'. Could you try rephrasing your next request similarly?"""
+                        last_exec_example = student_profile.get("last_executive_example", "your previous question")
+                        system_prompt_content += f"""\n**Profile Hint (Third Executive):** 
+                        This is the third consecutive executive question. Take the student's question and rephrase it as a model instrumental question. For example: 
+                        "Instead of asking 'make a bar plot', a better version might be 'what is the first step to make a bar plot?' Could you try rephrasing your next request similarly?"
+                        Student's previous question: {last_exec_example} """
                         logging.info(f"Adaptive Logic: Third consecutive executive question for {message.student_id}")
                     else:
-                        system_prompt_content += """\n**Profile Hint (Fourth+ Executive):** This is the fourth or subsequent consecutive executive question. Directly refer to the pedagogical rationale. For example: "Research in learning suggests that asking questions focused on understanding is more strongly linked to better learning outcomes than seeking direct solutions. It might be helpful to try and focus on understanding the process here." or "Focusing on direct solutions is not as effective as asking questions that help you understand the material. How might you rephrase your next request to focus on understanding the material?" """
+                        last_instr_example = student_profile.get("last_instrumental_example", "your previous question")
+                        system_prompt_content += f"""\n**Profile Hint (Fourth+ Executive):** 
+                        This is the fourth or subsequent consecutive executive question. Directly refer to the pedagogical rationale. 
+                        For example: "Research in learning suggests that asking questions focused on understanding is more strongly linked to better learning outcomes than seeking direct solutions. It might be helpful to try and focus on understanding the process here." or "Focusing on direct solutions is not as effective as asking questions that help you understand the material. How might you rephrase your next request to focus on understanding the material?"
+                        Use their previous good question as motivation: {last_instr_example} """
                         logging.info(f"Adaptive Logic: Fourth+ consecutive executive question for {message.student_id}")
             elif current_profile_hint_strategy == "none":
                 # Control group gets no adaptive hints
