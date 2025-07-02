@@ -2,7 +2,7 @@ import sqlite3
 from collections import Counter
 from datetime import datetime
 
-DB_PATH = "chat_history.db"
+DB_PATH = "/app/chat_histories/chat_history.db"
 
 def main():
     conn = sqlite3.connect(DB_PATH)
@@ -50,6 +50,16 @@ def main():
         print(f"\nActivity date range: {min_dt} to {max_dt}")
     else:
         print("\nNo activity recorded.")
+
+    # Students per experiment group
+    print("\nStudents per experiment group:")
+    c.execute("SELECT experiment_id, group_id, COUNT(DISTINCT student_id) FROM student_experiment_assignments GROUP BY experiment_id, group_id ORDER BY experiment_id, group_id")
+    rows = c.fetchall()
+    if rows:
+        for experiment_id, group_id, count in rows:
+            print(f"  Experiment: {experiment_id} | Group: {group_id} | Students: {count}")
+    else:
+        print("  No experiment group assignments found.")
 
     conn.close()
 
