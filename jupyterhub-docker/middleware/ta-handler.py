@@ -242,7 +242,7 @@ def get_student_profile(student_id: str, file_name: str) -> dict:
         logging.error(f"DB error getting profile for {student_id} (file: {file_name}): {e}. Using default.")
     return profile
 
-def update_student_profile_sync(student_id: str, file_name: str, classification: str, timestamp: float, question_text: str):
+def update_student_profile_sync(student_id: str, file_name: str, classification: str, timestamp: float, question_text: str, consecutive_executive: int, last_question_classification: str):
     """Updates profile counts, flags, and example questions for a specific file."""
     logging.info(f"Background task: Updating profile for {student_id} (file: {file_name}) based on classification: {classification}")
     try:
@@ -272,6 +272,10 @@ def update_student_profile_sync(student_id: str, file_name: str, classification:
              if profile.get("needs_guidance_flag", False): 
                  logging.info(f"Profile update for {student_id}: Setting needs_guidance_flag to False.")
              profile["needs_guidance_flag"] = False 
+
+        # Store consecutive_executive_count and last_question_classification
+        profile["consecutive_executive_count"] = consecutive_executive
+        profile["last_question_classification"] = last_question_classification
 
         # Save updated profile back to DB
         if profile.get("last_instrumental_example") and len(profile["last_instrumental_example"]) > 500:
@@ -565,7 +569,7 @@ async def classify_and_update_profile(student_id: str, file_name: str, question_
 
     # Update profile using the synchronous function
     try:
-        update_student_profile_sync(student_id, file_name, classification_result, timestamp, question_text)
+        update_student_profile_sync(student_id, file_name, classification_result, timestamp, question_text, 0, "other")
     except Exception as e:
         logging.error(f"Background task: Failed during update_student_profile_sync for {student_id}: {e}", exc_info=True)
 
@@ -784,13 +788,25 @@ async def receive_student_message(message: StudentMessage, background_tasks: Bac
                 system_prompt_content = DEFAULT_TA_SYSTEM_PROMPT
 
             # Get current question classification and profile info
-            consecutive_executive = student_profile.get("consecutive_executive_count", 0)
             last_classification = student_profile.get("last_question_classification")
+            consecutive_executive = student_profile.get("consecutive_executive_count", 0)
+
+            # --- Update consecutive_executive_count for this request ---
+            if classification_result == "executive":
+                if last_classification == "executive":
+                    consecutive_executive += 1
+                else:
+                    consecutive_executive = 1
+            else:
+                consecutive_executive = 0
+            # --- End update ---
 
             # Apply adaptive response logic based on A/B test group and question type
             if current_profile_hint_strategy == "enhanced_guidance":
                 # Treatment group gets adaptive help-seeking logic
                 if classification_result == "instrumental":
+                    # Reset consecutive_executive streak
+                    consecutive_executive = 0
                     if last_classification == "executive":
                         # Shift from executive to instrumental - provide positive reinforcement
                         system_prompt_content += """\n**Profile Hint (Positive Reinforcement):** The student has shifted from an executive to an instrumental question. Provide explicit positive reinforcement for this shift (e.g., "That's a very effective way to ask for help to understand the material.") along with standard JIT support."""
@@ -802,7 +818,10 @@ async def receive_student_message(message: StudentMessage, background_tasks: Bac
 
                 elif classification_result == "executive":
                     # Incremental hints based on consecutive executive questions
-                    if consecutive_executive == 1:
+                    if consecutive_executive == 0:
+                        # No executive streak, skip hint or use a default (no hint)
+                        pass
+                    elif consecutive_executive == 1:
                         system_prompt_content += """\n**Profile Hint (First Executive):** This is the first executive question in sequence. Gently guide the student towards reflection, without requiring direct rephrasing. For example: "That question seems focused on getting the answer directly. For the following questions, can you think about how to rephrase them to better understand the underlying concepts?"""
                         logging.info(f"Adaptive Logic: First executive question for {message.student_id}")
                     elif consecutive_executive == 2:
@@ -811,8 +830,13 @@ async def receive_student_message(message: StudentMessage, background_tasks: Bac
                     elif consecutive_executive == 3:
                         system_prompt_content += """\n**Profile Hint (Third Executive):** This is the third consecutive executive question. Take an example and rephrase it as a model instrumental question. For example: "If you asked '[student's executive question example]', a better version might be '[rephrased instrumental question]'. Could you try rephrasing your next request similarly?"""
                         logging.info(f"Adaptive Logic: Third consecutive executive question for {message.student_id}")
+<<<<<<< HEAD
                     else:
                         system_prompt_content += """\n**Profile Hint (Fourth+ Executive):** This is the fourth or subsequent consecutive executive question. Directly refer to the pedagogical rationale. For example: "Research in learning suggests that asking questions focused on understanding is more strongly linked to better learning outcomes than seeking direct solutions. It might be helpful to try and focus on understanding the process here." or "Focusing on direct solutions is not as effective as asking questions that help you understand the material. How might you rephrase your next request to focus on understanding the material?" """
+=======
+                    else:  # consecutive_executive >= 4
+                        system_prompt_content += """ \n**Profile Hint (Fourth+ Executive):** This is the fourth or subsequent consecutive executive question. Directly refer to the pedagogical rationale. For example: "Research in learning suggests that asking questions focused on understanding is more strongly linked to better learning outcomes than seeking direct solutions. It might be helpful to try and focus on understanding the process here." or "Focusing on direct solutions is not as effective as asking questions that help you understand the material. How might you rephrase your next request to focus on understanding the material?" """
+>>>>>>> 3150623fba8e35de1d666aff3589af8153dc16c4
                         logging.info(f"Adaptive Logic: Fourth+ consecutive executive question for {message.student_id}")
             elif current_profile_hint_strategy == "none":
                 # Control group gets no adaptive hints
@@ -869,7 +893,9 @@ async def receive_student_message(message: StudentMessage, background_tasks: Bac
             message.file_name, 
             classification_result,
             current_timestamp,
-            message.message_text
+            message.message_text,
+            consecutive_executive,
+            classification_result
         )
         logging.info(f"Scheduled background task: update_student_profile_sync for {message.student_id}")
 
