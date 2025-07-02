@@ -39,7 +39,7 @@ This setup has was developed and tested on Ubuntu 22.04 and 24.04.
 ### Prerequisites
 - Docker
 - Docker Compose
-- Python 3.10 or above
+- Python 3.11 or above
 
 ### Quick Start
 Build and run the JupyterHub server using docker compose. This will create a JupyterHub instance using the latest image from the JupyterHub Docker Hub repo (quay.io/jupyterhub/jupyterhub) with the volume **jupyterhub-data** to persist data for individual users and a network **jupyterhub-network** to allow communication between the JupyterHub server, the individual user servers, and the chatbot server.
@@ -132,7 +132,7 @@ For the local Ollama server, see the steps above, if you have access to a webui 
 
  
 ### For Step-by-step individual services:
-This workflow does not require Docker, but it needs Python 3.11+ and `uv` (or `pip`).
+This workflow does not require Docker, but it needs Python 3.11+ and `uv` (for package/project management).
 1. Create a virtual environment and install dependencies for the Middleware (TA & EA):
     - Navigate to the Middleware directory: `cd jupyterhub-docker/middleware`
     - `python -m venv .venv` (or your preferred venv name)
@@ -148,7 +148,6 @@ This workflow does not require Docker, but it needs Python 3.11+ and `uv` (or `p
     - `python -m venv .venv-chat`
     - `source .venv-chat/bin/activate` (on Windows use `.venv-chat\Scripts\activate`)
     - `uv pip install -r chat_interact_requirements.txt`
-       *(Or use `pip install -r chat_interact_requirements.txt`)*
 4. Create your environment variables file for the Middleware:
     - Ensure you are in the **jupyterhub-docker/middleware** directory.
     - Create an **.env** file.
