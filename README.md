@@ -138,13 +138,11 @@ This workflow does not require Docker, but it needs Python 3.11+ and `uv` (or `p
     - `python -m venv .venv` (or your preferred venv name)
     - `source .venv/bin/activate` (on Windows use `.venv\Scripts\activate`)
     - `uv pip install .` (This reads `pyproject.toml` and installs dependencies)
-       *(Alternatively, if not using `uv`, use `pip install -r requirements.txt` if you maintain one)*
 2. On a different terminal, create a venv and install dependencies for JupyterLab:
     - Navigate to the repository root: `cd ../..`
     - `python -m venv .venv-lab`
     - `source .venv-lab/bin/activate` (on Windows use `.venv-lab\Scripts\activate`)
     - `uv pip install jupyterlab notebook` *(Install other necessary lab extensions)*
-       *(Or use `pip install -r requirements.txt` if you have one at the root)*
 3. On a third terminal, create a venv and install dependencies for the chat interaction script:
     - Navigate to the user-notebook directory: `cd jupyterhub-docker/user-notebook`
     - `python -m venv .venv-chat`
