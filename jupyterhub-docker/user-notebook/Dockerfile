@@ -12,6 +12,7 @@ RUN mkdir /home/jovyan/logs/processed && \
 
 # Copy jupyterlab_pioneer config
 COPY jupyter_jupyterlab_pioneer_config.py /etc/jupyter/
+COPY jupyter_notebook_config.py /etc/jupyter/
 
 # Install additional packages
 RUN pip install --no-cache-dir jupyterlab-chat jupyterlab_pioneer
