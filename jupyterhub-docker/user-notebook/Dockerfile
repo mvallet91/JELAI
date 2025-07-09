@@ -15,7 +15,7 @@ COPY jupyter_jupyterlab_pioneer_config.py /etc/jupyter/
 COPY jupyter_notebook_config.py /etc/jupyter/
 
 # Install additional packages
-RUN pip install --no-cache-dir jupyterlab-chat jupyterlab_pioneer
+RUN pip install --no-cache-dir jupyterlab-chat jupyterlab_pioneer folium
 
 # Install Fluent Bit
 # Install td-agent-bit
