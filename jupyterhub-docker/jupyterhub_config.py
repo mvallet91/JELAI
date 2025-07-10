@@ -48,7 +48,8 @@ c.DockerSpawner.stop_timeout = 30
 # --- Storage and Data Persistence ---
 notebook_dir = os.environ.get("DOCKER_NOTEBOOK_DIR", "/home/jovyan/work")
 c.DockerSpawner.notebook_dir = notebook_dir
-c.DockerSpawner.volumes = {"jupyterhub-user-{username}": notebook_dir}
+c.DockerSpawner.volumes = {"jupyterhub-user-{username}": notebook_dir,
+                           "jupyterhub-logs-{username}": "/home/jovyan/logs/processed"}
 c.JupyterHub.cookie_secret_file = "/data/jupyterhub_cookie_secret"
 c.JupyterHub.db_url = "sqlite:////data/jupyterhub.sqlite"
 

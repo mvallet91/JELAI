@@ -84,7 +84,7 @@ CMD ["/bin/bash", "-c", "\
 source /home/jovyan/.bashrc && \
 /opt/td-agent-bit/bin/td-agent-bit -c /etc/td-agent-bit/td-agent-bit.conf  & \
 . /home/jovyan/venv/bin/activate && \
-python /home/jovyan/chat_interact.py /home/jovyan/work/${CHAT_DIR} /home/jovyan/logs/processed >> /home/jovyan/chat_interact.log 2>&1 & \
+python /home/jovyan/chat_interact.py /home/jovyan/work/${CHAT_DIR} /home/jovyan/logs/processed >> /home/jovyan/logs/processed/chat_interact.log 2>&1 & \
 . /home/jovyan/venv/bin/activate && \
-python /home/jovyan/process_logs.py /home/jovyan/logs/log /home/jovyan/logs/processed >> /home/jovyan/process_logs.log 2>&1 & \
+python /home/jovyan/process_logs.py /home/jovyan/logs/log /home/jovyan/logs/processed >> /home/jovyan/logs/processed/process_logs.log 2>&1 & \
 start-notebook.py"]
