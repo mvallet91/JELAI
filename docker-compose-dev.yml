@@ -21,6 +21,21 @@ services:
       - "8888:8888"  # Expose JupyterLab directly
     networks:
       - jelai-dev-network
+    command: >
+      bash -c "
+      echo 'Starting background services...' &&
+      . /home/jovyan/venv/bin/activate &&
+      python /home/jovyan/chat_interact.py /home/jovyan/work/chats /home/jovyan/logs/processed >> /home/jovyan/chat_interact.log 2>&1 &
+      python /home/jovyan/process_logs.py /home/jovyan/logs/log /home/jovyan/logs/processed >> /home/jovyan/process_logs.log 2>&1 &
+      echo 'Starting JupyterLab...' &&
+      jupyter lab
+      --ip=0.0.0.0
+      --port=8888
+      --no-browser
+      --ServerApp.token='dev'
+      --ServerApp.password=''
+      --ServerApp.allow_remote_access=True
+      "
 
   middleware-dev:
     build:

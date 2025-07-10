@@ -1,43 +1,33 @@
 import logging
 
-c = get_config()
-
-# Define keywords for INFO logs you want to KEEP.
-# Everything else will be hidden.
+# --- Define the Filter ---
+# Keywords for INFO logs you want to KEEP.
 IMPORTANT_INFO_KEYWORDS = [
-    'jupyterlab-pioneer/export',  # Telemetry export confirmation
-    'Saving file:',               # Successful file saves
-    'YDocExtension',              # Collaboration/sync events
-    'CellExecuteEvent',           # Log processor event
-    'JupyterHubSingleUser'        # Hub-related info
+    'jupyterlab-pioneer/export',
+    'Serving notebooks from local directory:',
+    'Jupyter Server is running at:',
+    'Writing Jupyter server cookie secret',
+    'extension was successfully'
 ]
 
 class SelectiveLogFilter(logging.Filter):
-    """
-    A custom filter to show only important INFO logs while allowing all
-    higher-level logs (WARNING, ERROR, CRITICAL).
-    """
+    """A custom filter to hide routine logs and show important ones."""
     def filter(self, record):
-        # 1. Always allow logs that are WARNING level or higher.
+        # Always show anything that is a WARNING or an ERROR
         if record.levelno > logging.INFO:
             return True
-
-        # 2. For INFO level, check if the message is important.
+        # For INFO logs, only show them if they contain our important keywords
         if record.levelno == logging.INFO:
-            message = record.getMessage()
-            # Show if it contains an important keyword OR if it's part of the startup.
-            # We approximate "startup" by checking for common startup phrases.
-            if any(keyword in message for keyword in IMPORTANT_INFO_KEYWORDS):
-                return True
-            # Allow initial server startup messages
-            if 'Jupyter Server' in message or 'Serving notebooks' in message or 'extension was successfully' in message:
-                return True
-            # Hide other INFO logs.
-            return False
-        
-        # 3. Allow other logs (like DEBUG if you ever enable it).
-        return True
+            return any(keyword in record.getMessage() for keyword in IMPORTANT_INFO_KEYWORDS)
+        return False
 
-# Apply this filter to the main Jupyter Server logger.
-# This ensures it processes all logs from the server.
-c.ServerApp.log.addFilter(SelectiveLogFilter())
+# --- Apply the Filter ---
+# Get the root logger for the entire Python process
+log = logging.getLogger()
+# Add our custom filter to it
+log.addFilter(SelectiveLogFilter())
+
+# --- Set Log Level ---
+# We still need to tell the Jupyter App to process INFO-level logs
+c = get_config()
+c.Application.log_level = 'INFO'

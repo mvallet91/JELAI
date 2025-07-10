@@ -71,11 +71,31 @@ Several aspects of the AI tutor's behavior and context can be configured by edit
 ### Individual User Servers
 The individual user servers are automatically created (or *spawned*) when a user is created in the JupyterHub server. These servers include the necessary configuration for the JupyterLab-Pioneer and Jupyter-Chat extensions to log telemetry data and enable chat functionality in the notebook. The image is built automatically using the Dockerfile in the user-notebook directory.
 
-### User Working Environment
+### User/Student Working Environment
+
 In the Dockerfile in the user-notebook directory, the working directory for the chatbot interaction is set to the **working-directory** environment variable. This is the local directory where students see their notebooks and chat files. 
 To add course or experiment materials, the files can be added to the **working-directory** in the user-notebook image.
-Additionally, the default directory for chat files can be set in the Dockerfile, for example by setting `{"defaultDirectory": "chats/"}'`.
-Check the Dockerfile in the user-notebook directory for more details.
+
+#### Learning Materials Directory
+A special directory, `learning_materials`, is provided in `jupyterhub-docker/user-notebook/` for sharing datasets, notebooks, and other resources with all users. 
+- Any files or folders placed in `learning_materials` will be copied into the Docker image and made available to all users at `/home/jovyan/learning_materials/` in their JupyterLab environment.
+- This is useful for distributing course datasets, starter notebooks, or reference materials.
+- By default, only `.gitkeep` and `README.md` are tracked by git in this directory; all other contents are ignored to prevent accidental commits of large or user-specific files. You can add or remove files as needed for your course or project.
+- To update the materials for all users, add or update files in `learning_materials` and rebuild the user-notebook image.
+
+Additionally, the default directory for chat files can be set via the `CHAT_DIR` environment variable, which is configured in `jupyterhub-docker/docker-compose.yml` under the `user-notebook` service.  
+For example:
+```yaml
+user-notebook:
+  ...
+  environment:
+    - CHAT_DIR=chats   # Change 'chats' to your desired directory name
+```
+The chat interaction app (`chat_interact.py`) will monitor `/home/jovyan/work/${CHAT_DIR}` for chat files.  
+**To change the chat directory:** edit the `CHAT_DIR` value in the `environment` section and rebuild/restart the containers.
+
+> **Note:**  
+> The `args` section under `build` is only needed if you want to change the build-time setup. For most use cases, only the `environment` line matters.
 
 ### Chatbot File Watcher
 The chat interaction app in **chat_interact.py** watches the chat files for changes and sends the messages to the chatbot server. It automatically runs in the individual containers.

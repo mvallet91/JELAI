@@ -12,7 +12,7 @@ RUN mkdir /home/jovyan/logs/processed && \
 
 # Copy jupyterlab_pioneer config
 COPY jupyter_jupyterlab_pioneer_config.py /etc/jupyter/
-COPY jupyter_notebook_config.py /etc/jupyter/
+# COPY jupyter_server_config.py /etc/jupyter/
 
 # Install additional packages
 RUN pip install --no-cache-dir jupyterlab-chat jupyterlab_pioneer folium
@@ -46,25 +46,13 @@ RUN chown root:root /etc/td-agent-bit/td-agent-bit.conf && \
 # Switch back to jovyan to avoid running the container as root
 USER jovyan
 
-# Set up the work directory
-WORKDIR /home/jovyan/work
-
 ################# Workspace Configuration #################
 
-# # COPY data files into the directory
-# # For this, you need to have the data files in the same directory as the Dockerfile
-COPY sharks.csv /home/jovyan/work/	
+# Copy learning materials (shared, version-controlled)
+COPY --chown=jovyan:users learning_materials /home/jovyan/work/
 
-# # Copy files in notebooks folder into work directory
-# # For this, you need to have the notebook files in the same directory as the Dockerfile, for example, notebooks/Task1.ipynb
-COPY --chown=jovyan:users notebooks/Welcome.ipynb /home/jovyan/work/
-COPY --chown=jovyan:users notebooks/Task1.ipynb   /home/jovyan/work/
-COPY --chown=jovyan:users notebooks/Task2.ipynb   /home/jovyan/work/
-
-# # Create chat files
-RUN mkdir /home/jovyan/work/chats
-RUN touch /home/jovyan/work/chats/Task1.chat
-RUN touch /home/jovyan/work/chats/Task2.chat
+# Set up the work directory
+WORKDIR /home/jovyan/work
 
 ################# Workspace Configuration #################
 
