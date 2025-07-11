@@ -15,12 +15,13 @@ def load_log_file(log_file_path):
             return log_data
 
 
+
 def get_executed_cell_contents(cell_index, notebook_state):
     if not notebook_state:
         return "", ""
     
     cells = notebook_state.get('notebookContent', {}).get('cells', [])
-    if cell_index < len(cells):
+    if cell_index is not None and cell_index < len(cells):
         cell = cells[cell_index]
         cell_content = cell.get('source', '')
         cell_outputs = cell.get('outputs', [])
@@ -44,162 +45,228 @@ def get_executed_cell_contents(cell_index, notebook_state):
 
 
 def reconstruct_cell_contents(log_data):
-    cell_contents = {}
-    cell_edit_times = {}
     events = []
-    paste_events = {}
-
-    # Create an ordered list of dictionaries to store the content of each event
     event_dict = []
+    processed_indices = set()
+    cell_contents_buffer = {}
+    last_assistant_content = {}  # Track last assistant content per cell
 
+    # Pass 1: Identify assistant-inserted content patterns
+    for i, log in enumerate(log_data):
+        if i in processed_indices:
+            continue
 
-    for log in log_data:
         event_detail = log.get('eventDetail', {})
         event_name = event_detail.get('eventName', '')
-        event_time = event_detail.get('eventTime', '')
-        event_info = event_detail.get('eventInfo', {})
-        notebook_state = log.get('notebookState', {})
-        notebook_path = notebook_state.get('notebookPath', '')
-
-        if event_time:
-            event_time_str = datetime.fromtimestamp(event_time / 1000).strftime('%Y-%m-%d %H:%M:%S')
-
-        if event_name == 'NotebookOpenEvent':
-            events.append(f"Opened notebook '{notebook_path}' at {event_time_str}")
-            event_dict.append(OrderedDict({'event': 'Opened notebook', 'notebook': notebook_path, 'time': event_time_str}))
         
-        elif event_name == 'NotebookHiddenEvent':
-            events.append(f"Closed notebook '{notebook_path}' at {event_time_str}")
-            event_dict.append(OrderedDict({'event': 'Closed notebook', 'notebook': notebook_path, 'time': event_time_str}))
-
-        elif event_name == 'NotebookVisibleEvent':
-            events.append(f"Notebook '{notebook_path}' became visible at {event_time_str}")
-            event_dict.append(OrderedDict({'event': 'Notebook became visible', 'notebook': notebook_path, 'time': event_time_str}))
-
+        # Pattern: Assistant inserted code (either into new cell or replacing existing content)
+        if event_name == 'CellAddEvent':
+            added_cell_index = event_detail.get('eventInfo', {}).get('cells', [{}])[0].get('index')
+            # Look for immediate CellEditEvent with bulk content
+            for j in range(i + 1, min(i + 6, len(log_data))):
+                if j in processed_indices: 
+                    continue
+                
+                future_log = log_data[j]
+                future_detail = future_log.get('eventDetail', {})
+                if (future_detail.get('eventName') == 'CellEditEvent' and
+                    future_detail.get('eventInfo', {}).get('index') == added_cell_index):
+                    
+                    changes = future_detail.get('eventInfo', {}).get('changes', [])
+                    if changes and isinstance(changes[0], list) and len(changes[0]) > 1:
+                        content_str = '\n'.join(changes[0][1:])
+                        # Heuristic: assistant inserts are typically multi-character or multi-line
+                        if len(content_str) > 1 or '\n' in content_str:
+                            add_time_str = datetime.fromtimestamp(event_detail.get('eventTime') / 1000).strftime('%Y-%m-%d %H:%M:%S')
+                            edit_time_str = datetime.fromtimestamp(future_detail.get('eventTime') / 1000).strftime('%Y-%m-%d %H:%M:%S')
+                            
+                            # Add "Added new cell" event
+                            event_dict.append(OrderedDict({
+                                'event': 'Added new cell',
+                                'notebook': log.get('notebookState', {}).get('notebookPath', ''),
+                                'time': add_time_str,
+                                'cell_index': added_cell_index,
+                                'content': ''
+                            }))
+                            
+                            # Add "Inserted code from assistant" event
+                            event_dict.append(OrderedDict({
+                                'event': 'Inserted code from assistant',
+                                'notebook': future_log.get('notebookState', {}).get('notebookPath', ''),
+                                'time': edit_time_str,
+                                'cell_index': added_cell_index,
+                                'content': content_str
+                            }))
+                            
+                            # Mark these events as processed
+                            processed_indices.add(i)
+                            processed_indices.add(j)
+                            
+                            # Update buffer and track assistant content
+                            cell_contents_buffer[added_cell_index] = content_str
+                            last_assistant_content[added_cell_index] = content_str
+                            break
+        
+        # Pattern: Replacement in existing cell (assistant replacing content)
         elif event_name == 'CellEditEvent':
-            cell_index = event_info.get('index', '')
+            event_info = event_detail.get('eventInfo', {})
+            changes = event_info.get('changes', [])
+            cell_index = event_info.get('index')
+            
+            # Check for replacement pattern (deletion followed by insertion)
+            if len(changes) > 1 and isinstance(changes[0], list) and isinstance(changes[1], list):
+                content_str = '\n'.join(changes[1][1:])
+                edit_time_str = datetime.fromtimestamp(event_detail.get('eventTime') / 1000).strftime('%Y-%m-%d %H:%M:%S')
+                
+                event_dict.append(OrderedDict({
+                    'event': 'Inserted code from assistant',
+                    'notebook': log.get('notebookState', {}).get('notebookPath', ''),
+                    'time': edit_time_str,
+                    'cell_index': cell_index,
+                    'content': content_str
+                }))
+                
+                processed_indices.add(i)
+                cell_contents_buffer[cell_index] = content_str
+                last_assistant_content[cell_index] = content_str
+
+    # Pass 2: Process all other events (manual edits, executions, etc.)
+    for i, log in enumerate(log_data):
+        if i in processed_indices:
+            continue
+            
+        event_detail = log.get('eventDetail', {})
+        event_name = event_detail.get('eventName', '')
+        event_time = event_detail.get('eventTime')
+        event_info = event_detail.get('eventInfo', {})
+        notebook_path = log.get('notebookState', {}).get('notebookPath', '')
+        event_time_str = datetime.fromtimestamp(event_time / 1000).strftime('%Y-%m-%d %H:%M:%S')
+
+        # Skip navigation events
+        if event_name in ['NotebookScrollEvent', 'ActiveCellChangeEvent', 'NotebookHiddenEvent', 'NotebookVisibleEvent', 'NotebookOpenEvent']:
+            continue
+
+        # Manual cell addition (without assistant content)
+        if event_name == 'CellAddEvent':
+            added_cell_index = event_info.get('cells', [{}])[0].get('index')
+            event_dict.append(OrderedDict({
+                'event': 'Added new cell',
+                'notebook': notebook_path,
+                'time': event_time_str,
+                'cell_index': added_cell_index,
+                'content': ''
+            }))
+            cell_contents_buffer[added_cell_index] = ""
+            continue
+            
+        # Manual cell edits
+        elif event_name == 'CellEditEvent':
+            cell_index = event_info.get('index')
             changes = event_info.get('changes', [])
             
-            if cell_index not in cell_contents:
-                cell_contents[cell_index] = []
-                cell_edit_times[cell_index] = event_time_str
-
-            if changes:
-                if isinstance(changes[0], list):
-                    for change in changes:
-                        if type(change) == int:
-                            print('Error -------', change, event_time)
-                            continue
-                        elif len(change) > 2:
-                            pos = change[0]
-                            lines = '\n'.join(change[1:])
-                            if pos >= len(cell_contents[cell_index]):
-                                cell_contents[cell_index].extend([''] * (pos - len(cell_contents[cell_index]) + 1))
-                            cell_contents[cell_index][pos:pos+1] = [lines]
-                        elif len(change) == 2:
-                            pos, char = change
-                            if pos >= len(cell_contents[cell_index]):
-                                cell_contents[cell_index].extend([''] * (pos - len(cell_contents[cell_index]) + 1))
-                            cell_contents[cell_index][pos] = char
-                else:
-                    if len(changes) >= 2:
-                        string_index = changes[0]
-                        char_change = changes[1]
-                        if isinstance(char_change, list) and len(char_change) == 2:
-                            pos, char = char_change
-                            if string_index >= len(cell_contents[cell_index]):
-                                cell_contents[cell_index].extend([''] * (string_index - len(cell_contents[cell_index]) + 1))
-                            cell_contents[cell_index][string_index] = char
-
-            if cell_index in paste_events:
-                if paste_events[cell_index] == ''.join(cell_contents[cell_index]):
-                    del paste_events[cell_index]
-                    continue  # Skip logging this event as it is a duplicate
+            # Track manual typing in buffer
+            if cell_index not in cell_contents_buffer:
+                cell_contents_buffer[cell_index] = ""
             
+            # Simple reconstruction of manual edits
+            if changes and isinstance(changes[0], list) and len(changes[0]) > 1:
+                # Multi-line edit
+                current_lines = cell_contents_buffer.get(cell_index, "").split('\n') if cell_contents_buffer.get(cell_index) else [""]
+                start_pos = changes[0][0]
+                new_content = changes[0][1:]
+                
+                # Expand lines if needed
+                while len(current_lines) <= start_pos:
+                    current_lines.append("")
+                
+                # Replace content
+                current_lines[start_pos:start_pos+1] = new_content
+                cell_contents_buffer[cell_index] = '\n'.join(current_lines)
+            elif changes and len(changes) >= 2:
+                # Character-by-character edit
+                line_index = changes[0]
+                char_changes = changes[1]
+                if isinstance(char_changes, list) and len(char_changes) == 2:
+                    pos, char = char_changes
+                    current_lines = cell_contents_buffer.get(cell_index, "").split('\n') if cell_contents_buffer.get(cell_index) else [""]
+                    
+                    # Expand lines if needed
+                    while len(current_lines) <= line_index:
+                        current_lines.append("")
+                    
+                    # Expand characters in line if needed
+                    current_line = current_lines[line_index]
+                    while len(current_line) <= pos:
+                        current_line += " "
+                    
+                    # Replace character
+                    current_line = current_line[:pos] + char + current_line[pos+1:]
+                    current_lines[line_index] = current_line
+                    cell_contents_buffer[cell_index] = '\n'.join(current_lines)
+            
+        # Cell execution
         elif event_name == 'CellExecuteEvent':
-            # Log edits for all cells before execution
-            for cell_index, content in cell_contents.items():
-                content_str = ''.join(content).strip()
-                if content_str:
-                    start_time = cell_edit_times[cell_index]
-                    events.append(f"Edited cell {cell_index} in notebook '{notebook_path}' from {start_time} to {event_time_str}: Added '{content_str}'")
-                    event_dict.append(OrderedDict({
-                        'event': 'Edited cell', 
-                        'notebook': notebook_path, 
-                        'time': event_time_str, 
-                        'cell_index': cell_index, 
-                        'content': content_str
-                    }))
-                    # Clear cell content after logging
-                    cell_contents[cell_index] = []
-
-            cell_indices = [cell.get('index', '') for cell in event_info.get('cells', [])]
-            success = event_info.get('success', '')
-            if success:
-                cell_content, cell_output = get_executed_cell_contents(cell_indices[0], notebook_state)
-                events.append(f"Executed cells {cell_indices} in notebook '{notebook_path}' successfully at {event_time_str} with input: {cell_content}")
+            exec_cell_index = event_info.get('cells', [{}])[0].get('index')
+            cell_content_from_log, cell_output = get_executed_cell_contents(exec_cell_index, log.get('notebookState'))
+            
+            # Check if there was manual editing before execution
+            actual_content = cell_content_from_log.strip()
+            
+            # Check if content changed from last assistant insertion
+            last_assistant = last_assistant_content.get(exec_cell_index, "").strip()
+            
+            should_log_manual_edit = False
+            
+            if last_assistant and actual_content != last_assistant:
+                # Content changed from what assistant inserted - this is a manual edit
+                should_log_manual_edit = True
+            elif not last_assistant:
+                # No assistant content, check buffer comparison
+                buffer_content = cell_contents_buffer.get(exec_cell_index, "").strip()
+                should_log_manual_edit = buffer_content and buffer_content != actual_content
+            
+            if should_log_manual_edit:
                 event_dict.append(OrderedDict({
-                    'event': 'Executed cells', 
-                    'notebook': notebook_path, 
-                    'time': event_time_str, 
-                    'cell_index': cell_indices[0], 
-                    'input': cell_content, 
+                    'event': 'Edited cell',
+                    'notebook': notebook_path,
+                    'time': event_time_str,
+                    'cell_index': exec_cell_index,
+                    'content': actual_content
+                }))
+            
+            # Reset tracking for this cell after execution
+            cell_contents_buffer.pop(exec_cell_index, None)
+            last_assistant_content.pop(exec_cell_index, None)
+
+            # Log the execution event
+            if event_info.get('success'):
+                event_dict.append(OrderedDict({
+                    'event': 'Executed cells',
+                    'notebook': notebook_path,
+                    'time': event_time_str,
+                    'cell_index': exec_cell_index,
+                    'input': cell_content_from_log,
                     'output': cell_output
                 }))
             else:
                 kernel_error = event_info.get('kernelError', {})
                 error_name = kernel_error.get('errorName', 'UnknownError')
-                error_value = kernel_error.get('errorValue', 'Unknown error value')
-
-                # Get the content of the cell that caused the error
-                cell_content, _ = get_executed_cell_contents(cell_indices[0], notebook_state)
-                
-                events.append(f"Executed cells {cell_indices} in notebook '{notebook_path}' at {event_time_str} with error: {error_name} - {error_value}. Cell content: '{cell_content}'")
+                error_value = kernel_error.get('errorValue', 'Unknown error')
                 event_dict.append(OrderedDict({
-                    'event': 'Executed cells with error', 
-                    'notebook': notebook_path, 
-                    'time': event_time_str, 
-                    'cell_index': cell_indices[0], 
-                    'error': f"{error_name} - {error_value}",
-                    'content': cell_content
+                    'event': 'Executed cells with error',
+                    'notebook': notebook_path,
+                    'time': event_time_str,
+                    'cell_index': exec_cell_index,
+                    'error': f"{error_name}: {error_value}",
+                    'content': cell_content_from_log
                 }))
 
-        
-        elif event_name == 'ClipboardPasteEvent':
-            cell_index = event_info.get('cells', [])[0].get('index', '')
-            selection = event_info.get('selection', '')
-
-            if cell_index not in cell_contents:
-                cell_contents[cell_index] = []
-                cell_edit_times[cell_index] = event_time_str
-
-            # If the cell content is empty or shorter than the paste position, extend it
-            if len(cell_contents[cell_index]) < 1:
-                cell_contents[cell_index].extend([''] * (1 - len(cell_contents[cell_index])))
-
-            # Add the pasted content
-            cell_contents[cell_index][0] = selection
-
-            # Log the paste event for potential redundancy checks
-            paste_events[cell_index] = selection
-
-            events.append(f"Pasted content into cell {cell_index} in notebook '{notebook_path}' at {event_time_str}: Added '{selection}'")
-            event_dict.append(OrderedDict({'event': 'Pasted content', 'notebook': notebook_path, 'time': event_time_str, 'cell_index': cell_index, 'content': selection}))
-
-        elif event_name == 'CellAddEvent':
-            cell_index = event_info.get('index', '')
-            cell_content = event_info.get('content', '')
-
-            if cell_index not in cell_contents:
-                cell_contents[cell_index] = []
-                cell_edit_times[cell_index] = event_time_str
-
-            # Add the new cell content
-            cell_contents[cell_index].append(cell_content)
-
-            events.append(f"Added new cell {cell_index} in notebook '{notebook_path}' at {event_time_str}: Added '{cell_content}'")
-            event_dict.append(OrderedDict({'event': 'Added new cell', 'notebook': notebook_path, 'time': event_time_str, 'cell_index': cell_index, 'content': cell_content}))
-
+    # Sort events by time
+    event_dict.sort(key=lambda x: datetime.strptime(x['time'], '%Y-%m-%d %H:%M:%S'))
+    
+    # Generate summary events
+    for item in event_dict:
+        events.append(f"Event: '{item['event']}' at {item['time']} in notebook '{item.get('notebook', 'N/A')}'")
 
     return events, event_dict
 
