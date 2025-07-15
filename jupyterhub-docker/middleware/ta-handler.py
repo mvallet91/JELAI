@@ -651,6 +651,68 @@ async def receive_student_message(message: StudentMessage, background_tasks: Bac
             purpose="performance report generation"
         )
         return TutorApiResponse(final_response=report)
+
+        # --- NEW LOGIC FOR THE COMPLETION COMMAND ---
+    elif message.message_text.strip().lower() == "/qualtrics-finish":
+        # Check if student has spent minimum required time AND has sufficient activity
+        MIN_SESSION_DURATION_MINUTES = 15  # Adjust as needed
+        MIN_INTERACTIONS = 1  # Minimum number of questions/interactions
+        
+        # Get the student's session stats
+        try:
+            with sqlite3.connect(DATABASE_FILE) as conn:
+                cursor = conn.cursor()
+                # Get first interaction and count of questions
+                cursor.execute("""
+                    SELECT MIN(timestamp) as first_interaction,
+                           COUNT(CASE WHEN message_type = 'question' THEN 1 END) as question_count
+                    FROM chat_history
+                    WHERE student_id = ? AND file_name = ?
+                """, (message.student_id, message.file_name))
+                result = cursor.fetchone()
+                
+                if result and result[0]:
+                    first_interaction, question_count = result
+                    current_time = time.time()
+                    session_duration_minutes = (current_time - first_interaction) / 60
+                    
+                    # Check both time and activity requirements
+                    time_requirement_met = session_duration_minutes >= MIN_SESSION_DURATION_MINUTES
+                    activity_requirement_met = question_count >= MIN_INTERACTIONS
+                    
+                    if not time_requirement_met or not activity_requirement_met:
+                        feedback_parts = []
+                        
+                        if not time_requirement_met:
+                            remaining_minutes = MIN_SESSION_DURATION_MINUTES - session_duration_minutes
+                            feedback_parts.append(f"- Work for at least {remaining_minutes:.1f} more minutes (currently: {session_duration_minutes:.1f} minutes)")
+                        
+                        if not activity_requirement_met:
+                            remaining_questions = MIN_INTERACTIONS - question_count
+                            feedback_parts.append(f"- Ask at least {remaining_questions} more questions (currently: {question_count} questions)")
+                        
+                        early_finish_response = f"""### Almost There!
+To ensure a meaningful learning experience, please:
+
+{chr(10).join(feedback_parts)}
+
+You can try `/qualtrics-finish` again once you meet these requirements."""
+                        return TutorApiResponse(final_response=early_finish_response)
+                else:
+                    # No interaction history found - this shouldn't happen normally
+                    logging.warning(f"No interaction history found for {message.student_id} in {message.file_name}")
+        except sqlite3.Error as e:
+            logging.error(f"Database error checking session requirements: {e}")
+        
+        # If requirements are met or there was an error, show completion code
+        completion_code = """### Session 1 Complete!
+
+Thank you for completing the tasks for this session.
+
+Please return to the Qualtrics survey tab and enter the following code to finalize your submission:
+
+**`BLUE-SHARK-24`**"""
+        return TutorApiResponse(final_response=completion_code)
     
     start_time = time.time()
     current_timestamp = time.time()
