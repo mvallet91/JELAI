@@ -20,6 +20,7 @@ __pycache__
 .python-version
 *.egg-info/
 *.egg
+analysis/
 
 # Middleware
 /jupyterhub-docker/middleware/venv/
@@ -39,3 +40,9 @@ wiki/
 
 # User Notebook
 /jupyterhub-docker/user-notebook/user-venv/
+
+# DEMO MATERIALS - Keep these for pedagogical personalities branch
+!/jupyterhub-docker/user-notebook/learning_materials/JELAI_Personality_Exercises.ipynb
+!/jupyterhub-docker/user-notebook/learning_materials/sample_sales_data.csv
+!/jupyterhub-docker/user-notebook/learning_materials/pedagogical_personalities_demo.json
+!/jupyterhub-docker/middleware/inputs/pedagogical_personalities.json

@@ -24,6 +24,7 @@ load_dotenv()
 # DATABASE_FILE = "chat_history.db" # for local testing
 DATABASE_FILE = "/app/chat_histories/chat_history.db"  # for docker
 EXPERIMENT_CONFIG_FILE = Path(__file__).parent / "inputs" / "ab_experiments.json" # Added
+PERSONALITIES_CONFIG_FILE = Path(__file__).parent / "inputs" / "pedagogical_personalities.json" # Added
 
 EA_URL = "http://localhost:8003/expert_query" 
 
@@ -109,6 +110,7 @@ app = FastAPI(title="Multi-Agent Flow")
 
 # --- Global variable for experiment config ---
 ACTIVE_EXPERIMENT_CONFIG = None # Added
+PERSONALITIES_CONFIG = None # Added
 
 # --- Function to load experiment configuration ---
 def load_experiment_config(): # Added
@@ -133,6 +135,24 @@ def load_experiment_config(): # Added
     except Exception as e:
         logging.error(f"A/B testing: Unexpected error loading experiment config: {e}. A/B testing disabled.")
         ACTIVE_EXPERIMENT_CONFIG = None
+
+
+# --- Function to load personality configuration --- Added
+def load_personalities_config():
+    global PERSONALITIES_CONFIG
+    try:
+        with open(PERSONALITIES_CONFIG_FILE, 'r') as f:
+            PERSONALITIES_CONFIG = json.load(f)
+            logging.info(f"Successfully loaded pedagogical personalities config with {len(PERSONALITIES_CONFIG.get('personalities', {}))} personalities.")
+    except FileNotFoundError:
+        logging.warning(f"Personalities config file {PERSONALITIES_CONFIG_FILE} not found. Using default personality only.")
+        PERSONALITIES_CONFIG = None
+    except json.JSONDecodeError:
+        logging.error(f"Error decoding JSON from {PERSONALITIES_CONFIG_FILE}. Using default personality only.")
+        PERSONALITIES_CONFIG = None
+    except Exception as e:
+        logging.error(f"Unexpected error loading personalities config: {e}. Using default personality only.")
+        PERSONALITIES_CONFIG = None
 
 
 # --- Database Setup ---
@@ -179,6 +199,7 @@ def init_db():
 
 init_db()
 load_experiment_config() # Added: Load experiment config on startup
+load_personalities_config() # Added: Load personality config on startup
 
 # --- Data Models ---
 class StudentMessage(BaseModel):
@@ -367,6 +388,63 @@ def get_or_assign_experiment_group(student_id: str) -> Optional[dict]:
     except Exception as e:
         logging.error(f"Unexpected error during experiment group assignment for {student_id}: {e}")
         return groups[0] if groups else None
+
+
+def detect_personality(file_name: str, first_message: str = "") -> str:
+    """Detects the appropriate personality based on /personality commands only."""
+    if not PERSONALITIES_CONFIG:
+        return "default"
+    
+    personalities = PERSONALITIES_CONFIG.get("personalities", {})
+    first_message_lower = first_message.lower()
+    
+    # Check for special personality commands in the first message
+    if first_message_lower.startswith("/personality"):
+        parts = first_message_lower.split()
+        if len(parts) > 1:
+            requested_personality = parts[1]
+            if requested_personality in personalities:
+                logging.info(f"Personality explicitly requested: {requested_personality}")
+                return requested_personality
+    
+    # Always return default unless explicitly requested
+    logging.info(f"No personality command detected. Using default.")
+    return "default"
+
+
+def get_personality_config(personality_id: str) -> dict:
+    """Gets the configuration for a specific personality."""
+    if not PERSONALITIES_CONFIG:
+        return PERSONALITIES_CONFIG.get("personalities", {}).get("default", {})
+    
+    return PERSONALITIES_CONFIG.get("personalities", {}).get(personality_id, 
+                                                             PERSONALITIES_CONFIG.get("personalities", {}).get("default", {}))
+
+
+def apply_personality_adaptive_strategy(personality_id: str, classification: str, consecutive_executive: int, student_profile: dict) -> str:
+    """Applies personality-specific adaptive strategies."""
+    if not PERSONALITIES_CONFIG:
+        return ""
+    
+    personality_config = get_personality_config(personality_id)
+    strategy_name = personality_config.get("adaptive_strategy", "standard")
+    strategies = PERSONALITIES_CONFIG.get("adaptive_strategies", {})
+    strategy = strategies.get(strategy_name, strategies.get("standard", {}))
+    
+    if classification == "instrumental":
+        response_guide = strategy.get("instrumental_response", "")
+        if response_guide:
+            return f"\n**Personality Guidance:** {response_guide}"
+    
+    elif classification == "executive" and consecutive_executive > 0:
+        escalation_messages = strategy.get("executive_escalation", [])
+        if escalation_messages:
+            # Use different messages based on escalation level
+            msg_index = min(consecutive_executive - 1, len(escalation_messages) - 1)
+            escalation_msg = escalation_messages[msg_index]
+            return f"\n**Personality Guidance (Executive #{consecutive_executive}):** Incorporate this approach: '{escalation_msg}'"
+    
+    return ""
 
 
 def select_learning_objective_embeddings(question_text: str, learning_objectives: list) -> str:
@@ -603,6 +681,56 @@ async def receive_student_message(message: StudentMessage, background_tasks: Bac
         logging.info(f"A/B Test: No specific group or params for student {message.student_id}. Using default TA prompt and hint strategy.")
     # --- End A/B Testing Block ---
 
+    # --- Personality Command Handling ---
+    if message.message_text.strip().lower().startswith("/personality"):
+        parts = message.message_text.strip().split()
+        if len(parts) == 1:
+            # List available personalities
+            if PERSONALITIES_CONFIG:
+                personalities = PERSONALITIES_CONFIG.get("personalities", {})
+                personality_list = []
+                for p_id, config in personalities.items():
+                    name = config.get("name", p_id)
+                    desc = config.get("description", "No description")
+                    personality_list.append(f"**{name}** (`{p_id}`): {desc}")
+                
+                response = "🎭 **Available Teaching Personalities:**\n\n" + "\n\n".join(personality_list)
+                response += "\n\n💡 **Usage:** Type `/personality [name]` to switch (e.g., `/personality socratic`)"
+                response += "\n🔄 **Auto-detection:** I can also detect personalities from your file name or keywords!"
+            else:
+                response = "Personality system not configured."
+            return TutorApiResponse(final_response=response)
+        
+        elif len(parts) == 2:
+            requested_personality = parts[1].lower()
+            if PERSONALITIES_CONFIG and requested_personality in PERSONALITIES_CONFIG.get("personalities", {}):
+                personality_config = get_personality_config(requested_personality)
+                name = personality_config.get("name", requested_personality)
+                response = f"🎭 **Personality switched to {name}!**\n\nI'll now teach using this style for the rest of our session. How can I help you learn today?"
+                
+                # Store the personality choice in the student profile
+                try:
+                    profile = get_student_profile(message.student_id, message.file_name)
+                    profile["selected_personality"] = requested_personality
+                    profile_json = json.dumps(profile)
+                    with sqlite3.connect(DATABASE_FILE) as conn:
+                        cursor = conn.cursor()
+                        cursor.execute("""
+                            INSERT OR REPLACE INTO student_profiles (student_id, file_name, profile_data)
+                            VALUES (?, ?, ?)
+                        """, (message.student_id, message.file_name, profile_json))
+                        conn.commit()
+                    logging.info(f"Stored personality choice '{requested_personality}' for {message.student_id}")
+                except Exception as e:
+                    logging.error(f"Failed to store personality choice: {e}")
+                
+                return TutorApiResponse(final_response=response)
+            else:
+                response = f"❌ Personality '{requested_personality}' not found. Type `/personality` to see available options."
+                return TutorApiResponse(final_response=response)
+
+    # --- End Personality Command Handling ---
+
     if message.message_text.strip().lower() == "/report":
         """
         Generates a performance report for the student based on their recent activity logs and conversation history.
@@ -724,6 +852,19 @@ Please return to the Qualtrics survey tab and enter the following code to finali
     last_exec_example = student_profile.get("last_executive_example")
     last_instr_example = student_profile.get("last_instrumental_example")
     logging.info(f"Retrieved profile for {message.student_id}: Guidance Flag = {needs_guidance}")
+
+    # --- Personality Detection ---
+    # Check if personality was manually selected
+    selected_personality = student_profile.get("selected_personality")
+    if not selected_personality:
+        # Auto-detect based on file name and first message
+        conversation_history_messages = get_history(message.student_id, message.file_name, limit=1)
+        first_message = message.message_text if not conversation_history_messages else ""
+        selected_personality = detect_personality(message.file_name, first_message)
+    
+    personality_config = get_personality_config(selected_personality)
+    personality_name = personality_config.get("name", "Juno")
+    logging.info(f"Using personality '{selected_personality}' ({personality_name}) for {message.student_id}")
 
     conversation_history_messages = get_history(message.student_id, message.file_name, limit=6)
     formatted_history_for_ea = format_history_for_prompt(conversation_history_messages)
@@ -849,6 +990,11 @@ Please return to the Qualtrics survey tab and enter the following code to finali
                 logging.error(f"Failed to load TA system prompt from '{current_ta_system_prompt_file}': {e}. Using default.")
                 system_prompt_content = DEFAULT_TA_SYSTEM_PROMPT
 
+            # Add personality modifier to system prompt
+            personality_modifier = personality_config.get("system_prompt_modifier", "")
+            if personality_modifier:
+                system_prompt_content += personality_modifier
+
             # Get current question classification and profile info
             last_classification = student_profile.get("last_question_classification")
             consecutive_executive = student_profile.get("consecutive_executive_count", 0)
@@ -863,8 +1009,15 @@ Please return to the Qualtrics survey tab and enter the following code to finali
                 consecutive_executive = 0
             # --- End update ---
 
-            # Apply adaptive response logic based on A/B test group and question type
-            if current_profile_hint_strategy == "enhanced_guidance":
+            # Apply personality-specific adaptive strategies
+            personality_guidance = apply_personality_adaptive_strategy(
+                selected_personality, classification_result, consecutive_executive, student_profile
+            )
+            if personality_guidance:
+                system_prompt_content += personality_guidance
+
+            # Fallback to A/B testing logic only if no personality-specific strategy
+            if not personality_guidance and current_profile_hint_strategy == "enhanced_guidance":
                 # Treatment group gets adaptive help-seeking logic
                 if classification_result == "instrumental":
                     # Reset consecutive_executive streak
