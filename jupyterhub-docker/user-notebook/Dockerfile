@@ -48,8 +48,9 @@ USER jovyan
 
 ################# Workspace Configuration #################
 
-# Copy learning materials (shared, version-controlled)
-COPY --chown=jovyan:users learning_materials /home/jovyan/work/
+# Copy learning materials (shared, version-controlled) - exclude developer README
+COPY --chown=jovyan:users learning_materials /home/jovyan/work/learning_materials
+RUN rm -f /home/jovyan/work/learning_materials/README.md
 
 # Set up the work directory
 WORKDIR /home/jovyan/work
