@@ -64,7 +64,8 @@ c.JupyterHub.hub_port = 8080
 
 # --- Authentication and Users ---
 c.JupyterHub.authenticator_class = "nativeauthenticator.NativeAuthenticator"
-c.NativeAuthenticator.open_signup = False
+# TEMPORARY: Open signup for AIED25 Conference Demo
+c.NativeAuthenticator.open_signup = True
 admin = os.environ.get("JUPYTERHUB_ADMIN")
 if admin:
     c.Authenticator.admin_users = [admin]
