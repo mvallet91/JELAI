@@ -35,7 +35,7 @@ services:
       DOCKER_NOTEBOOK_DIR: /home/jovyan/work
       # Default startup notebook, must start with /lab/tree
       # The notebook should be in the user's home directory, see the Dockerfile in user-notebook
-      DEFAULT_NOTEBOOK: /lab/tree/Welcome.ipynb
+      DEFAULT_NOTEBOOK: /lab/tree/JELAI_AIED_Demo.ipynb
 
   user-notebook:
     build:
