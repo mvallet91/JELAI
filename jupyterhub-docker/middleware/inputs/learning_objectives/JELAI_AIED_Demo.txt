@@ -1,0 +1,8 @@
+Import Python libraries: Successfully import pandas and numpy for basic data analysis tasks.
+Create simple DataFrames: Build basic data structures with product information including price and quantity.
+Calculate derived columns: Add new columns to DataFrames using mathematical operations like multiplication.
+Debug common pandas errors: Identify and fix KeyError issues related to column name typos and inconsistencies.
+Find maximum values: Use pandas methods to identify best-performing products and analyze simple datasets.
+Experience different AI personalities: Compare how Socratic questioning, Feynman teaching, Wing computational thinking, and standard assistance help with learning.
+Practice help-seeking skills: Learn the difference between asking for direct solutions versus asking for guidance and understanding.
+Use the report function: Generate comprehensive analysis of coding session and learning progress using /report command.

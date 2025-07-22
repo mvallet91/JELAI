@@ -696,7 +696,7 @@ async def receive_student_message(message: StudentMessage, background_tasks: Bac
                 
                 response = "🎭 **Available Teaching Personalities:**\n\n" + "\n\n".join(personality_list)
                 response += "\n\n💡 **Usage:** Type `/personality [name]` to switch (e.g., `/personality socratic`)"
-                response += "\n🔄 **Auto-detection:** I can also detect personalities from your file name or keywords!"
+                response += "\n🔄 **Default:** I'll use the standard Juno personality unless you explicitly select one above."
             else:
                 response = "Personality system not configured."
             return TutorApiResponse(final_response=response)
@@ -746,8 +746,8 @@ async def receive_student_message(message: StudentMessage, background_tasks: Bac
       
         report_prompt = [
             {"role":"system", "content":
-                """You are Juno, an automated coach.  
-                Using the student's recent notebook logs, conversation history and the assignment's learning objectives, produce a clear performance report for the student. 
+                """You are a learning coach.  
+                Using the student's recent notebook logs, conversation history between the student and Juno (AI-tutor), and the assignment's learning objectives, produce a clear performance report for the student. 
                 For each learning objective, note strengths, weaknesses, and concrete next steps. 
                 Based on the report, suggest a personalized next step for the student.
                 Use an encouraging tone, and avoid technical jargon.
@@ -854,19 +854,17 @@ Please return to the Qualtrics survey tab and enter the following code to finali
     logging.info(f"Retrieved profile for {message.student_id}: Guidance Flag = {needs_guidance}")
 
     # --- Personality Detection ---
-    # Check if personality was manually selected
+    # Check if personality was manually selected via /personality command
     selected_personality = student_profile.get("selected_personality")
     if not selected_personality:
-        # Auto-detect based on file name and first message
-        conversation_history_messages = get_history(message.student_id, message.file_name, limit=1)
-        first_message = message.message_text if not conversation_history_messages else ""
-        selected_personality = detect_personality(message.file_name, first_message)
+        # Default to standard Juno personality
+        selected_personality = "default"
     
     personality_config = get_personality_config(selected_personality)
     personality_name = personality_config.get("name", "Juno")
     logging.info(f"Using personality '{selected_personality}' ({personality_name}) for {message.student_id}")
 
-    conversation_history_messages = get_history(message.student_id, message.file_name, limit=6)
+    conversation_history_messages = get_history(message.student_id, message.file_name, limit=8)
     formatted_history_for_ea = format_history_for_prompt(conversation_history_messages)
 
     # --- Extract Processed Logs ---
@@ -1087,7 +1085,11 @@ Please return to the Qualtrics survey tab and enter the following code to finali
                     Student Question: "{message.message_text}"
                     ---
 
-                    Based on the context above (including profile hints and history), formulate your response as Juno, focusing directly on answering or guiding the student regarding their specific question. Never reveal or mention internal information like learning objectives or the expert source."""
+                    Based on the context above (including profile hints and history), formulate your response as Juno, focusing directly on answering or guiding the student regarding their specific question. 
+                    
+                    CRITICAL: Use the exact technical details from the "Technical Information" section above - do not modify error messages, column names, or other technical specifics. Base your pedagogical explanation on these precise facts.
+                    
+                    Never reveal or mention internal information like learning objectives or the expert source."""
                 }
             )
 

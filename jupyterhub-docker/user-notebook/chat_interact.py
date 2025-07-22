@@ -214,8 +214,26 @@ class ChatHandler(FileSystemEventHandler):
             if not matching_log_files:
                 logging.warning(f"No *.json log files found in {self.processed_logs_dir}")
                 return None
-            log_file_path = os.path.join(self.processed_logs_dir, matching_log_files[0])
-            logging.info(f"Reading log file: {log_file_path}")
+            
+            # Find the most recently modified log file
+            log_files_with_mtime = []
+            for f in matching_log_files:
+                file_path = os.path.join(self.processed_logs_dir, f)
+                try:
+                    mtime = os.path.getmtime(file_path)
+                    log_files_with_mtime.append((f, mtime))
+                except OSError:
+                    continue
+            
+            if not log_files_with_mtime:
+                logging.warning(f"No accessible log files found in {self.processed_logs_dir}")
+                return None
+                
+            # Sort by modification time (most recent first) and take the first one
+            most_recent_file = sorted(log_files_with_mtime, key=lambda x: x[1], reverse=True)[0][0]
+            log_file_path = os.path.join(self.processed_logs_dir, most_recent_file)
+            logging.info(f"Reading most recent log file: {log_file_path}")
+            
             with open(log_file_path, 'r') as log_file:
                 try: all_logs = json.load(log_file)
                 except json.JSONDecodeError: logging.error(f"Error decoding JSON: {log_file_path}"); return None
