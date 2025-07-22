@@ -33,6 +33,10 @@ The system consists of a JupyterHub server, individual user Jupyter servers, a m
 - **Fluent** is used to collect logs from the individual containers and send them to the middleware container for storage and processing with the LA module.
 - The **Ollama** server can run locally in the host machine or on a separate one. Cloud or third-party services can also be used, but the system is designed to work with a self-hosted server. 
 
+## References
+> Valle Torre, M., van der Velden, T., Specht, M., Oertel, C. (2025). JELAI: Integrating AI and Learning Analytics in Jupyter Notebooks. In: Cristea, A.I., Walker, E., Lu, Y., Santos, O.C., Isotani, S. (eds) Artificial Intelligence in Education. AIED 2025. Lecture Notes in Computer Science(), vol 15882. Springer, Cham. https://doi-org/10.1007/978-3-031-98465-5_9
+
+
 ## Setup and Configuration
 This setup has was developed and tested on Ubuntu 22.04 and 24.04. 
 
@@ -122,8 +126,6 @@ To access JupyterHub from outside the local network, follow the official [Jupyte
     - Yes, you can add course materials to the **working-directory** in the user-notebook image, using the Dockerfile.
 - What if I can't run Ollama locally?
     - You can use a third-party service that provides a REST API for the chatbot server to interact with. The system is designed to work with a self-hosted server, but other services can be used.
-
-
 
 ## Development and Local Experimentation
 To run the system locally for development and experimentation, you can use **JupyterLab** (instead of JupyterHub) and the chatbot server in your local environment.
