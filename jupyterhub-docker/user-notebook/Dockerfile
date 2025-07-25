@@ -50,6 +50,8 @@ USER jovyan
 
 # Copy learning materials (shared, version-controlled)
 COPY --chown=jovyan:users learning_materials /home/jovyan/work/
+# Remove the README.md file from the learning materials
+RUN rm -f /home/jovyan/work/README.md
 
 # Set up the work directory
 WORKDIR /home/jovyan/work
