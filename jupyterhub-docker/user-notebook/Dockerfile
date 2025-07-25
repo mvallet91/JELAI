@@ -50,7 +50,7 @@ USER jovyan
 
 # Copy learning materials (shared, version-controlled) - exclude developer README
 COPY --chown=jovyan:users learning_materials /home/jovyan/work
-RUN rm -f /home/jovyan/work/learning_materials/README.md
+RUN rm -f /home/jovyan/work/README.md
 
 # Set up the work directory
 WORKDIR /home/jovyan/work
