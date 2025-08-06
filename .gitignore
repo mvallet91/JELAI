@@ -20,6 +20,9 @@ __pycache__
 .python-version
 *.egg-info/
 *.egg
+*.Rhistory
+*.RData
+*.Rproj.user
 
 # Middleware
 /jupyterhub-docker/middleware/venv/
