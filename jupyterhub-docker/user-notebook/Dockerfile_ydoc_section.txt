@@ -1,0 +1,41 @@
+# Updated Dockerfile section for YDoc support
+
+# Create a virtual environment
+RUN python -m venv /home/jovyan/venv
+
+# Copy both requirements files
+COPY chat_interact_requirements.txt /home/jovyan/
+COPY chat_interact_requirements_ydoc.txt /home/jovyan/
+
+# Install basic requirements first
+RUN /home/jovyan/venv/bin/pip install --no-cache-dir -r /home/jovyan/chat_interact_requirements.txt
+
+# Try to install YDoc dependencies, but don't fail if they're not available
+RUN /home/jovyan/venv/bin/pip install --no-cache-dir -r /home/jovyan/chat_interact_requirements_ydoc.txt || \
+    echo "YDoc dependencies not available - will use fallback implementation"
+
+# Copy the chat interaction scripts
+COPY chat_interact.py /home/jovyan/
+COPY chat_interact_ydoc.py /home/jovyan/
+COPY process_logs.py /home/jovyan/
+COPY utils.py /home/jovyan/
+
+# Environment variable to choose implementation
+ENV USE_YDOC_CHAT=${USE_YDOC_CHAT:-true}
+
+# Get container ID and export it as an environment variable
+RUN echo 'export CONTAINER_ID=$(cat /proc/self/cgroup | grep "docker" | sed "s/^.*\///" | tail -n1)' >> /home/jovyan/.bashrc
+
+# Start script that chooses the right chat implementation
+COPY start_chat_interact.sh /home/jovyan/
+RUN chmod +x /home/jovyan/start_chat_interact.sh
+
+# Updated CMD that uses the start script
+CMD ["/bin/bash", "-c", "\
+source /home/jovyan/.bashrc && \
+/opt/td-agent-bit/bin/td-agent-bit -c /etc/td-agent-bit/td-agent-bit.conf  & \
+. /home/jovyan/venv/bin/activate && \
+/home/jovyan/start_chat_interact.sh /home/jovyan/work/${CHAT_DIR} /home/jovyan/logs/processed >> /home/jovyan/logs/processed/chat_interact.log 2>&1 & \
+. /home/jovyan/venv/bin/activate && \
+python /home/jovyan/process_logs.py /home/jovyan/logs/log /home/jovyan/logs/processed >> /home/jovyan/logs/processed/process_logs.log 2>&1 & \
+start-notebook.py"]
