@@ -12,9 +12,10 @@ RUN mkdir /home/jovyan/logs/processed && \
 
 # Copy jupyterlab_pioneer config
 COPY jupyter_jupyterlab_pioneer_config.py /etc/jupyter/
-# COPY jupyter_server_config.py /etc/jupyter/
+# COPY jupyter_config.py /etc/jupyter/
+COPY jupyter_server_config.py /etc/jupyter/
 
-# Install additional packages
+# Install additional packages 
 RUN pip install --no-cache-dir jupyterlab-chat jupyterlab_pioneer folium
 
 # Install Fluent Bit
@@ -67,26 +68,44 @@ RUN mkdir -p /home/jovyan/.jupyter/lab/user-settings/jupyterlab-chat-extension &
    echo '{"defaultDirectory": "'"${CHAT_DIR}"'"}' > /home/jovyan/.jupyter/lab/user-settings/jupyterlab-chat-extension/factory.jupyterlab-settings
 
 # Create a virtual environment
-RUN python -m venv /home/jovyan/venv
+# RUN python -m venv /home/jovyan/venv
 
-# Activate the virtual environment and install requirements
-COPY chat_interact_requirements.txt /home/jovyan/
-RUN /home/jovyan/venv/bin/pip install --no-cache-dir -r /home/jovyan/chat_interact_requirements.txt
+# Copy consolidated requirements file
+COPY requirements_all.txt /home/jovyan/
 
-# Copy the chat_interact.py script
+# Install all requirements in one step to avoid conflicts
+RUN pip install --no-cache-dir -r /home/jovyan/requirements_all.txt
+
+# Copy the chat interaction scripts
 COPY chat_interact.py /home/jovyan/
+COPY chat_interact_ydoc.py /home/jovyan/
 COPY process_logs.py /home/jovyan/
 COPY utils.py /home/jovyan/
+
+# Environment variable to choose implementation
+ENV USE_YDOC_CHAT=${USE_YDOC_CHAT:-true}
+
+# Switch to root temporarily to set permissions on start script
+USER root
+
+# Start script that chooses the right chat implementation
+COPY start_chat_interact.sh /home/jovyan/start_chat_interact.sh
+RUN chown jovyan:users /home/jovyan/start_chat_interact.sh && \
+    chmod +x /home/jovyan/start_chat_interact.sh
 
 # Get container ID and export it as an environment variable
 RUN echo 'export CONTAINER_ID=$(cat /proc/self/cgroup | grep "docker" | sed "s/^.*\///" | tail -n1)' >> /home/jovyan/.bashrc
 
+# Switch back to jovyan user for runtime
+USER jovyan
+
 # Start Fluent Bit, chat_interact.py, and Jupyter Notebook
 CMD ["/bin/bash", "-c", "\
 source /home/jovyan/.bashrc && \
+chmod +x /home/jovyan/start_chat_interact.sh && \
 /opt/td-agent-bit/bin/td-agent-bit -c /etc/td-agent-bit/td-agent-bit.conf  & \
-. /home/jovyan/venv/bin/activate && \
-python /home/jovyan/chat_interact.py /home/jovyan/work/${CHAT_DIR} /home/jovyan/logs/processed >> /home/jovyan/logs/processed/chat_interact.log 2>&1 & \
-. /home/jovyan/venv/bin/activate && \
+# . /home/jovyan/venv/bin/activate && \
+/home/jovyan/start_chat_interact.sh /home/jovyan/work/${CHAT_DIR} /home/jovyan/logs/processed >> /home/jovyan/logs/processed/chat_interact.log 2>&1 & \
+# . /home/jovyan/venv/bin/activate && \
 python /home/jovyan/process_logs.py /home/jovyan/logs/log /home/jovyan/logs/processed >> /home/jovyan/logs/processed/process_logs.log 2>&1 & \
 start-notebook.py"]

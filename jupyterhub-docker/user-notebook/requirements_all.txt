@@ -1,0 +1,17 @@
+# Consolidated requirements for chat interaction with YDoc support
+langserve
+watchdog
+fastapi
+asyncio
+watchgod
+uvicorn
+
+# YDoc dependencies
+pycrdt
+jupyter-ydoc
+jupyterlab-chat
+
+# Async compatibility libraries
+trio
+sniffio>=1.3.0
+anyio>=4.0.0

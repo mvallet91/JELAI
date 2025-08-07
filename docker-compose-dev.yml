@@ -15,6 +15,7 @@ services:
     environment:
       - JUPYTER_TOKEN=dev  # Simple token for development access
       - TA_MIDDLEWARE_URL=http://middleware-dev:8004
+      - USE_YDOC_CHAT=true  # Enable YDoc implementation
     image: user-notebook-dev
     container_name: notebook-dev
     ports:
@@ -24,10 +25,8 @@ services:
     command: >
       bash -c "
       echo 'Starting background services...' &&
-      . /home/jovyan/venv/bin/activate &&
-      python /home/jovyan/chat_interact.py /home/jovyan/work/chats /home/jovyan/logs/processed >> /home/jovyan/chat_interact.log 2>&1 &
+      /home/jovyan/start_chat_interact.sh /home/jovyan/work/chats /home/jovyan/logs/processed >> /home/jovyan/chat_interact.log 2>&1 &
       echo 'Processing logs...' &&
-      . /home/jovyan/venv/bin/activate &&
       python /home/jovyan/process_logs.py /home/jovyan/logs/log /home/jovyan/logs/processed >> /home/jovyan/process_logs.log 2>&1 &
       echo 'Starting JupyterLab...' &&
       jupyter lab

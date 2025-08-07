@@ -8,8 +8,8 @@ LOGS_DIR="$2"
 if [ "$USE_YDOC_CHAT" = "true" ]; then
     echo "Attempting to use YDoc-based chat interaction..."
     
-    # Test if YDoc dependencies are available
-    if python -c "import jupyterlab_chat.ychat, pycrdt" 2>/dev/null; then
+    # Test if YDoc dependencies are available in system Python
+    if python -c "import pycrdt, jupyter_ydoc, watchdog" 2>/dev/null; then
         echo "YDoc dependencies found - using chat_interact_ydoc.py"
         exec python /home/jovyan/chat_interact_ydoc.py "$CHAT_DIR" "$LOGS_DIR"
     else

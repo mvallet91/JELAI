@@ -1,4 +1,4 @@
-# chat_interact_ydoc.py - YDoc-based Implementation
+# chat_interact_ydoc.py - YDoc-based Implementation with Typing Indicators
 import os
 import sys
 import re
@@ -15,9 +15,17 @@ from typing import Optional, Dict, Any
 
 # YDoc imports
 try:
-    from jupyterlab_chat.ychat import YChat
-    from jupyterlab_chat.models import Message, NewMessage, User
+    from jupyter_ydoc import ydocs
     from pycrdt import Doc
+    from jupyterlab_chat.models import User, NewMessage, Message
+    from typing import TYPE_CHECKING
+    
+    YChat = ydocs['chat']  # Get YChat class from registry
+    
+    if TYPE_CHECKING:
+        YChatType = YChat
+    else:
+        YChatType = None
     YDOC_AVAILABLE = True
 except ImportError:
     YDOC_AVAILABLE = False
@@ -35,15 +43,23 @@ class YDocChatHandler:
     
     def __init__(self, chat_directory: str):
         self.chat_directory = os.path.abspath(chat_directory)
-        self.chat_docs: Dict[str, YChat] = {}
+        self.chat_docs: Dict[str, Any] = {}  # YChat instances
         self._doc_locks: Dict[str, asyncio.Lock] = {}
         
-    def get_or_create_chat_doc(self, file_path: str) -> YChat:
+    def get_or_create_chat_doc(self, file_path: str):  # Returns YChat instance
         """Get existing YChat document or create new one"""
         if file_path not in self.chat_docs:
-            # Create new YDoc
+            # Create new YDoc with awareness
+            from pycrdt import Doc, Awareness
             ydoc = Doc()
+            awareness = Awareness(ydoc)
             ychat = YChat(ydoc)
+            
+            # Store both YChat and awareness
+            self.chat_docs[file_path] = {
+                'ychat': ychat,
+                'awareness': awareness
+            }
             
             # Load existing content if file exists
             if os.path.exists(file_path):
@@ -57,35 +73,59 @@ class YDocChatHandler:
                 except Exception as e:
                     logging.error(f"Error loading chat file {file_path}: {e}")
             
-            self.chat_docs[file_path] = ychat
             self._doc_locks[file_path] = asyncio.Lock()
             
             # Set up observer for changes
             ychat.observe(lambda topic, event: self._on_document_change(file_path, topic, event))
             
-        return self.chat_docs[file_path]
+        return self.chat_docs[file_path]['ychat']
     
     def _on_document_change(self, file_path: str, topic: str, event):
         """Handle document changes and save to file"""
         try:
-            ychat = self.chat_docs[file_path]
-            content = json.loads(ychat.get())
+            # Only save on specific topics to avoid overwriting user messages
+            if topic not in ['messages', 'users', 'metadata']:
+                logging.debug(f"Skipping save for topic: {topic}")
+                return
+                
+            ychat = self.chat_docs[file_path]['ychat']
             
-            # Ensure the content has the expected structure
-            if not isinstance(content, dict):
-                content = {"messages": [], "users": {}, "metadata": {}}
+            # Get the current content from YDoc
+            ydoc_content = json.loads(ychat.get())
             
-            if "messages" not in content:
-                content["messages"] = []
-            if "users" not in content:
-                content["users"] = {}
-            if "metadata" not in content:
-                content["metadata"] = {}
+            # Read the current file content to preserve user messages
+            current_content = {"messages": [], "users": {}, "metadata": {}}
+            if os.path.exists(file_path):
+                try:
+                    with open(file_path, 'r') as f:
+                        current_content = json.load(f)
+                except Exception as e:
+                    logging.warning(f"Could not read current file {file_path}: {e}")
+            
+            # Merge YDoc changes with current content
+            if "messages" in ydoc_content:
+                # Add new Juno messages to existing messages
+                current_messages = current_content.get("messages", [])
+                ydoc_messages = ydoc_content.get("messages", [])
+                
+                # Find new messages (messages that are in YDoc but not in current file)
+                current_ids = {msg.get("id") for msg in current_messages if msg.get("id")}
+                for ydoc_msg in ydoc_messages:
+                    if ydoc_msg.get("id") and ydoc_msg.get("id") not in current_ids:
+                        current_messages.append(ydoc_msg)
+                
+                current_content["messages"] = current_messages
+            
+            if "users" in ydoc_content:
+                current_content["users"].update(ydoc_content["users"])
+            
+            if "metadata" in ydoc_content:
+                current_content["metadata"].update(ydoc_content["metadata"])
             
             # Write atomically
             temp_file = file_path + '.tmp'
             with open(temp_file, 'w') as f:
-                json.dump(content, f, indent=4)
+                json.dump(current_content, f, indent=4)
             os.rename(temp_file, file_path)
                 
             logging.debug(f"Saved changes to {file_path} (topic: {topic})")
@@ -109,40 +149,57 @@ class YDocChatHandler:
                 
                 ychat.set_user(juno_user)
                 logging.info(f"Added Juno user to {file_path}")
+
+    async def set_typing_indicator(self, file_path: str, is_typing: bool = True):
+        """Set typing indicator for Juno using awareness"""
+        try:
+            async with self._doc_locks.get(file_path, asyncio.Lock()):
+                ychat = self.get_or_create_chat_doc(file_path)
+                awareness = self.chat_docs[file_path]['awareness']
+                
+                # Get existing Juno user or create if doesn't exist
+                existing_user = ychat.get_user("Juno")
+                if not existing_user:
+                    await self.ensure_juno_user(file_path)
+                
+                # Set typing status through awareness
+                if is_typing:
+                    awareness.set_local_state_field("user", {
+                        "username": "Juno",
+                        "name": "Juno AI Assistant", 
+                        "display_name": "Juno",
+                        "initials": "J",
+                        "color": "#2196F3",
+                        "typing": True
+                    })
+                    logging.info("Set Juno typing indicator ON")
+                else:
+                    awareness.set_local_state_field("user", {
+                        "username": "Juno",
+                        "name": "Juno AI Assistant",
+                        "display_name": "Juno", 
+                        "initials": "J",
+                        "color": "#2196F3",
+                        "typing": False
+                    })
+                    logging.info("Set Juno typing indicator OFF")
+                    
+        except Exception as e:
+            logging.error(f"Error setting typing indicator: {e}")
     
-    async def add_message(self, file_path: str, message_text: str, sender: str = "Juno", 
-                         automated: bool = True, message_id: Optional[str] = None) -> str:
+    async def add_message(self, file_path: str, message_text: str, sender: str = "Juno") -> str:
         """Add a message to the chat using YDoc"""
         async with self._doc_locks.get(file_path, asyncio.Lock()):
             ychat = self.get_or_create_chat_doc(file_path)
             
-            # Create new message
+            # Create new message (ID is generated automatically)
             new_message = NewMessage(
                 body=message_text,
-                sender=sender,
-                id=message_id or str(uuid.uuid4())
+                sender=sender
             )
             
             # Add the message and get the ID
             message_id = ychat.add_message(new_message)
-            
-            # Update message properties if needed
-            if automated:
-                messages = ychat.get_messages()
-                for i, msg in enumerate(messages):
-                    if msg.id == message_id:
-                        # Create updated message
-                        updated_msg = Message(
-                            id=msg.id,
-                            body=msg.body,
-                            sender=msg.sender,
-                            time=msg.time,
-                            type=msg.type,
-                            automated=True,
-                            raw_time=False
-                        )
-                        ychat.update_message(updated_msg)
-                        break
             
             logging.info(f"Added message to {file_path}: {message_text[:50]}...")
             return message_id
@@ -152,19 +209,16 @@ class YDocChatHandler:
         async with self._doc_locks.get(file_path, asyncio.Lock()):
             ychat = self.get_or_create_chat_doc(file_path)
             
-            # Find message index by ID
-            message_index = ychat.get_message_index(message_id)
-            if message_index >= 0:
-                existing_msg = ychat.get_message(message_index)
-                if existing_msg:
+            # Find message by ID
+            messages = ychat.get_messages()
+            for msg in messages:
+                if msg.id == message_id:
                     # Create updated message
                     updated_msg = Message(
-                        id=existing_msg.id,
+                        id=msg.id,
                         body=new_text,
-                        sender=existing_msg.sender,
+                        sender=msg.sender,
                         time=time.time(),
-                        type=existing_msg.type,
-                        automated=getattr(existing_msg, 'automated', True),
                         raw_time=False
                     )
                     ychat.update_message(updated_msg)
@@ -174,41 +228,15 @@ class YDocChatHandler:
             logging.warning(f"Message {message_id} not found in {file_path}")
             return False
     
-    async def replace_message(self, file_path: str, old_message_id: str, final_text: str, 
-                            sender: str = "Juno") -> bool:
-        """Replace an existing message with new content"""
-        async with self._doc_locks.get(file_path, asyncio.Lock()):
-            ychat = self.get_or_create_chat_doc(file_path)
-            
-            # Find and update the message
-            message_index = ychat.get_message_index(old_message_id)
-            if message_index >= 0:
-                existing_msg = ychat.get_message(message_index)
-                if existing_msg:
-                    # Create replacement message
-                    updated_msg = Message(
-                        id=existing_msg.id,
-                        body=final_text,
-                        sender=sender,
-                        time=time.time(),
-                        type="msg",
-                        automated=True,
-                        raw_time=False
-                    )
-                    ychat.update_message(updated_msg)
-                    logging.info(f"Replaced message {old_message_id} in {file_path}")
-                    return True
-            
-            # If message not found, add new one
-            await self.add_message(file_path, final_text, sender, automated=True)
-            logging.info(f"Added new message (original {old_message_id} not found) in {file_path}")
-            return False
-    
     def cleanup(self):
         """Clean up resources"""
-        for ychat in self.chat_docs.values():
+        for chat_data in self.chat_docs.values():
             try:
-                ychat.dispose()
+                chat_data['ychat'].dispose()
+            except:
+                pass
+            try:
+                chat_data['awareness'].stop()
             except:
                 pass
         self.chat_docs.clear()
@@ -221,7 +249,6 @@ class ChatHandlerYDoc(FileSystemEventHandler):
         os.makedirs(self.chat_directory, exist_ok=True)
         os.makedirs(self.processed_logs_dir, exist_ok=True)
         self.last_processed_messages: Dict[str, Dict[str, Any]] = {}
-        self.working_message_ids: Dict[str, str] = {}
         self.loop = loop
         
         # Initialize YDoc handler if available
@@ -237,7 +264,14 @@ class ChatHandlerYDoc(FileSystemEventHandler):
     def on_modified(self, event):
         if event.is_directory:
             return
+        
         file_path = os.path.abspath(event.src_path)
+        
+        # Skip temporary files (starting with .~ or ._)
+        filename = os.path.basename(file_path)
+        if filename.startswith('.~') or filename.startswith('._'):
+            return
+            
         if file_path.endswith('.chat') and os.path.exists(file_path):
             logging.info(f"Detected modification in: {file_path}")
             self.loop.call_soon_threadsafe(self.handle_new_message, file_path)
@@ -247,13 +281,18 @@ class ChatHandlerYDoc(FileSystemEventHandler):
             if not os.path.exists(file_path):
                 logging.warning(f"File {file_path} was modified but no longer exists. Skipping.")
                 return
+                
+            # Skip temporary files again as safeguard
+            filename = os.path.basename(file_path)
+            if filename.startswith('.~') or filename.startswith('._'):
+                return
 
             # Read current content for message detection
             with open(file_path, 'r') as file:
                 try:
                     content = json.load(file)
-                except json.JSONDecodeError:
-                    logging.error(f"Could not decode JSON from {file_path}. Skipping.")
+                except json.JSONDecodeError as e:
+                    logging.error(f"Could not decode JSON from {file_path}. Error: {e}. Skipping.")
                     return
                     
                 if not isinstance(content, dict) or "messages" not in content or "users" not in content:
@@ -269,8 +308,9 @@ class ChatHandlerYDoc(FileSystemEventHandler):
 
                 last_message = content["messages"][-1]
 
+                # Check if message is not from Juno and hasn't been processed
                 if (last_message != self.last_processed_messages.get(file_path) and
-                        not last_message.get("automated", False) and
+                        last_message.get("sender") != "Juno" and
                         "body" in last_message and "sender" in last_message):
 
                     self.last_processed_messages[file_path] = last_message
@@ -290,9 +330,7 @@ class ChatHandlerYDoc(FileSystemEventHandler):
                         ))
                     else:
                         # Fallback to original implementation
-                        asyncio.create_task(self.manage_interaction_fallback(
-                            content, file_path, student_id, message_text, processed_log_data, file_name
-                        ))
+                        logging.error("YDoc handler not available - no fallback implemented")
 
         except FileNotFoundError:
             logging.warning(f"File not found: {file_path}.")
@@ -303,7 +341,7 @@ class ChatHandlerYDoc(FileSystemEventHandler):
 
     async def manage_interaction_ydoc(self, file_path: str, student_id: str, message_text: str, 
                                      processed_log_data: Optional[str], file_name: str):
-        """Manage interaction using YDoc"""
+        """Manage interaction using YDoc with typing indicators"""
         if not self.ydoc_handler:
             logging.error("YDoc handler not available")
             return
@@ -313,25 +351,13 @@ class ChatHandlerYDoc(FileSystemEventHandler):
         if message_text.strip().lower() == "/report":
             processed_log_data = self.get_processed_log_data(session_id_for_logs, limit=None)
 
-        # Add working message using YDoc
-        working_message_id = await self.ydoc_handler.add_message(
-            file_path, 
-            "Juno is working on it...", 
-            sender="Juno", 
-            automated=True
-        )
-        
-        self.working_message_ids[file_path] = working_message_id
-
-        # Start "working" messages
-        working_task = asyncio.create_task(
-            self.send_working_messages_ydoc(file_path, working_message_id)
-        )
-
         final_response_text = None
         error_occurred = False
 
         try:
+            # Set typing indicator ON
+            await self.ydoc_handler.set_typing_indicator(file_path, is_typing=True)
+
             # Call TA and WAIT for the response
             async with httpx.AsyncClient() as client:
                 logging.info(f"Sending message to TA at {TA_URL} and waiting for response...")
@@ -368,53 +394,16 @@ class ChatHandlerYDoc(FileSystemEventHandler):
             final_response_text = "Sorry, an unexpected error occurred."
             error_occurred = True
         finally:
-            # Stop the "working" messages
-            working_task.cancel()
-            try:
-                await working_task
-            except asyncio.CancelledError:
-                logging.debug(f"Working task cancelled successfully for {file_path}.")
+            # Turn OFF typing indicator
+            await self.ydoc_handler.set_typing_indicator(file_path, is_typing=False)
 
-            # Replace working message with final response using YDoc
+            # Add final response message
             if final_response_text:
-                await self.ydoc_handler.replace_message(
+                await self.ydoc_handler.add_message(
                     file_path, 
-                    working_message_id, 
                     final_response_text, 
                     sender="Juno"
                 )
-                
-            # Clean up
-            if file_path in self.working_message_ids:
-                del self.working_message_ids[file_path]
-
-    async def send_working_messages_ydoc(self, file_path: str, message_id: str):
-        """Send cycling working messages using YDoc"""
-        working_phrases = [
-            "Juno is working on it...", 
-            "Just a moment, processing...", 
-            "Thinking...", 
-            "Checking notes..."
-        ]
-        
-        idx = 0
-        try:
-            while True:
-                phrase = working_phrases[idx % len(working_phrases)]
-                if self.ydoc_handler:
-                    await self.ydoc_handler.update_message_by_id(file_path, message_id, phrase)
-                idx += 1
-                await asyncio.sleep(random.uniform(3, 5.5))
-        except asyncio.CancelledError:
-            logging.info(f"Stopped working messages for {file_path} (ID: {message_id})")
-        except Exception as e:
-            logging.error(f"Error in send_working_messages_ydoc for {file_path}: {e}", exc_info=True)
-
-    async def manage_interaction_fallback(self, content, file_path, student_id, message_text, processed_log_data, file_name):
-        """Fallback to original JSON-based implementation"""
-        logging.warning("Using fallback JSON-based implementation - consider installing YDoc")
-        # Original implementation would go here
-        # For brevity, not included - this would be the existing manage_interaction method
 
     def extract_session_id_from_filename(self, file_path: str) -> str:
         file_name = os.path.basename(file_path)
@@ -443,19 +432,35 @@ class ChatHandlerYDoc(FileSystemEventHandler):
                 logging.warning(f"No *.json log files found in {self.processed_logs_dir}")
                 return None
             
-            log_file_path = os.path.join(self.processed_logs_dir, matching_log_files[0])
-            logging.info(f"Reading log file: {log_file_path}")
-            
-            with open(log_file_path, 'r') as log_file:
+            # Collect logs from all JSON files
+            all_logs = []
+            for log_file_name in matching_log_files:
+                log_file_path = os.path.join(self.processed_logs_dir, log_file_name)
+                logging.debug(f"Reading log file: {log_file_path}")
+                
                 try:
-                    all_logs = json.load(log_file)
-                except json.JSONDecodeError:
-                    logging.error(f"Error decoding JSON: {log_file_path}")
-                    return None
+                    with open(log_file_path, 'r') as log_file:
+                        file_logs = json.load(log_file)
+                        
+                    if not isinstance(file_logs, list):
+                        logging.warning(f"Log file not a list, skipping: {log_file_path}")
+                        continue
+                        
+                    all_logs.extend(file_logs)
+                    logging.debug(f"Added {len(file_logs)} logs from {log_file_name}")
                     
-                if not isinstance(all_logs, list):
-                    logging.error(f"Log file not a list: {log_file_path}")
-                    return None
+                except json.JSONDecodeError:
+                    logging.error(f"Error decoding JSON, skipping: {log_file_path}")
+                    continue
+                except Exception as e:
+                    logging.error(f"Error reading log file {log_file_path}: {e}")
+                    continue
+            
+            if not all_logs:
+                logging.warning(f"No valid logs found in any JSON files")
+                return None
+                
+            logging.info(f"Loaded {len(all_logs)} total logs from {len(matching_log_files)} files")
 
             matching_logs = []
             for log in all_logs:
@@ -468,7 +473,7 @@ class ChatHandlerYDoc(FileSystemEventHandler):
                         matching_logs.append(log)
 
             if not matching_logs:
-                logging.info(f"No matching logs for '{session_id}' in {log_file_path}")
+                logging.info(f"No matching logs for '{session_id}' in processed logs")
                 return None
 
             # Apply limit if given, otherwise use entire session
