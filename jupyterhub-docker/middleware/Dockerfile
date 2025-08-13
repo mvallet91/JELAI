@@ -14,7 +14,7 @@ COPY uv.lock /app/
 
 # Create venv + install dependencies
 ENV UV_SYSTEM_PYTHON=true
-RUN uv pip install -r uv.lock --system .
+RUN uv pip install fastapi uvicorn pydantic python-dotenv rapidfuzz thefuzz fluent-logger httpx sentence-transformers asyncio flask pandas werkzeug --system
 
 # Runtime stage
 FROM python:3.11-slim-bookworm AS runtime
@@ -29,7 +29,11 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/* 
 
 RUN gem install fluentd --no-document && \
-    fluentd --setup /fluent 
+    fluentd --setup /fluent
+
+# Copy Python environment from builder
+COPY --from=builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
+COPY --from=builder /usr/local/bin /usr/local/bin 
 
 # Copy application code
 COPY ea-handler.py ta-handler.py utils.py start.sh .env analytics_cli.py admin_api.py /app/
