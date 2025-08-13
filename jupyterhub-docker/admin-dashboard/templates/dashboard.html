@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JELAI Admin Dashboard</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .header {
+            background: linear-gradient(135deg, #007cba 0%, #005a8c 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        .section {
+            background: white;
+            margin: 20px 0;
+            padding: 25px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .section h2 {
+            margin-top: 0;
+            color: #333;
+            border-bottom: 2px solid #007cba;
+            padding-bottom: 10px;
+        }
+        .button {
+            background: #007cba;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            margin: 5px;
+            transition: background-color 0.3s;
+        }
+        .button:hover {
+            background: #005a8c;
+        }
+        .button.secondary {
+            background: #6c757d;
+        }
+        .button.secondary:hover {
+            background: #545b62;
+        }
+        textarea {
+            width: 100%;
+            height: 200px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            box-sizing: border-box;
+        }
+        input[type="text"], input[type="file"] {
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin: 5px;
+            width: 300px;
+        }
+        input[type="file"] {
+            width: auto;
+        }
+        .analytics-card {
+            display: inline-block;
+            margin: 10px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid #007cba;
+            min-width: 200px;
+            vertical-align: top;
+        }
+        .analytics-card h4 {
+            margin: 0 0 10px 0;
+            color: #007cba;
+        }
+        .files-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 10px;
+            margin-top: 15px;
+        }
+        .file-item {
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+        }
+        .file-icon {
+            margin-right: 10px;
+            font-size: 18px;
+        }
+        .success-message, .error-message {
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .success-message {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error-message {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .loading {
+            opacity: 0.5;
+            pointer-events: none;
+        }
+        .stats-row {
+            display: flex;
+            justify-content: space-around;
+            margin: 20px 0;
+        }
+        .stat-box {
+            text-align: center;
+            padding: 20px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            min-width: 120px;
+        }
+        .stat-number {
+            font-size: 2em;
+            font-weight: bold;
+            color: #007cba;
+        }
+        .stat-label {
+            color: #666;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🤖 JELAI Admin Dashboard</h1>
+        <p>Manage your AI tutoring system, learning materials, and student analytics</p>
+    </div>
+    
+    <div class="stats-row">
+        <div class="stat-box">
+            <div class="stat-number" id="total-students">-</div>
+            <div class="stat-label">Active Students</div>
+        </div>
+        <div class="stat-box">
+            <div class="stat-number" id="total-messages">-</div>
+            <div class="stat-label">Total Messages</div>
+        </div>
+        <div class="stat-box">
+            <div class="stat-number" id="total-files">-</div>
+            <div class="stat-label">Learning Materials</div>
+        </div>
+    </div>
+    
+    <div class="section">
+        <h2>🎯 AI Tutor Configuration</h2>
+        
+        <h3>Tutor System Prompt</h3>
+        <p>Configure how the AI tutor behaves and responds to students</p>
+        <textarea id="tutor-prompt" placeholder="Loading tutor prompt..."></textarea>
+        <br>
+        <button class="button" onclick="savePrompt('tutor')">💾 Save Tutor Prompt</button>
+        
+        <h3>Expert System Prompt</h3>
+        <p>Configure the expert agent that provides technical information</p>
+        <textarea id="expert-prompt" placeholder="Loading expert prompt..."></textarea>
+        <br>
+        <button class="button" onclick="savePrompt('expert')">💾 Save Expert Prompt</button>
+    </div>
+    
+    <div class="section">
+        <h2>📚 Learning Objectives</h2>
+        <p>Define learning objectives for specific tasks or assignments</p>
+        
+        <div>
+            <input type="text" id="task-name" placeholder="Task name (e.g., task1, assignment2)">
+            <button class="button secondary" onclick="loadObjectives()">📖 Load Objectives</button>
+        </div>
+        
+        <textarea id="objectives" placeholder="Enter learning objectives for this task..."></textarea>
+        <br>
+        <button class="button" onclick="saveObjectives()">💾 Save Objectives</button>
+    </div>
+    
+    <div class="section">
+        <h2>📁 Learning Materials</h2>
+        <p>Upload and manage files that students can access (datasets, notebooks, documentation)</p>
+        
+        <div>
+            <input type="file" id="file-upload" multiple accept=".ipynb,.csv,.txt,.pdf,.py,.md,.json">
+            <button class="button" onclick="uploadFiles()">📤 Upload Files</button>
+        </div>
+        
+        <div id="files-list" class="files-grid">
+            <div>Loading files...</div>
+        </div>
+    </div>
+    
+    <div class="section">
+        <h2>📊 Student Analytics</h2>
+        <p>Monitor student engagement and interaction patterns</p>
+        
+        <button class="button" onclick="loadAnalytics()">🔄 Refresh Analytics</button>
+        <button class="button secondary" onclick="loadChatSummary()">📈 Weekly Summary</button>
+        
+        <div id="analytics-content">
+            <p>Click "Refresh Analytics" to load student data...</p>
+        </div>
+    </div>
+    
+    <!-- Messages -->
+    <div id="messages"></div>
+    
+    <script>
+        // Global state
+        let isLoading = false;
+        
+        // Load initial data when page loads
+        window.onload = function() {
+            loadPrompt('tutor');
+            loadPrompt('expert');
+            loadFiles();
+            loadQuickStats();
+        };
+        
+        function showMessage(message, type = 'success') {
+            const messages = document.getElementById('messages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = type === 'success' ? 'success-message' : 'error-message';
+            messageDiv.textContent = message;
+            messages.appendChild(messageDiv);
+            
+            // Remove message after 5 seconds
+            setTimeout(() => {
+                messages.removeChild(messageDiv);
+            }, 5000);
+        }
+        
+        function setLoading(loading) {
+            isLoading = loading;
+            document.body.className = loading ? 'loading' : '';
+        }
+        
+        async function apiCall(endpoint, options = {}) {
+            try {
+                const response = await fetch('/api/proxy/' + endpoint, {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        ...options.headers
+                    },
+                    ...options
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                return await response.json();
+            } catch (error) {
+                console.error('API Error:', error);
+                showMessage('API Error: ' + error.message, 'error');
+                throw error;
+            }
+        }
+        
+        async function loadPrompt(type) {
+            try {
+                const data = await apiCall(`prompts/${type}`);
+                document.getElementById(`${type}-prompt`).value = data.content || '';
+            } catch (error) {
+                document.getElementById(`${type}-prompt`).value = '';
+            }
+        }
+        
+        async function savePrompt(type) {
+            if (isLoading) return;
+            setLoading(true);
+            
+            try {
+                const content = document.getElementById(`${type}-prompt`).value;
+                await apiCall(`prompts/${type}`, {
+                    method: 'PUT',
+                    body: JSON.stringify({ content: content })
+                });
+                showMessage(`${type.charAt(0).toUpperCase() + type.slice(1)} prompt saved successfully!`);
+            } catch (error) {
+                showMessage(`Error saving ${type} prompt`, 'error');
+            } finally {
+                setLoading(false);
+            }
+        }
+        
+        async function loadObjectives() {
+            const task = document.getElementById('task-name').value.trim();
+            if (!task) {
+                showMessage('Please enter a task name', 'error');
+                return;
+            }
+            
+            try {
+                const data = await apiCall(`learning-objectives/${encodeURIComponent(task)}`);
+                document.getElementById('objectives').value = data.content || '';
+                showMessage(`Loaded objectives for task: ${task}`);
+            } catch (error) {
+                document.getElementById('objectives').value = '';
+            }
+        }
+        
+        async function saveObjectives() {
+            const task = document.getElementById('task-name').value.trim();
+            if (!task) {
+                showMessage('Please enter a task name', 'error');
+                return;
+            }
+            
+            if (isLoading) return;
+            setLoading(true);
+            
+            try {
+                const content = document.getElementById('objectives').value;
+                await apiCall(`learning-objectives/${encodeURIComponent(task)}`, {
+                    method: 'PUT',
+                    body: JSON.stringify({ content: content })
+                });
+                showMessage(`Objectives saved for task: ${task}`);
+            } catch (error) {
+                showMessage('Error saving objectives', 'error');
+            } finally {
+                setLoading(false);
+            }
+        }
+        
+        async function loadFiles() {
+            try {
+                const data = await apiCall('materials');
+                const filesList = document.getElementById('files-list');
+                
+                if (data.files && data.files.length > 0) {
+                    filesList.innerHTML = data.files.map(file => {
+                        const extension = file.split('.').pop().toLowerCase();
+                        const icon = getFileIcon(extension);
+                        return `
+                            <div class="file-item">
+                                <span class="file-icon">${icon}</span>
+                                <span>${file}</span>
+                            </div>
+                        `;
+                    }).join('');
+                } else {
+                    filesList.innerHTML = '<div class="file-item">No files uploaded yet</div>';
+                }
+                
+                // Update stats
+                document.getElementById('total-files').textContent = data.files ? data.files.length : 0;
+            } catch (error) {
+                document.getElementById('files-list').innerHTML = '<div class="file-item">Error loading files</div>';
+            }
+        }
+        
+        function getFileIcon(extension) {
+            const icons = {
+                'ipynb': '📓',
+                'csv': '📊',
+                'json': '📋',
+                'txt': '📄',
+                'md': '📝',
+                'pdf': '📕',
+                'py': '🐍',
+                'js': '📜',
+                'html': '🌐',
+                'css': '🎨'
+            };
+            return icons[extension] || '📄';
+        }
+        
+        async function uploadFiles() {
+            const fileInput = document.getElementById('file-upload');
+            const files = fileInput.files;
+            
+            if (files.length === 0) {
+                showMessage('Please select files to upload', 'error');
+                return;
+            }
+            
+            if (isLoading) return;
+            setLoading(true);
+            
+            let successCount = 0;
+            let errorCount = 0;
+            
+            for (let file of files) {
+                try {
+                    const formData = new FormData();
+                    formData.append('file', file);
+                    
+                    const response = await fetch('/api/proxy/materials', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    
+                    if (response.ok) {
+                        successCount++;
+                    } else {
+                        errorCount++;
+                    }
+                } catch (error) {
+                    errorCount++;
+                }
+            }
+            
+            if (successCount > 0) {
+                showMessage(`Successfully uploaded ${successCount} file(s)`);
+            }
+            if (errorCount > 0) {
+                showMessage(`Failed to upload ${errorCount} file(s)`, 'error');
+            }
+            
+            // Refresh file list and clear input
+            await loadFiles();
+            fileInput.value = '';
+            setLoading(false);
+        }
+        
+        async function loadAnalytics() {
+            if (isLoading) return;
+            setLoading(true);
+            
+            try {
+                const data = await apiCall('analytics/students');
+                const content = document.getElementById('analytics-content');
+                
+                if (data && data.length > 0) {
+                    const totalMessages = data.reduce((sum, student) => sum + student.message_count, 0);
+                    document.getElementById('total-students').textContent = data.length;
+                    document.getElementById('total-messages').textContent = totalMessages;
+                    
+                    content.innerHTML = '<h3>Student Activity:</h3>' +
+                        data.map(student => `
+                            <div class="analytics-card">
+                                <h4>👤 ${student.username}</h4>
+                                <div><strong>Messages:</strong> ${student.message_count}</div>
+                                <div><strong>First:</strong> ${new Date(student.first_interaction).toLocaleDateString()}</div>
+                                <div><strong>Last:</strong> ${new Date(student.last_interaction).toLocaleDateString()}</div>
+                            </div>
+                        `).join('');
+                } else {
+                    content.innerHTML = '<p>No student activity data available yet.</p>';
+                    document.getElementById('total-students').textContent = '0';
+                    document.getElementById('total-messages').textContent = '0';
+                }
+            } catch (error) {
+                document.getElementById('analytics-content').innerHTML = 
+                    '<p>Error loading analytics. Make sure students have used the chat feature.</p>';
+            } finally {
+                setLoading(false);
+            }
+        }
+        
+        async function loadChatSummary() {
+            if (isLoading) return;
+            setLoading(true);
+            
+            try {
+                const data = await apiCall('analytics/chat-summary');
+                const content = document.getElementById('analytics-content');
+                
+                if (data && data.length > 0) {
+                    content.innerHTML = '<h3>Weekly Chat Activity:</h3>' +
+                        data.map(day => `
+                            <div class="analytics-card">
+                                <h4>📅 ${day.date}</h4>
+                                <div><strong>Messages:</strong> ${day.messages}</div>
+                                <div><strong>Active Students:</strong> ${day.active_students}</div>
+                            </div>
+                        `).join('');
+                } else {
+                    content.innerHTML = '<p>No recent chat activity.</p>';
+                }
+            } catch (error) {
+                document.getElementById('analytics-content').innerHTML = 
+                    '<p>Error loading chat summary.</p>';
+            } finally {
+                setLoading(false);
+            }
+        }
+        
+        async function loadQuickStats() {
+            try {
+                // Load basic stats without showing loading state
+                const [materials, analytics] = await Promise.all([
+                    apiCall('materials').catch(() => ({files: []})),
+                    apiCall('analytics/students').catch(() => [])
+                ]);
+                
+                document.getElementById('total-files').textContent = materials.files ? materials.files.length : 0;
+                document.getElementById('total-students').textContent = analytics.length || 0;
+                
+                if (analytics.length > 0) {
+                    const totalMessages = analytics.reduce((sum, student) => sum + student.message_count, 0);
+                    document.getElementById('total-messages').textContent = totalMessages;
+                } else {
+                    document.getElementById('total-messages').textContent = '0';
+                }
+            } catch (error) {
+                // Silently fail for initial stats load
+                console.log('Could not load quick stats:', error);
+            }
+        }
+    </script>
+</body>
+</html>

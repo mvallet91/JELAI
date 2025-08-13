@@ -14,7 +14,10 @@ dependencies = [
     "fluent-logger",
     "httpx",
     "sentence-transformers",
-    "asyncio"
+    "asyncio",
+    "flask",
+    "pandas",
+    "werkzeug"
 ]
 
 [[tool.uv.index]]

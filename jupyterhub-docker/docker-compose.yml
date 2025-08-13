@@ -60,13 +60,36 @@ services:
     volumes:
       - "middleware-data:/var/log/jelai"
       - "chat-histories:/app/chat_histories"
-      - "./middleware/inputs:/app/inputs:ro"
+      - "./middleware/inputs:/app/inputs:rw"
     ports:
       - "24224:24224"
       - "8004:8004" 
-      - "8003:8003"  
+      - "8003:8003"
+      - "8005:8005"
     depends_on:
       - hub
+
+  admin-dashboard:
+    build:
+      context: ./admin-dashboard
+      dockerfile: Dockerfile
+    image: admin-dashboard
+    container_name: admin-dashboard
+    networks:
+      - jupyterhub-network
+    volumes:
+      - "./middleware/inputs:/app/inputs:rw"
+      - "chat-histories:/app/chat_histories:ro"
+      - "middleware-data:/app/logs:ro"
+      - "./user-notebook/learning_materials:/app/learning_materials:rw"
+      - "jupyterhub-data:/app/jupyterhub_data:ro"
+    ports:
+      - "8006:8006"
+    depends_on:
+      - middleware
+    environment:
+      - MIDDLEWARE_URL=http://middleware:8005
+      - JUPYTERHUB_URL=http://hub:8000
 
 volumes:
   jupyterhub-data:
