@@ -28,6 +28,13 @@ The system consists of a JupyterHub server, individual user Jupyter servers, a m
 - The **middleware** container runs the backend services:
     - The Tutor Agent (`ta-handler.py`) receives student messages, orchestrates calls to the Expert Agent and the LLM, manages student profiles, and maintains chat history using an SQLite database (`chat_histories` volume).
     - The Expert Agent (`ea-handler.py`) provides concise, factual technical information based on context provided by the TA.
+    - The Admin API (`admin_api.py`) provides a REST interface for the admin dashboard to manage system configuration, learning materials, and analytics.
+- The **admin dashboard** container provides a web-based interface for educators to:
+    - Configure AI tutor behavior and prompts
+    - Manage learning objectives for different tasks
+    - Upload and organize learning materials
+    - Monitor student analytics and engagement metrics
+    - Access the dashboard at `http://localhost:8006` after deployment
     - Both agents are started via the `start.sh` script.
     - The LA module (in progress) processes telemetry logs to generate insights.
 - **Fluent** is used to collect logs from the individual containers and send them to the middleware container for storage and processing with the LA module.
