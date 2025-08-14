@@ -28,6 +28,18 @@ h1 {
     text-shadow: 0 4px 8px rgba(0,0,0,0.3);
 }
 
+.dashboard-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+}
+
+.dashboard-header h1 {
+    margin: 0;
+    text-align: left;
+}
+
 .dashboard-intro {
     color: rgba(255, 255, 255, 0.9);
     text-align: center;

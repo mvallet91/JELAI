@@ -13,7 +13,7 @@ COPY uv.lock /app/
 # Install dependencies
 RUN uv sync --frozen
 
-# Copy application files
+# Copy source code
 COPY app.py /app/
 COPY templates/ /app/templates/
 COPY static/ /app/static/

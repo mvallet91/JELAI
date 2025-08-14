@@ -383,13 +383,10 @@ async def select_learning_objective_llm(question_text: str, learning_objectives:
         objectives_text = "\n".join(f"{i+1}. {obj}" for i, obj in enumerate(learning_objectives))
         
         prompt = f"""Given this student question: "{question_text}"
-
-Which learning objective is most relevant?
-
-Learning Objectives:
-{objectives_text}
-
-Respond with only the number (1-{len(learning_objectives)}) of the most relevant objective, or 0 if none are clearly relevant."""
+                    Which learning objective is most relevant?
+                    Learning Objectives:
+                    {objectives_text}
+                    Respond with only the number (1-{len(learning_objectives)}) of the most relevant objective, or 0 if none are clearly relevant."""
 
         messages = [
             {"role": "system", "content": "You are helping match student questions to learning objectives. Be precise and respond with only a number."},

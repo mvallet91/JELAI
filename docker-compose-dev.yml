@@ -51,7 +51,9 @@ services:
       # Mount middleware code for development
       - "middleware-dev-data:/var/log/jelai"
       - "chat-histories:/app/chat_histories"
-    # Mount learning objectives file for development
+      # Mount learning objectives file directly
+      - "./jupyterhub-docker/middleware/learning_objectives.yaml:/app/learning_objectives.yaml:rw"
+      # Mount middleware code for live development
       - "./jupyterhub-docker/middleware/ea-handler.py:/app/ea-handler.py"
       - "./jupyterhub-docker/middleware/ta-handler.py:/app/ta-handler.py"
       - "./jupyterhub-docker/middleware/utils.py:/app/utils.py"
@@ -60,12 +62,47 @@ services:
       - "24224:24224"
       - "8003:8003"  # EA handler server
       - "8004:8004"  # TA handler server
+      - "8005:8005"  # Admin API server
+
+  admin-dashboard-dev:
+    build:
+      context: ./jupyterhub-docker/admin-dashboard
+      dockerfile: Dockerfile
+    image: admin-dashboard-dev
+    container_name: admin-dashboard-dev
+    networks:
+      - jelai-dev-network
+    volumes:
+      # Mount admin dashboard code for development
+      - "./jupyterhub-docker/admin-dashboard/app.py:/app/app.py"
+      - "./jupyterhub-docker/admin-dashboard/templates:/app/templates"
+      - "./jupyterhub-docker/admin-dashboard/static:/app/static"
+      # Mount middleware inputs for configuration
+      - "./jupyterhub-docker/middleware/inputs:/app/inputs:rw"
+      # Mount learning objectives file directly (since we know it exists)
+      - "./jupyterhub-docker/middleware/learning_objectives.yaml:/app/learning_objectives.yaml:rw"
+      # Mount shared data volumes
+      - "chat-histories:/app/chat_histories:ro"
+      - "middleware-dev-data:/app/logs:ro"
+    environment:
+      - MIDDLEWARE_URL=http://middleware-dev:8005
+      # No JUPYTERHUB_URL in dev - this enables development mode
+      - ENABLE_SIMPLE_AUTH=true
+      - ADMIN_USERNAME=admin
+      - ADMIN_PASSWORD=admin123
+      - ADMIN_SECRET_KEY=dev-secret-key-change-in-production
+    ports:
+      - "8006:8006"  # Admin dashboard
+    depends_on:
+      - middleware-dev
 
 volumes:
   chat-histories:
   middleware-dev-data:
   notebook-workspace:
   log-data:
+  # Note: learning-materials, workspace-templates, shared-resources are empty in dev
+  # They can be added later when content is available
 
 networks:
   jelai-dev-network:

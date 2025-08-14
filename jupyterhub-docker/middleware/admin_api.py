@@ -386,6 +386,38 @@ def manage_objectives(task):
             logger.error(f"Error updating objectives for {task}: {e}")
             return jsonify({'error': str(e)}), 500
 
+@app.route('/api/sync-learning-objectives', methods=['POST'])
+def sync_learning_objectives():
+    """Create learning objective files for any templates that don't have them"""
+    try:
+        created_files = []
+        
+        # Get all template files
+        if os.path.exists(WORKSPACE_TEMPLATES_DIR):
+            for template_file in os.listdir(WORKSPACE_TEMPLATES_DIR):
+                if os.path.isfile(os.path.join(WORKSPACE_TEMPLATES_DIR, template_file)):
+                    # Get base name without extension
+                    base_name = os.path.splitext(template_file)[0]
+                    obj_file = f'{INPUTS_DIR}/learning_objectives/{base_name}.txt'
+                    
+                    # Create if doesn't exist
+                    if not os.path.exists(obj_file):
+                        os.makedirs(os.path.dirname(obj_file), exist_ok=True)
+                        with open(obj_file, 'w') as f:
+                            f.write('')  # Create empty file
+                        created_files.append(f"{base_name}.txt")
+                        logger.info(f"Created learning objective file: {base_name}.txt")
+        
+        return jsonify({
+            'success': True, 
+            'created_files': created_files,
+            'message': f'Created {len(created_files)} learning objective files'
+        })
+        
+    except Exception as e:
+        logger.error(f"Error syncing learning objectives: {e}")
+        return jsonify({'error': str(e)}), 500
+
 @app.route('/api/experiments', methods=['GET', 'PUT'])
 def manage_experiments():
     """Configure A/B testing experiments"""
@@ -557,6 +589,17 @@ def manage_workspace_templates(filename=None):
             logger.info(f"Secured filename: '{filename}'")
             file_path = os.path.join(WORKSPACE_TEMPLATES_DIR, filename)
             file.save(file_path)
+            
+            # Auto-create learning objective file for the new template
+            base_name = os.path.splitext(filename)[0]  # Remove extension
+            obj_file = f'{INPUTS_DIR}/learning_objectives/{base_name}.txt'
+            
+            # Only create if it doesn't exist
+            if not os.path.exists(obj_file):
+                os.makedirs(os.path.dirname(obj_file), exist_ok=True)
+                with open(obj_file, 'w') as f:
+                    f.write('')  # Create empty learning objective file
+                logger.info(f"Auto-created empty learning objective file: {base_name}.txt")
             
             logger.info(f"Uploaded workspace template: {filename}")
             return jsonify({'success': True, 'filename': filename})

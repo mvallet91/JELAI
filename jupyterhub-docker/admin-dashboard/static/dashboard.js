@@ -283,7 +283,7 @@ function editObjective(taskName) {
                 <form onsubmit="saveObjective(event, '${taskName}')">
                     <div class="form-group">
                         <label for="objectiveText">Learning Objective:</label>
-                        <textarea id="objectiveText" placeholder="Enter the learning objective for this task..." required></textarea>
+                        <textarea id="objectiveText" placeholder="Loading existing content..." disabled></textarea>
                     </div>
                     <div class="modal-actions">
                         <button type="button" onclick="closeObjectiveModal()" class="button secondary">Cancel</button>
@@ -297,20 +297,32 @@ function editObjective(taskName) {
     // Add modal to page
     document.body.insertAdjacentHTML('beforeend', modalHTML);
     
-    // Load current objective
+    // Show modal immediately
+    document.getElementById('objectiveModal').style.display = 'block';
+    
+    // Load current objective content
     fetch(`/api/proxy/learning-objectives/${taskName}`)
         .then(response => response.json())
         .then(data => {
-            if (data.objective) {
-                document.getElementById('objectiveText').value = data.objective;
+            const textarea = document.getElementById('objectiveText');
+            textarea.disabled = false;
+            textarea.placeholder = "Enter the learning objective for this task...";
+            
+            if (data.content && data.content.trim()) {
+                textarea.value = data.content;
+                console.log(`Loaded content for ${taskName}:`, data.content.substring(0, 50) + '...');
+            } else {
+                textarea.value = '';
+                console.log(`No content found for ${taskName}, starting with empty form`);
             }
         })
         .catch(error => {
-            console.log('No existing objective found, starting with empty form');
+            console.error(`Error loading content for ${taskName}:`, error);
+            const textarea = document.getElementById('objectiveText');
+            textarea.disabled = false;
+            textarea.placeholder = "Enter the learning objective for this task...";
+            textarea.value = '';
         });
-    
-    // Show modal
-    document.getElementById('objectiveModal').style.display = 'block';
 }
 
 function closeObjectiveModal() {
@@ -325,17 +337,14 @@ function saveObjective(event, taskName) {
     
     const objectiveText = document.getElementById('objectiveText').value.trim();
     
-    if (!objectiveText) {
-        showMessage('Please enter a learning objective', 'error');
-        return;
-    }
+    // Allow saving empty content (to clear objectives)
     
     fetch(`/api/proxy/learning-objectives/${taskName}`, {
         method: 'PUT',
         headers: {
             'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ objective: objectiveText })
+        body: JSON.stringify({ content: objectiveText })
     })
     .then(response => response.json())
     .then(data => {

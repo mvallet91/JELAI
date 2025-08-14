@@ -77,7 +77,12 @@ async def proxy_to_middleware(request: Request, endpoint: str):
 @app.get("/health")
 async def health():
     """Health check endpoint"""
-    return {"status": "healthy"}
+    return {"status": "healthy", "service": "admin-dashboard"}
+
+@app.get("/api/user")
+async def get_user():
+    """Get current user info"""
+    return {"username": "admin"}
 
 if __name__ == '__main__':
     logger.info("Starting JELAI Admin Dashboard on port 8006")
