@@ -1,0 +1,1023 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JELAI Admin Dashboard</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .header {
+            background: linear-gradient(135deg, #007cba 0%, #005a8c 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        .section {
+            background: white;
+            margin: 20px 0;
+            padding: 25px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .section h2 {
+            margin-top: 0;
+            color: #333;
+            border-bottom: 2px solid #007cba;
+            padding-bottom: 10px;
+        }
+        .button {
+            background: #007cba;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            margin: 5px;
+            transition: background-color 0.3s;
+        }
+        .button:hover {
+            background: #005a8c;
+        }
+        .button.secondary {
+            background: #6c757d;
+        }
+        .button.secondary:hover {
+            background: #545b62;
+        }
+        textarea {
+            width: 100%;
+            height: 200px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            box-sizing: border-box;
+        }
+        input[type="text"], input[type="file"] {
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin: 5px;
+            width: 300px;
+        }
+        input[type="file"] {
+            width: auto;
+        }
+        .analytics-card {
+            display: inline-block;
+            margin: 10px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid #007cba;
+            min-width: 200px;
+            vertical-align: top;
+        }
+        .analytics-card h4 {
+            margin: 0 0 10px 0;
+            color: #007cba;
+        }
+        .files-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 10px;
+            margin-top: 15px;
+        }
+        .file-item {
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            border: 1px solid #e9ecef;
+        }
+        .file-item:hover {
+            background: #e9ecef;
+            border-color: #007cba;
+        }
+        .file-item.selected {
+            background: #e7f3ff;
+            border-color: #007cba;
+        }
+        .file-info {
+            display: flex;
+            align-items: center;
+            flex: 1;
+        }
+        .file-actions {
+            display: flex;
+            gap: 5px;
+        }
+        .file-actions button {
+            padding: 5px 10px;
+            font-size: 12px;
+            margin: 0;
+        }
+        .objective-preview {
+            background: white;
+            margin: 10px 0;
+            padding: 15px;
+            border-radius: 6px;
+            border-left: 4px solid #007cba;
+        }
+        .objective-preview h5 {
+            margin: 0 0 10px 0;
+            color: #007cba;
+        }
+        .objective-list {
+            color: #666;
+            font-size: 0.9em;
+        }
+        .file-icon {
+            margin-right: 10px;
+            font-size: 18px;
+        }
+        .success-message, .error-message {
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .success-message {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error-message {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .loading {
+            opacity: 0.5;
+            pointer-events: none;
+        }
+        .stats-row {
+            display: flex;
+            justify-content: space-around;
+            margin: 20px 0;
+        }
+        .stat-box {
+            text-align: center;
+            padding: 20px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            min-width: 120px;
+        }
+        .stat-number {
+            font-size: 2em;
+            font-weight: bold;
+            color: #007cba;
+        }
+        .stat-label {
+            color: #666;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🤖 JELAI Admin Dashboard</h1>
+        <p>Manage your AI tutoring system, learning materials, and student analytics</p>
+    </div>
+    
+    <div class="stats-row">
+        <div class="stat-box">
+            <div class="stat-number" id="total-students">-</div>
+            <div class="stat-label">Active Students</div>
+        </div>
+        <div class="stat-box">
+            <div class="stat-number" id="total-messages">-</div>
+            <div class="stat-label">Total Messages</div>
+        </div>
+        <div class="stat-box">
+            <div class="stat-number" id="total-files">-</div>
+            <div class="stat-label">Learning Materials</div>
+        </div>
+    </div>
+    
+    <div class="section">
+        <h2>🎯 AI Tutor Configuration</h2>
+        
+        <h3>Tutor System Prompt</h3>
+        <p>Configure how the AI tutor behaves and responds to students</p>
+        <textarea id="tutor-prompt" placeholder="Loading tutor prompt..."></textarea>
+        <br>
+        <button class="button" onclick="savePrompt('tutor')">💾 Save Tutor Prompt</button>
+        
+        <h3>Expert System Prompt</h3>
+        <p>Configure the expert agent that provides technical information</p>
+        <textarea id="expert-prompt" placeholder="Loading expert prompt..."></textarea>
+        <br>
+        <button class="button" onclick="savePrompt('expert')">💾 Save Expert Prompt</button>
+    </div>
+    
+    <div class="section">
+        <h2>📚 Learning Objectives</h2>
+        <p>Define learning objectives for specific tasks or assignments</p>
+        
+        <div>
+            <input type="text" id="task-name" placeholder="Task name (e.g., task1, assignment2)">
+            <button class="button secondary" onclick="loadObjectives()">📖 Load Objectives</button>
+        </div>
+        
+        <textarea id="objectives" placeholder="Enter learning objectives for this task..."></textarea>
+        <br>
+        <button class="button" onclick="saveObjectives()">💾 Save Objectives</button>
+    </div>
+    
+    <div class="section">
+        <h2>📁 Learning Materials & Objectives</h2>
+        <p>Upload and manage files that students can access, then link them to learning objectives</p>
+        
+        <div style="margin-bottom: 20px;">
+            <input type="file" id="file-upload" multiple accept=".ipynb,.csv,.txt,.pdf,.py,.md,.json">
+            <button class="button" onclick="uploadFiles()">📤 Upload Files</button>
+        </div>
+        
+        <div id="materials-section">
+            <h3>📁 Available Learning Materials</h3>
+            <div id="files-list" class="files-grid">
+                <div>Loading files...</div>
+            </div>
+        </div>
+        
+        <div id="objectives-section" style="margin-top: 30px;">
+            <h3>📚 Learning Objectives by Material</h3>
+            <p>Click on a material file to view/edit its learning objectives</p>
+            <div id="material-objectives">
+                <div>Select a material file above to view or edit its learning objectives</div>
+            </div>
+        </div>
+        
+        <!-- Edit objectives modal/section -->
+        <div id="edit-objectives-section" style="display: none; margin-top: 20px; padding: 20px; border: 2px solid #007cba; border-radius: 8px; background: #f8f9fa;">
+            <h4 id="editing-material-name">Editing Objectives for: </h4>
+            <textarea id="material-objectives-editor" placeholder="Enter learning objectives (one per line)...
+Example:
+Data loading and file I/O
+Pandas DataFrame manipulation
+Basic statistical analysis" style="height: 150px;"></textarea>
+            <div style="margin-top: 10px;">
+                <button class="button" onclick="saveMaterialObjectives()">💾 Save Objectives</button>
+                <button class="button secondary" onclick="cancelEditObjectives()">❌ Cancel</button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="section">
+        <h2>🏗️ Workspace Configuration</h2>
+        <p>Manage files for student workspaces: individual templates (copied to each workspace) and shared resources (read-only access)</p>
+        
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 20px;">
+            <!-- Workspace Templates Section -->
+            <div style="border: 1px solid #ddd; border-radius: 8px; padding: 15px;">
+                <h3>📋 Workspace Templates</h3>
+                <p style="font-size: 0.9em; color: #666;">Files copied to each student's individual workspace at build time</p>
+                
+                <div style="margin-bottom: 15px;">
+                    <input type="file" id="template-upload" multiple accept=".ipynb,.csv,.txt,.pdf,.py,.md,.json">
+                    <button class="button" onclick="uploadWorkspaceTemplates()" style="font-size: 0.9em; padding: 8px 15px;">📤 Upload Templates</button>
+                </div>
+                
+                <div id="templates-list" class="files-grid" style="max-height: 300px; overflow-y: auto;">
+                    <div>Loading templates...</div>
+                </div>
+                
+                <div style="margin-top: 15px; padding: 10px; background: #e7f3ff; border-radius: 5px; font-size: 0.9em;">
+                    <strong>📌 Note:</strong> After uploading templates, click "Rebuild Workspaces" to distribute them to new user containers.
+                </div>
+            </div>
+            
+            <!-- Shared Resources Section -->
+            <div style="border: 1px solid #ddd; border-radius: 8px; padding: 15px;">
+                <h3>🌐 Shared Resources</h3>
+                <p style="font-size: 0.9em; color: #666;">Files accessible to all students (read-only, mounted at runtime)</p>
+                
+                <div style="margin-bottom: 15px;">
+                    <input type="file" id="resource-upload" multiple accept=".csv,.txt,.pdf,.json,.xlsx,.png,.jpg">
+                    <button class="button" onclick="uploadSharedResources()" style="font-size: 0.9em; padding: 8px 15px;">📤 Upload Resources</button>
+                </div>
+                
+                <div id="resources-list" class="files-grid" style="max-height: 300px; overflow-y: auto;">
+                    <div>Loading resources...</div>
+                </div>
+                
+                <div style="margin-top: 15px; padding: 10px; background: #f0f8e7; border-radius: 5px; font-size: 0.9em;">
+                    <strong>💡 Tip:</strong> Shared resources are immediately available to all active student workspaces.
+                </div>
+            </div>
+        </div>
+        
+        <!-- Rebuild Workspaces Section -->
+        <div style="margin-top: 20px; padding: 15px; background: #fff3cd; border-radius: 8px; border: 1px solid #ffeaa7;">
+            <h4>🔧 Workspace Management</h4>
+            <p style="margin-bottom: 15px;">After uploading workspace templates, rebuild the user notebook image to distribute them to new student containers.</p>
+            <button class="button" onclick="rebuildWorkspaces()" style="background: #28a745;">🔄 Rebuild Workspaces</button>
+            <div id="rebuild-status" style="margin-top: 10px; display: none;"></div>
+        </div>
+    </div>
+
+    <div class="section">
+        <h2>📊 Student Analytics</h2>
+        <p>Monitor student engagement and interaction patterns</p>
+        
+        <button class="button" onclick="loadAnalytics()">🔄 Refresh Analytics</button>
+        <button class="button secondary" onclick="loadChatSummary()">📈 Weekly Summary</button>
+        
+        <div id="analytics-content">
+            <p>Click "Refresh Analytics" to load student data...</p>
+        </div>
+    </div>
+    
+    <!-- Messages -->
+    <div id="messages"></div>
+    
+    <script>
+        // Global state
+        let isLoading = false;
+        
+        // Load initial data when page loads
+        window.onload = function() {
+            loadPrompt('tutor');
+            loadPrompt('expert');
+            loadFiles();
+            loadWorkspaceTemplates();
+            loadSharedResources();
+            loadQuickStats();
+        };
+        
+        function showMessage(message, type = 'success') {
+            const messages = document.getElementById('messages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = type === 'success' ? 'success-message' : 'error-message';
+            messageDiv.textContent = message;
+            messages.appendChild(messageDiv);
+            
+            // Remove message after 5 seconds
+            setTimeout(() => {
+                messages.removeChild(messageDiv);
+            }, 5000);
+        }
+        
+        function setLoading(loading) {
+            isLoading = loading;
+            document.body.className = loading ? 'loading' : '';
+        }
+        
+        async function apiCall(endpoint, options = {}) {
+            try {
+                const response = await fetch('/api/proxy/' + endpoint, {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        ...options.headers
+                    },
+                    ...options
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                return await response.json();
+            } catch (error) {
+                console.error('API Error:', error);
+                showMessage('API Error: ' + error.message, 'error');
+                throw error;
+            }
+        }
+        
+        async function loadPrompt(type) {
+            try {
+                const data = await apiCall(`prompts/${type}`);
+                document.getElementById(`${type}-prompt`).value = data.content || '';
+            } catch (error) {
+                document.getElementById(`${type}-prompt`).value = '';
+            }
+        }
+        
+        async function savePrompt(type) {
+            if (isLoading) return;
+            setLoading(true);
+            
+            try {
+                const content = document.getElementById(`${type}-prompt`).value;
+                await apiCall(`prompts/${type}`, {
+                    method: 'PUT',
+                    body: JSON.stringify({ content: content })
+                });
+                showMessage(`${type.charAt(0).toUpperCase() + type.slice(1)} prompt saved successfully!`);
+            } catch (error) {
+                showMessage(`Error saving ${type} prompt`, 'error');
+            } finally {
+                setLoading(false);
+            }
+        }
+        
+        async function loadObjectives() {
+            const task = document.getElementById('task-name').value.trim();
+            if (!task) {
+                showMessage('Please enter a task name', 'error');
+                return;
+            }
+            
+            try {
+                const data = await apiCall(`learning-objectives/${encodeURIComponent(task)}`);
+                document.getElementById('objectives').value = data.content || '';
+                showMessage(`Loaded objectives for task: ${task}`);
+            } catch (error) {
+                document.getElementById('objectives').value = '';
+            }
+        }
+        
+        async function saveObjectives() {
+            const task = document.getElementById('task-name').value.trim();
+            if (!task) {
+                showMessage('Please enter a task name', 'error');
+                return;
+            }
+            
+            if (isLoading) return;
+            setLoading(true);
+            
+            try {
+                const content = document.getElementById('objectives').value;
+                await apiCall(`learning-objectives/${encodeURIComponent(task)}`, {
+                    method: 'PUT',
+                    body: JSON.stringify({ content: content })
+                });
+                showMessage(`Objectives saved for task: ${task}`);
+            } catch (error) {
+                showMessage('Error saving objectives', 'error');
+            } finally {
+                setLoading(false);
+            }
+        }
+        
+        async function loadFiles() {
+            try {
+                const [materialsData, objectivesData] = await Promise.all([
+                    apiCall('materials'),
+                    apiCall('learning-objectives')
+                ]);
+                
+                const filesList = document.getElementById('files-list');
+                
+                if (materialsData.files && materialsData.files.length > 0) {
+                    filesList.innerHTML = materialsData.files.map(file => {
+                        const extension = file.split('.').pop().toLowerCase();
+                        const icon = getFileIcon(extension);
+                        const fileBaseName = file.replace(/\.[^/.]+$/, ""); // Remove extension
+                        const hasObjectives = objectivesData[fileBaseName];
+                        
+                        return `
+                            <div class="file-item" onclick="selectMaterial('${file}')">
+                                <div class="file-info">
+                                    <span class="file-icon">${icon}</span>
+                                    <div>
+                                        <div style="font-weight: bold;">${file}</div>
+                                        <div style="font-size: 0.8em; color: #666;">
+                                            ${hasObjectives ? '✅ Has learning objectives' : '⚠️ No learning objectives'}
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="file-actions">
+                                    <button class="button secondary" onclick="event.stopPropagation(); editMaterialObjectives('${file}')" style="padding: 5px 10px; font-size: 12px;">
+                                        ${hasObjectives ? 'Edit LOs' : 'Add LOs'}
+                                    </button>
+                                    <button class="button secondary" onclick="event.stopPropagation(); deleteMaterial('${file}')" style="padding: 5px 10px; font-size: 12px; background: #dc3545;">
+                                        🗑️ Delete
+                                    </button>
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
+                    
+                    // Load material objectives overview
+                    loadMaterialObjectivesOverview(materialsData.files, objectivesData);
+                } else {
+                    filesList.innerHTML = '<div class="file-item">No files uploaded yet</div>';
+                    document.getElementById('material-objectives').innerHTML = '<div>No materials available. Upload some files first!</div>';
+                }
+                
+                // Update stats
+                document.getElementById('total-files').textContent = materialsData.files ? materialsData.files.length : 0;
+            } catch (error) {
+                document.getElementById('files-list').innerHTML = '<div class="file-item">Error loading files</div>';
+            }
+        }
+        
+        async function loadMaterialObjectivesOverview(files, objectivesData) {
+            const container = document.getElementById('material-objectives');
+            
+            if (!files || files.length === 0) {
+                container.innerHTML = '<div>No materials available</div>';
+                return;
+            }
+            
+            const overview = files.map(file => {
+                const fileBaseName = file.replace(/\.[^/.]+$/, "");
+                const objectives = objectivesData[fileBaseName];
+                
+                if (objectives) {
+                    const objectivesList = objectives.split('\\n')
+                        .map(obj => obj.trim())
+                        .filter(obj => obj)
+                        .map(obj => `• ${obj}`)
+                        .join('<br>');
+                    
+                    return `
+                        <div class="objective-preview">
+                            <h5>📁 ${file}</h5>
+                            <div class="objective-list">${objectivesList}</div>
+                        </div>
+                    `;
+                } else {
+                    return `
+                        <div class="objective-preview" style="border-left-color: #ffc107;">
+                            <h5>📁 ${file}</h5>
+                            <div class="objective-list" style="color: #856404;">
+                                ⚠️ No learning objectives defined. 
+                                <a href="#" onclick="editMaterialObjectives('${file}')" style="color: #007cba;">Add some now</a>
+                            </div>
+                        </div>
+                    `;
+                }
+            }).join('');
+            
+            container.innerHTML = overview;
+        }
+        
+        function getFileIcon(extension) {
+            const icons = {
+                'ipynb': '📓',
+                'csv': '📊',
+                'json': '📋',
+                'txt': '📄',
+                'md': '📝',
+                'pdf': '📕',
+                'py': '🐍',
+                'js': '📜',
+                'html': '🌐',
+                'css': '🎨'
+            };
+            return icons[extension] || '📄';
+        }
+        
+        async function uploadFiles() {
+            const fileInput = document.getElementById('file-upload');
+            const files = fileInput.files;
+            
+            if (files.length === 0) {
+                showMessage('Please select files to upload', 'error');
+                return;
+            }
+            
+            if (isLoading) return;
+            setLoading(true);
+            
+            let successCount = 0;
+            let errorCount = 0;
+            
+            for (let file of files) {
+                try {
+                    const formData = new FormData();
+                    formData.append('file', file);
+                    
+                    const response = await fetch('/api/proxy/materials', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    
+                    if (response.ok) {
+                        successCount++;
+                    } else {
+                        errorCount++;
+                    }
+                } catch (error) {
+                    errorCount++;
+                }
+            }
+            
+            if (successCount > 0) {
+                showMessage(`Successfully uploaded ${successCount} file(s)`);
+            }
+            if (errorCount > 0) {
+                showMessage(`Failed to upload ${errorCount} file(s)`, 'error');
+            }
+            
+            // Refresh file list and clear input
+            await loadFiles();
+            fileInput.value = '';
+            setLoading(false);
+        }
+        
+        async function loadAnalytics() {
+            if (isLoading) return;
+            setLoading(true);
+            
+            try {
+                const data = await apiCall('analytics/students');
+                const content = document.getElementById('analytics-content');
+                
+                if (data && data.length > 0) {
+                    const totalMessages = data.reduce((sum, student) => sum + student.message_count, 0);
+                    document.getElementById('total-students').textContent = data.length;
+                    document.getElementById('total-messages').textContent = totalMessages;
+                    
+                    content.innerHTML = '<h3>Student Activity:</h3>' +
+                        data.map(student => `
+                            <div class="analytics-card">
+                                <h4>👤 ${student.username}</h4>
+                                <div><strong>Messages:</strong> ${student.message_count}</div>
+                                <div><strong>First:</strong> ${new Date(student.first_interaction).toLocaleDateString()}</div>
+                                <div><strong>Last:</strong> ${new Date(student.last_interaction).toLocaleDateString()}</div>
+                            </div>
+                        `).join('');
+                } else {
+                    content.innerHTML = '<p>No student activity data available yet.</p>';
+                    document.getElementById('total-students').textContent = '0';
+                    document.getElementById('total-messages').textContent = '0';
+                }
+            } catch (error) {
+                document.getElementById('analytics-content').innerHTML = 
+                    '<p>Error loading analytics. Make sure students have used the chat feature.</p>';
+            } finally {
+                setLoading(false);
+            }
+        }
+        
+        async function loadChatSummary() {
+            if (isLoading) return;
+            setLoading(true);
+            
+            try {
+                const data = await apiCall('analytics/chat-summary');
+                const content = document.getElementById('analytics-content');
+                
+                if (data && data.length > 0) {
+                    content.innerHTML = '<h3>Weekly Chat Activity:</h3>' +
+                        data.map(day => `
+                            <div class="analytics-card">
+                                <h4>📅 ${day.date}</h4>
+                                <div><strong>Messages:</strong> ${day.messages}</div>
+                                <div><strong>Active Students:</strong> ${day.active_students}</div>
+                            </div>
+                        `).join('');
+                } else {
+                    content.innerHTML = '<p>No recent chat activity.</p>';
+                }
+            } catch (error) {
+                document.getElementById('analytics-content').innerHTML = 
+                    '<p>Error loading chat summary.</p>';
+            } finally {
+                setLoading(false);
+            }
+        }
+        
+        async function loadQuickStats() {
+            try {
+                // Load basic stats without showing loading state
+                const [materials, analytics] = await Promise.all([
+                    apiCall('materials').catch(() => ({files: []})),
+                    apiCall('analytics/students').catch(() => [])
+                ]);
+                
+                document.getElementById('total-files').textContent = materials.files ? materials.files.length : 0;
+                document.getElementById('total-students').textContent = analytics.length || 0;
+                
+                if (analytics.length > 0) {
+                    const totalMessages = analytics.reduce((sum, student) => sum + student.message_count, 0);
+                    document.getElementById('total-messages').textContent = totalMessages;
+                } else {
+                    document.getElementById('total-messages').textContent = '0';
+                }
+            } catch (error) {
+                // Silently fail for initial stats load
+                console.log('Could not load quick stats:', error);
+            }
+        }
+        
+        // Material management functions
+        let selectedMaterial = null;
+        let currentEditingMaterial = null;
+        
+        function selectMaterial(fileName) {
+            // Remove previous selections
+            document.querySelectorAll('.file-item').forEach(item => {
+                item.classList.remove('selected');
+            });
+            
+            // Select current item
+            event.currentTarget.classList.add('selected');
+            selectedMaterial = fileName;
+        }
+        
+        async function editMaterialObjectives(fileName) {
+            currentEditingMaterial = fileName;
+            const fileBaseName = fileName.replace(/\.[^/.]+$/, "");
+            
+            // Show edit section
+            document.getElementById('edit-objectives-section').style.display = 'block';
+            document.getElementById('editing-material-name').textContent = `Editing Objectives for: ${fileName}`;
+            
+            // Load existing objectives
+            try {
+                const data = await apiCall(`learning-objectives/${fileBaseName}`);
+                document.getElementById('material-objectives-editor').value = data.content || '';
+            } catch (error) {
+                document.getElementById('material-objectives-editor').value = '';
+            }
+            
+            // Scroll to editor
+            document.getElementById('edit-objectives-section').scrollIntoView({ behavior: 'smooth' });
+        }
+        
+        async function saveMaterialObjectives() {
+            if (!currentEditingMaterial) return;
+            
+            const fileBaseName = currentEditingMaterial.replace(/\.[^/.]+$/, "");
+            const content = document.getElementById('material-objectives-editor').value.trim();
+            
+            if (!content) {
+                showMessage('Please enter some learning objectives', 'error');
+                return;
+            }
+            
+            try {
+                await apiCall(`learning-objectives/${fileBaseName}`, {
+                    method: 'PUT',
+                    body: JSON.stringify({ content: content })
+                });
+                
+                showMessage(`Learning objectives saved for ${currentEditingMaterial}!`);
+                cancelEditObjectives();
+                loadFiles(); // Refresh the display
+            } catch (error) {
+                showMessage('Error saving objectives', 'error');
+            }
+        }
+        
+        function cancelEditObjectives() {
+            document.getElementById('edit-objectives-section').style.display = 'none';
+            currentEditingMaterial = null;
+        }
+        
+        async function deleteMaterial(fileName) {
+            if (!confirm(`Are you sure you want to delete "${fileName}"? This action cannot be undone.`)) {
+                return;
+            }
+            
+            try {
+                await apiCall(`materials/${encodeURIComponent(fileName)}`, {
+                    method: 'DELETE'
+                });
+                
+                showMessage(`File "${fileName}" deleted successfully!`);
+                loadFiles(); // Refresh the display
+            } catch (error) {
+                showMessage(`Error deleting file: ${error.message}`, 'error');
+            }
+        }
+
+        // Workspace Templates Functions
+        async function loadWorkspaceTemplates() {
+            try {
+                const data = await apiCall('workspace-templates');
+                const templatesList = document.getElementById('templates-list');
+                
+                if (data.files && data.files.length > 0) {
+                    templatesList.innerHTML = data.files.map(file => {
+                        const extension = file.name.split('.').pop().toLowerCase();
+                        const icon = getFileIcon(extension);
+                        const sizeKB = Math.round(file.size / 1024);
+                        
+                        return `
+                            <div class="file-item" style="margin-bottom: 10px;">
+                                <div class="file-info">
+                                    <span class="file-icon">${icon}</span>
+                                    <div>
+                                        <div style="font-weight: bold; font-size: 0.9em;">${file.name}</div>
+                                        <div style="font-size: 0.8em; color: #666;">${sizeKB} KB</div>
+                                    </div>
+                                </div>
+                                <div class="file-actions">
+                                    <button class="button secondary" onclick="deleteWorkspaceTemplate('${file.name}')" style="padding: 5px 8px; font-size: 11px; background: #dc3545;">🗑️</button>
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
+                } else {
+                    templatesList.innerHTML = '<div style="text-align: center; color: #666; padding: 20px;">No templates uploaded</div>';
+                }
+            } catch (error) {
+                document.getElementById('templates-list').innerHTML = '<div style="color: #dc3545; padding: 10px;">Error loading templates</div>';
+            }
+        }
+
+        async function loadSharedResources() {
+            try {
+                const data = await apiCall('shared-resources');
+                const resourcesList = document.getElementById('resources-list');
+                
+                if (data.files && data.files.length > 0) {
+                    resourcesList.innerHTML = data.files.map(file => {
+                        const extension = file.name.split('.').pop().toLowerCase();
+                        const icon = getFileIcon(extension);
+                        const sizeKB = Math.round(file.size / 1024);
+                        
+                        return `
+                            <div class="file-item" style="margin-bottom: 10px;">
+                                <div class="file-info">
+                                    <span class="file-icon">${icon}</span>
+                                    <div>
+                                        <div style="font-weight: bold; font-size: 0.9em;">${file.name}</div>
+                                        <div style="font-size: 0.8em; color: #666;">${sizeKB} KB</div>
+                                    </div>
+                                </div>
+                                <div class="file-actions">
+                                    <button class="button secondary" onclick="deleteSharedResource('${file.name}')" style="padding: 5px 8px; font-size: 11px; background: #dc3545;">🗑️</button>
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
+                } else {
+                    resourcesList.innerHTML = '<div style="text-align: center; color: #666; padding: 20px;">No shared resources uploaded</div>';
+                }
+            } catch (error) {
+                document.getElementById('resources-list').innerHTML = '<div style="color: #dc3545; padding: 10px;">Error loading shared resources</div>';
+            }
+        }
+
+        async function uploadWorkspaceTemplates() {
+            const fileInput = document.getElementById('template-upload');
+            const files = fileInput.files;
+            
+            if (files.length === 0) {
+                showMessage('Please select template files to upload', 'error');
+                return;
+            }
+            
+            if (isLoading) return;
+            setLoading(true);
+            
+            let successCount = 0;
+            let errorCount = 0;
+            
+            for (let file of files) {
+                try {
+                    const formData = new FormData();
+                    formData.append('file', file);
+                    
+                    const response = await fetch('/api/proxy/workspace-templates', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    
+                    if (response.ok) {
+                        successCount++;
+                    } else {
+                        errorCount++;
+                    }
+                } catch (error) {
+                    errorCount++;
+                }
+            }
+            
+            if (successCount > 0) {
+                showMessage(`Successfully uploaded ${successCount} template(s). Don't forget to rebuild workspaces!`);
+            }
+            if (errorCount > 0) {
+                showMessage(`Failed to upload ${errorCount} template(s)`, 'error');
+            }
+            
+            await loadWorkspaceTemplates();
+            fileInput.value = '';
+            setLoading(false);
+        }
+
+        async function uploadSharedResources() {
+            const fileInput = document.getElementById('resource-upload');
+            const files = fileInput.files;
+            
+            if (files.length === 0) {
+                showMessage('Please select resource files to upload', 'error');
+                return;
+            }
+            
+            if (isLoading) return;
+            setLoading(true);
+            
+            let successCount = 0;
+            let errorCount = 0;
+            
+            for (let file of files) {
+                try {
+                    const formData = new FormData();
+                    formData.append('file', file);
+                    
+                    const response = await fetch('/api/proxy/shared-resources', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    
+                    if (response.ok) {
+                        successCount++;
+                    } else {
+                        errorCount++;
+                    }
+                } catch (error) {
+                    errorCount++;
+                }
+            }
+            
+            if (successCount > 0) {
+                showMessage(`Successfully uploaded ${successCount} shared resource(s). They are immediately available to students!`);
+            }
+            if (errorCount > 0) {
+                showMessage(`Failed to upload ${errorCount} resource(s)`, 'error');
+            }
+            
+            await loadSharedResources();
+            fileInput.value = '';
+            setLoading(false);
+        }
+
+        async function deleteWorkspaceTemplate(fileName) {
+            if (!confirm(`Delete template "${fileName}"? This will remove it from future workspace builds.`)) {
+                return;
+            }
+            
+            try {
+                await apiCall(`workspace-templates/${encodeURIComponent(fileName)}`, {
+                    method: 'DELETE'
+                });
+                
+                showMessage(`Template "${fileName}" deleted successfully!`);
+                await loadWorkspaceTemplates();
+            } catch (error) {
+                showMessage(`Error deleting template: ${error.message}`, 'error');
+            }
+        }
+
+        async function deleteSharedResource(fileName) {
+            if (!confirm(`Delete shared resource "${fileName}"? This will remove it from all student workspaces.`)) {
+                return;
+            }
+            
+            try {
+                await apiCall(`shared-resources/${encodeURIComponent(fileName)}`, {
+                    method: 'DELETE'
+                });
+                
+                showMessage(`Shared resource "${fileName}" deleted successfully!`);
+                await loadSharedResources();
+            } catch (error) {
+                showMessage(`Error deleting shared resource: ${error.message}`, 'error');
+            }
+        }
+
+        async function rebuildWorkspaces() {
+            if (!confirm('Rebuild workspace image? This will take several minutes and affect new user containers.')) {
+                return;
+            }
+            
+            try {
+                const data = await apiCall('rebuild-workspaces', { method: 'POST' });
+                
+                const statusDiv = document.getElementById('rebuild-status');
+                statusDiv.style.display = 'block';
+                
+                if (data.status === 'manual_rebuild_required') {
+                    statusDiv.innerHTML = `
+                        <div style="background: #fff3cd; padding: 15px; border-radius: 5px; border: 1px solid #ffeaa7;">
+                            <h5>📋 Manual Rebuild Required</h5>
+                            <p>Please follow these steps:</p>
+                            <ol style="margin-left: 20px;">
+                                ${data.instructions.map(step => `<li>${step}</li>`).join('')}
+                            </ol>
+                            <p style="font-style: italic; margin-top: 10px;">${data.note}</p>
+                        </div>
+                    `;
+                } else {
+                    statusDiv.innerHTML = `<div style="background: #d4edda; padding: 10px; border-radius: 5px;">Rebuild started: ${data.status}</div>`;
+                }
+            } catch (error) {
+                document.getElementById('rebuild-status').innerHTML = 
+                    `<div style="background: #f8d7da; padding: 10px; border-radius: 5px;">Error starting rebuild: ${error.message}</div>`;
+            }
+        }
+    </script>
+</body>
+</html>

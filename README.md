@@ -40,6 +40,34 @@ The system consists of a JupyterHub server, individual user Jupyter servers, a m
 - **Fluent** is used to collect logs from the individual containers and send them to the middleware container for storage and processing with the LA module.
 - The **Ollama** server can run locally in the host machine or on a separate one. Cloud or third-party services can also be used, but the system is designed to work with a self-hosted server. 
 
+## Admin Dashboard
+The JELAI system includes a comprehensive web-based admin dashboard that provides educators with powerful tools to manage and monitor the learning environment.
+
+### Features
+- **AI Tutor Configuration**: Customize system prompts, learning objectives, and assignment descriptions for both the Tutor Agent (Juno) and Expert Agent
+- **Learning Materials Management**: Upload and organize course materials, datasets, and notebooks that will be available to all students
+- **Student Analytics**: Monitor student engagement with real-time metrics including:
+  - Total number of active students
+  - Message counts and interaction patterns
+  - Average messages per student
+  - Individual student activity details
+- **System Health Monitoring**: Check the status of middleware services and container health
+- **Workspace Templates**: Manage and deploy notebook templates and starter materials for different assignments
+
+### Access and Usage
+- **URL**: The admin dashboard is accessible at `http://localhost:8006` after system deployment
+- **Modern Interface**: Features a sleek, responsive design with glassmorphism effects and intuitive navigation
+- **Real-time Updates**: Analytics and system status update automatically without page refresh
+- **Mobile Friendly**: Optimized for both desktop and mobile access
+
+### Technical Details
+- **Technology Stack**: Built with FastAPI and modern web technologies, using UV for dependency management
+- **Architecture**: Runs as a separate container that communicates with the middleware via REST API
+- **Data Integration**: Seamlessly integrates with the chat history database and telemetry logs
+- **Security**: Designed for secure deployment in educational environments
+
+The admin dashboard serves as the central control hub for educators, providing insights into student learning patterns and enabling data-driven pedagogical decisions.
+
 ## References
 > Valle Torre, M., van der Velden, T., Specht, M., Oertel, C. (2025). JELAI: Integrating AI and Learning Analytics in Jupyter Notebooks. In: Cristea, A.I., Walker, E., Lu, Y., Santos, O.C., Isotani, S. (eds) Artificial Intelligence in Education. AIED 2025. Lecture Notes in Computer Science(), vol 15882. Springer, Cham. https://doi.org/10.1007/978-3-031-98465-5_9
 
@@ -67,6 +95,7 @@ Build and run the JupyterHub server using docker compose. This will create a Jup
 - Run `docker compose build` to build the containers
 - Run `docker compose up -d` to start the container in detached mode.
 - Access the JupyterHub server at `http://localhost:8000` in your browser (see *Nginx* below for public access). 
+- Access the Admin Dashboard at `http://localhost:8006` for system management and analytics.
 - The default admin user is `admin`, create a new user called admin, with a new password, to access the system.
 - To stop the system, run `docker compose down`.
 
@@ -128,9 +157,11 @@ To access JupyterHub from outside the local network, follow the official [Jupyte
 
 ## FAQ:
 - Where can I edit the system prompt for the assistant?
-    - The main system prompt for the Tutor Agent (Juno) can be edited in the **jupyterhub-docker/middleware/inputs/ta-system-prompt.txt** file. See the *Pedagogical Configuration* section for other related files.
+    - The main system prompt for the Tutor Agent (Juno) can be edited in the **jupyterhub-docker/middleware/inputs/ta-system-prompt.txt** file. See the *Pedagogical Configuration* section for other related files. You can also use the Admin Dashboard at `http://localhost:8006` for a user-friendly interface to manage prompts and configuration.
 - Can I add notebooks or materials so they are available to all users?
-    - Yes, you can add course materials to the **working-directory** in the user-notebook image, using the Dockerfile.
+    - Yes, you can add course materials to the **working-directory** in the user-notebook image, using the Dockerfile. Alternatively, use the Admin Dashboard's learning materials management feature to upload files through the web interface.
+- How can I monitor student progress and engagement?
+    - Use the Admin Dashboard at `http://localhost:8006` to view real-time analytics including student message counts, interaction patterns, and individual activity details.
 - What if I can't run Ollama locally?
     - You can use a third-party service that provides a REST API for the chatbot server to interact with. The system is designed to work with a self-hosted server, but other services can be used.
 

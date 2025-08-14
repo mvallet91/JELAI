@@ -20,6 +20,9 @@ services:
       - "/var/run/docker.sock:/var/run/docker.sock:rw"
       # Bind Docker volume on host for JupyterHub database and cookie secrets
       - "jupyterhub-data:/data"
+      # Workspace templates and shared resources
+      - "workspace-templates:/srv/jupyterhub/workspace_templates"
+      - "shared-resources:/srv/jupyterhub/shared_resources"
     ports:
       - "8001:8000"
       - "9000:9000"
@@ -61,6 +64,14 @@ services:
       - "middleware-data:/var/log/jelai"
       - "chat-histories:/app/chat_histories"
       - "./middleware/inputs:/app/inputs:rw"
+      - "learning-materials:/app/learning_materials:rw"
+      - "workspace-templates:/app/workspace_templates:rw"
+      - "shared-resources:/app/shared_resources:rw"
+      - "learning-objectives:/app/learning_objectives:rw"
+      # Add Docker socket for rebuild functionality
+      - "/var/run/docker.sock:/var/run/docker.sock:rw"
+      # Mount the project directory for docker-compose access
+      - ".:/app/jupyterhub-docker:ro"
     ports:
       - "24224:24224"
       - "8004:8004" 
@@ -81,8 +92,11 @@ services:
       - "./middleware/inputs:/app/inputs:rw"
       - "chat-histories:/app/chat_histories:ro"
       - "middleware-data:/app/logs:ro"
-      - "./user-notebook/learning_materials:/app/learning_materials:rw"
+      - "learning-materials:/app/learning_materials:rw"
       - "jupyterhub-data:/app/jupyterhub_data:ro"
+      - "workspace-templates:/app/workspace_templates:rw"
+      - "shared-resources:/app/shared_resources:rw"
+      - "learning-objectives:/app/learning_objectives:rw"
     ports:
       - "8006:8006"
     depends_on:
@@ -93,8 +107,13 @@ services:
 
 volumes:
   jupyterhub-data:
-  middleware-data:
-  chat-histories:
+  jupyterhub-db-data:
+  middleware-data:         # Middleware logs and data
+  chat-histories:          # Chat database storage
+  learning-materials:      # Shared learning materials
+  workspace-templates:     # Individual files copied to each student
+  shared-resources:        # Read-only shared files mounted for all
+  learning-objectives:     # Learning objectives storage
 
 networks:
   jupyterhub-network:

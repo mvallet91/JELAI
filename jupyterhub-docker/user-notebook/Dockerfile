@@ -15,7 +15,7 @@ COPY jupyter_jupyterlab_pioneer_config.py /etc/jupyter/
 # COPY jupyter_server_config.py /etc/jupyter/
 
 # Install additional packages
-RUN pip install --no-cache-dir jupyterlab-chat jupyterlab_pioneer folium
+RUN pip install --no-cache-dir jupyterlab-chat jupyterlab_pioneer folium requests
 
 # Install Fluent Bit
 # Install td-agent-bit
@@ -48,10 +48,13 @@ USER jovyan
 
 ################# Workspace Configuration #################
 
-# Copy learning materials (shared, version-controlled)
-COPY --chown=jovyan:users learning_materials /home/jovyan/work/
-# Remove the README.md file from the learning materials
-RUN rm -f /home/jovyan/work/README.md
+# Copy workspace templates (individual files, copied at build time)
+# This directory will be empty during initial build but populated before rebuilding
+COPY --chown=jovyan:users workspace_templates/ /home/jovyan/work/
+
+# Create mount point for shared resources (mounted at runtime)
+RUN mkdir -p /home/jovyan/work/shared_resources && \
+    chown jovyan:users /home/jovyan/work/shared_resources
 
 # Set up the work directory
 WORKDIR /home/jovyan/work
@@ -77,14 +80,17 @@ RUN /home/jovyan/venv/bin/pip install --no-cache-dir -r /home/jovyan/chat_intera
 COPY chat_interact.py /home/jovyan/
 COPY process_logs.py /home/jovyan/
 COPY utils.py /home/jovyan/
+COPY template_sync.py /home/jovyan/
 
 # Get container ID and export it as an environment variable
 RUN echo 'export CONTAINER_ID=$(cat /proc/self/cgroup | grep "docker" | sed "s/^.*\///" | tail -n1)' >> /home/jovyan/.bashrc
 
-# Start Fluent Bit, chat_interact.py, and Jupyter Notebook
+# Start Fluent Bit, template sync, chat_interact.py, and Jupyter Notebook
 CMD ["/bin/bash", "-c", "\
 source /home/jovyan/.bashrc && \
 /opt/td-agent-bit/bin/td-agent-bit -c /etc/td-agent-bit/td-agent-bit.conf  & \
+. /home/jovyan/venv/bin/activate && \
+python /home/jovyan/template_sync.py >> /home/jovyan/logs/template_sync.log 2>&1 & \
 . /home/jovyan/venv/bin/activate && \
 python /home/jovyan/chat_interact.py /home/jovyan/work/${CHAT_DIR} /home/jovyan/logs/processed >> /home/jovyan/logs/processed/chat_interact.log 2>&1 & \
 . /home/jovyan/venv/bin/activate && \

@@ -13,16 +13,8 @@ dependencies = [
     "thefuzz",
     "fluent-logger",
     "httpx",
-    "sentence-transformers",
     "asyncio",
     "flask",
     "pandas",
     "werkzeug"
 ]
-
-[[tool.uv.index]]
-url = "https://download.pytorch.org/whl/cpu"
-name = "pytorch-cpu" 
-
-[tool.uv.sources]
-torch = { index = "pytorch-cpu" }

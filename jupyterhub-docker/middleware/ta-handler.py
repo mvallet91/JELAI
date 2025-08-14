@@ -13,8 +13,7 @@ from dotenv import load_dotenv
 import uvicorn
 from typing import Optional, List 
 from thefuzz import process
-from sentence_transformers import SentenceTransformer, util
-import torch # May be needed depending on sentence-transformers version/setup
+# Removed: sentence-transformers imports (now using LLM-based matching)
 import glob
 import asyncio
 
@@ -138,6 +137,10 @@ def load_experiment_config(): # Added
 # --- Database Setup ---
 def init_db():
     try:
+        # Ensure the database directory exists
+        import os
+        os.makedirs(os.path.dirname(DATABASE_FILE), exist_ok=True)
+        
         with sqlite3.connect(DATABASE_FILE) as conn:
             cursor = conn.cursor()
             # Create chat history table (if not exists)
@@ -369,36 +372,62 @@ def get_or_assign_experiment_group(student_id: str) -> Optional[dict]:
         return groups[0] if groups else None
 
 
-def select_learning_objective_embeddings(question_text: str, learning_objectives: list) -> str:
-    """Selects the most relevant LO using sentence embeddings."""
-    if not embedding_model or LO_EMBEDDINGS is None:
-        logging.error("Sentence Transformer model or LO embeddings not available. Falling back to first LO.")
-        return "No specific LO"
+async def select_learning_objective_llm(question_text: str, learning_objectives: list) -> str:
+    """Selects the most relevant LO using LLM-based semantic matching."""
+    if not learning_objectives:
+        logging.warning("No learning objectives provided. Returning default.")
+        return "General programming concepts"
 
     try:
-        question_embedding = embedding_model.encode(question_text, convert_to_tensor=True)
+        # Create a numbered list of learning objectives
+        objectives_text = "\n".join(f"{i+1}. {obj}" for i, obj in enumerate(learning_objectives))
+        
+        prompt = f"""Given this student question: "{question_text}"
 
-        # Compute cosine similarities
-        cosine_scores = util.cos_sim(question_embedding, LO_EMBEDDINGS)[0] 
+Which learning objective is most relevant?
 
-        # Find the index of the highest score
-        best_match_idx = torch.argmax(cosine_scores).item()
-        best_score = cosine_scores[best_match_idx].item()
+Learning Objectives:
+{objectives_text}
 
-        SIMILARITY_THRESHOLD = 0.4
+Respond with only the number (1-{len(learning_objectives)}) of the most relevant objective, or 0 if none are clearly relevant."""
 
-        if best_score >= SIMILARITY_THRESHOLD:
-            selected_lo = learning_objectives[best_match_idx]
-            logging.info(f"Matched LO (Embeddings) '{selected_lo}' with score {best_score:.4f}")
-            return selected_lo
-        else:
-            # Fallback if no score is high enough (optional, could return best match regardless)
-            logging.warning(f"No strong embedding match found (best score: {best_score:.4f}). Defaulting.")
-            return learning_objectives[best_match_idx]
-
+        messages = [
+            {"role": "system", "content": "You are helping match student questions to learning objectives. Be precise and respond with only a number."},
+            {"role": "user", "content": prompt}
+        ]
+        
+        # Use the existing LLM call function
+        response = await call_llm(messages, CLASSIFICATION_MODEL_NAME, "learning objective matching")
+        
+        try:
+            objective_num = int(response.strip())
+            
+            if 1 <= objective_num <= len(learning_objectives):
+                selected_lo = learning_objectives[objective_num - 1]
+                logging.info(f"Matched LO (LLM): '{selected_lo}' (choice {objective_num})")
+                return selected_lo
+            elif objective_num == 0:
+                logging.info(f"LLM determined no specific match for question: '{question_text[:50]}...'")
+                return "General programming concepts"
+            else:
+                logging.warning(f"LLM returned out-of-range number {objective_num}. Using first objective.")
+                return learning_objectives[0]
+                
+        except ValueError:
+            logging.warning(f"LLM returned non-numeric response: '{response[:50]}...'. Using first objective.")
+            return learning_objectives[0]
+            
     except Exception as e:
-        logging.error(f"Error during embedding similarity calculation: {e}")
-        return "No specific LO"
+        logging.error(f"Error during LLM-based LO matching: {e}")
+        logging.info("Falling back to first learning objective.")
+        return learning_objectives[0] if learning_objectives else "General programming concepts"
+
+
+def select_learning_objective_embeddings(question_text: str, learning_objectives: list) -> str:
+    """DEPRECATED: Legacy function kept for backward compatibility."""
+    logging.warning("select_learning_objective_embeddings is deprecated. Use select_learning_objective_llm instead.")
+    # For now, return the first objective as a simple fallback
+    return learning_objectives[0] if learning_objectives else "General programming concepts"
 
 def extract_session_id_from_filename(file_name: str, student_id: str) -> str:
     sanitized_file_name = re.sub(r'[^a-zA-Z0-9_]', '', file_name.replace(".chat", "").lower())
@@ -753,7 +782,7 @@ Please return to the Qualtrics survey tab and enter the following code to finali
 
     try:
         # --- 1. Select Learning Objective ---
-        learning_objective = select_learning_objective_embeddings(message.message_text, learning_objectives)
+        learning_objective = await select_learning_objective_llm(message.message_text, learning_objectives)
         logging.info(f"Selected LO: {learning_objective}")
 
         # --- 2. Store Current Question ---
@@ -992,17 +1021,8 @@ def verify():
     return {"message": "Tutor Agent (Sync Response) is working"}
 
 # Load model (do this once at startup, outside the request handler)
-# Use a lightweight model suitable for the task
-try:
-    device = 'cuda' if torch.cuda.is_available() else 'cpu'
-    embedding_model = SentenceTransformer('all-MiniLM-L6-v2', device=device)
-    logging.info(f"Sentence Transformer model loaded successfully on {device}.")
-    LO_EMBEDDINGS = embedding_model.encode(LEARNING_OBJECTIVES_MAP.get("default", DEFAULT_LEARNING_OBJECTIVES), convert_to_tensor=True)
-    logging.info("Pre-computed embeddings for Learning Objectives.")
-except Exception as e:
-    logging.error(f"Failed to load Sentence Transformer model or encode LOs: {e}")
-    embedding_model = None
-    LO_EMBEDDINGS = None
+# Embeddings initialization removed - now using LLM-based learning objective matching
+logging.info("TA Handler initialized with LLM-based learning objective matching.")
 
 if __name__ == "__main__":
     import uvicorn

@@ -1,18 +1,25 @@
 FROM python:3.11-slim-bookworm
 
+# Install uv
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
+
 # Set working directory
 WORKDIR /app
 
-# Copy requirements and install packages
-COPY requirements.txt /app/
-RUN pip install -r requirements.txt
+# Copy project files
+COPY pyproject.toml /app/
+COPY uv.lock /app/
+
+# Install dependencies
+RUN uv sync --frozen
 
 # Copy application files
 COPY app.py /app/
 COPY templates/ /app/templates/
+COPY static/ /app/static/
 
 # Expose port
 EXPOSE 8006
 
 # Start the application
-CMD ["python", "app.py"]
+CMD ["uv", "run", "python", "app.py"]

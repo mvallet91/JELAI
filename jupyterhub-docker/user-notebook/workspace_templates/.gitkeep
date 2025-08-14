@@ -1,0 +1,2 @@
+# This directory will contain workspace template files that are copied to each student's workspace at build time
+# Files are managed through the admin dashboard and copied here before Docker image rebuilds
