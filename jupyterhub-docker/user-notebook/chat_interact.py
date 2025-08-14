@@ -214,12 +214,24 @@ class ChatHandler(FileSystemEventHandler):
             if not matching_log_files:
                 logging.warning(f"No *.json log files found in {self.processed_logs_dir}")
                 return None
-            log_file_path = os.path.join(self.processed_logs_dir, matching_log_files[0])
-            logging.info(f"Reading log file: {log_file_path}")
-            with open(log_file_path, 'r') as log_file:
-                try: all_logs = json.load(log_file)
-                except json.JSONDecodeError: logging.error(f"Error decoding JSON: {log_file_path}"); return None
-                if not isinstance(all_logs, list): logging.error(f"Log file not a list: {log_file_path}"); return None
+            # Aggregate logs from all valid JSON files in the directory
+            all_logs = []
+            for fname in matching_log_files:
+                log_file_path = os.path.join(self.processed_logs_dir, fname)
+                logging.info(f"Reading log file: {log_file_path}")
+                try:
+                    with open(log_file_path, 'r') as log_file:
+                        logs = json.load(log_file)
+                except json.JSONDecodeError:
+                    logging.error(f"Error decoding JSON: {log_file_path}")
+                    continue
+                except Exception as e:
+                    logging.error(f"Error reading {log_file_path}: {e}")
+                    continue
+                if not isinstance(logs, list):
+                    logging.error(f"Log file not a list: {log_file_path}")
+                    continue
+                all_logs.extend(logs)
 
             matching_logs = []
             for log in all_logs:
@@ -230,7 +242,7 @@ class ChatHandler(FileSystemEventHandler):
                     sanitized_notebook_name = re.sub(r'[^a-zA-Z0-9_\-\.]', '_', sanitized_notebook_name).lower()
                     if sanitized_notebook_name == session_id: matching_logs.append(log)
 
-            if not matching_logs: logging.info(f"No matching logs for '{session_id}' in {log_file_path}"); return None
+            if not matching_logs: logging.info(f"No matching logs for '{session_id}' in any JSON file"); return None
 
             # apply limit if given, otherwise use entire session
             if limit is not None and len(matching_logs) > limit:
