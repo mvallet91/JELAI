@@ -70,15 +70,13 @@ services:
       - "workspace-templates:/app/workspace_templates:rw"
       - "shared-resources:/app/shared_resources:rw"
       - "learning-objectives:/app/learning_objectives:rw"
-      # Add Docker socket for rebuild functionality
-      - "/var/run/docker.sock:/var/run/docker.sock:rw"
-      # Mount the project directory for docker-compose access
+      # Mount the project directory for configuration access
       - ".:/app/jupyterhub-docker:ro"
     ports:
       - "24224:24224"
       - "8004:8004" 
       - "8003:8003"
-      - "8005:8005"
+      # Port 8005 admin API is now internal only - accessed via admin dashboard
     depends_on:
       - hub
 
@@ -106,8 +104,8 @@ services:
       - JUPYTERHUB_SERVICE_PREFIX=/services/learn-dashboard
       - MIDDLEWARE_URL=http://middleware:8005
       - LEARN_DASHBOARD_TOKEN=${LEARN_DASHBOARD_TOKEN}
-    expose:
-      - "8006"
+    ports:
+      - "8006:8006"
 
 volumes:
   jupyterhub-data:

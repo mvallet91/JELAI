@@ -8,6 +8,7 @@ dependencies = [
     "fastapi",
     "uvicorn",
     "pydantic",
+    "python-multipart",
     "python-dotenv",
     "rapidfuzz",
     "thefuzz",
@@ -16,5 +17,5 @@ dependencies = [
     "asyncio",
     "flask",
     "pandas",
-    "werkzeug"
+    "werkzeug",
 ]

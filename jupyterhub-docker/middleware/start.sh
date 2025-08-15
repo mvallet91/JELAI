@@ -24,8 +24,8 @@ uvicorn ta-handler:app --workers 1 --host 0.0.0.0 --port 8004 > /var/log/llm-han
 TA_PID=$!
 
 # Start Admin API in the background on port 8005
-echo "Starting Admin API..."
-python admin_api.py > /var/log/llm-handler/admin-logs.txt 2>&1 &
+echo "Starting Admin API (FastAPI)..."
+uvicorn admin_api:app --workers 1 --host 0.0.0.0 --port 8005 > /var/log/llm-handler/admin-logs.txt 2>&1 &
 ADMIN_PID=$!
 
 echo "All services started. PIDs: EA=$EA_PID TA=$TA_PID ADMIN=$ADMIN_PID"
@@ -49,7 +49,7 @@ while true; do
     
     if ! kill -0 $ADMIN_PID 2>/dev/null; then
         echo "Admin API died, restarting..."
-        python admin_api.py > /var/log/llm-handler/admin-logs.txt 2>&1 &
+        uvicorn admin_api:app --workers 1 --host 0.0.0.0 --port 8005 > /var/log/llm-handler/admin-logs.txt 2>&1 &
         ADMIN_PID=$!
     fi
 done

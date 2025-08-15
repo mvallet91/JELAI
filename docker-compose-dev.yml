@@ -62,7 +62,7 @@ services:
       - "24224:24224"
       - "8003:8003"  # EA handler server
       - "8004:8004"  # TA handler server
-      - "8005:8005"  # Admin API server
+      # Port 8005 admin API is now internal only - accessed via admin dashboard
 
   admin-dashboard-dev:
     build:

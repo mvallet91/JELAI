@@ -91,7 +91,6 @@ def reconstruct_cell_contents(log_data):
                 if isinstance(changes[0], list):
                     for change in changes:
                         if type(change) == int:
-                            print('Error -------', change, event_time)
                             continue
                         elif len(change) > 2:
                             pos = change[0]
@@ -211,7 +210,6 @@ def analyze_logs(log_file_path, chat_log_path, start_time, end_time, filter_auto
     log_data = load_log_file(log_file_path)
     log_summary, log_objects = reconstruct_cell_contents(log_data)
     logs = []
-    print(len(log_objects))
     # Load the chat logs
     with open(chat_log_path, 'r') as file:
         chat_data = json.load(file)
@@ -220,19 +218,13 @@ def analyze_logs(log_file_path, chat_log_path, start_time, end_time, filter_auto
     start_timestamp = datetime.strptime(start_time, '%Y-%m-%d %H:%M:%S').timestamp()
     end_timestamp = datetime.strptime(end_time, '%Y-%m-%d %H:%M:%S').timestamp()
 
-    # Filter and print notebook events
-    print("Notebook Events:")
+    # Filter notebook events
     for event in log_objects:
         event_time = datetime.strptime(event['time'], '%Y-%m-%d %H:%M:%S').timestamp()
         if start_timestamp <= event_time <= end_timestamp:
             logs.append(event)
-            if event['event'] == 'Executed cells':
-                print(event['event'], event['time'], event['input'])
-            else:
-                print(event)
 
 
-    print("\nChat Messages:")
     for message in chat_data['messages']:
         message_time = message['time']
         if start_timestamp <= message_time <= end_timestamp:
@@ -240,7 +232,6 @@ def analyze_logs(log_file_path, chat_log_path, start_time, end_time, filter_auto
                 continue
             # Convert timestamp to string
             message['time'] = datetime.fromtimestamp(message_time).strftime('%Y-%m-%d %H:%M:%S')
-            print(message)
         else:
             # Remove the message from the list if it is outside the time range
             chat_data['messages'].remove(message)
