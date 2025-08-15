@@ -162,7 +162,11 @@ async def proxy_to_middleware(request: Request, endpoint: str, user=Depends(requ
                 content_type = request.headers.get("content-type", "")
                 
                 if "application/json" in content_type:
-                    body = await request.json()
+                    try:
+                        body = await request.json()
+                    except Exception:
+                        # Handle empty JSON body
+                        body = {}
                     response = await client.post(url, json=body)
                 elif "multipart/form-data" in content_type:
                     # Handle file uploads with proper filename preservation
@@ -181,7 +185,16 @@ async def proxy_to_middleware(request: Request, endpoint: str, user=Depends(requ
             elif request.method == "DELETE":
                 response = await client.delete(url)
         
-        return JSONResponse(content=response.json(), status_code=response.status_code)
+        try:
+            response_json = response.json()
+            logger.info(f"Proxy response for {url}: status={response.status_code}, content={response_json}")
+        except Exception as json_error:
+            # Handle empty or non-JSON responses
+            response_text = response.text
+            logger.error(f"Failed to parse JSON response from {url}: {json_error}. Response text: '{response_text}', Status: {response.status_code}")
+            response_json = {"error": f"Invalid response from middleware: {str(json_error)}"}
+            
+        return JSONResponse(content=response_json, status_code=response.status_code)
     except Exception as e:
         logger.error(f"Error proxying request to {url}: {e}")
         raise HTTPException(status_code=500, detail=str(e))

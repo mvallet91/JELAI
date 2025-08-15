@@ -561,6 +561,35 @@ function resetExpertPrompt() {
     showMessage('Expert prompt cleared. Enter a new prompt and save.', 'info');
 }
 
+function reloadLearningObjectives() {
+    if (!confirm('Are you sure you want to reload learning objectives? This will refresh all learning objectives from the files without restarting the system.')) {
+        return;
+    }
+    
+    // console.log('Reloading learning objectives...');
+    
+    fetch(apiUrl('reload-learning-objectives'), {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            showMessage('Learning objectives reloaded successfully! Changes are now active.', 'success');
+            // Optionally refresh the objectives display
+            loadObjectives();
+        } else {
+            showMessage(`Failed to reload learning objectives: ${data.message}`, 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error reloading learning objectives:', error);
+        showMessage('Network error while reloading learning objectives. Please try again.', 'error');
+    });
+}
+
 // Initialize dashboard when page loads
 window.onload = function() {
     loadWorkspaceTemplates();

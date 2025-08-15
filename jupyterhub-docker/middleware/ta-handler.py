@@ -1017,6 +1017,18 @@ Please return to the Qualtrics survey tab and enter the following code to finali
 def verify():
     return {"message": "Tutor Agent (Sync Response) is working"}
 
+@app.post("/reload_resources")
+def reload_resources():
+    """Reload learning objectives, assignment descriptions, and next steps from files"""
+    global ASSIGNMENT_DESCRIPTIONS, LEARNING_OBJECTIVES_MAP, NEXT_STEPS_MAP
+    try:
+        ASSIGNMENT_DESCRIPTIONS, LEARNING_OBJECTIVES_MAP, NEXT_STEPS_MAP = load_assignment_resources()
+        logging.info("Successfully reloaded assignment resources from files.")
+        return {"message": "Assignment resources reloaded successfully", "status": "success"}
+    except Exception as e:
+        logging.error(f"Failed to reload assignment resources: {e}")
+        return {"message": f"Failed to reload resources: {str(e)}", "status": "error"}
+
 # Load model (do this once at startup, outside the request handler)
 # Embeddings initialization removed - now using LLM-based learning objective matching
 logging.info("TA Handler initialized with LLM-based learning objective matching.")

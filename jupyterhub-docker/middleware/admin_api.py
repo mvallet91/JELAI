@@ -753,6 +753,56 @@ def get_build_status():
         logger.error(f"Error getting build status: {e}")
         return jsonify({'error': str(e)}), 500
 
+@app.route('/api/reload-learning-objectives', methods=['POST'])
+def reload_learning_objectives():
+    """Reload learning objectives from files without restarting middleware"""
+    try:
+        import urllib.request
+        import json as json_lib
+        
+        # Call the TA handler reload endpoint using urllib (available in standard library)
+        ta_reload_url = 'http://localhost:8004/reload_resources'
+        
+        # Create a POST request
+        req = urllib.request.Request(ta_reload_url, method='POST')
+        req.add_header('Content-Type', 'application/json')
+        
+        # Make the request with a timeout
+        with urllib.request.urlopen(req, timeout=10) as response:
+            if response.status == 200:
+                result_data = json_lib.loads(response.read().decode('utf-8'))
+                if result_data.get('status') == 'success':
+                    logger.info("Successfully reloaded learning objectives via TA handler")
+                    return jsonify({
+                        'status': 'success',
+                        'message': 'Learning objectives reloaded successfully'
+                    })
+                else:
+                    logger.error(f"TA handler reload failed: {result_data.get('message')}")
+                    return jsonify({
+                        'status': 'error',
+                        'message': f"TA handler reload failed: {result_data.get('message')}"
+                    }), 500
+            else:
+                logger.error(f"TA handler reload HTTP error: {response.status}")
+                return jsonify({
+                    'status': 'error',
+                    'message': f"Failed to contact TA handler: HTTP {response.status}"
+                }), 500
+            
+    except urllib.error.URLError as e:
+        logger.error(f"Network error calling TA handler reload: {e}")
+        return jsonify({
+            'status': 'error',
+            'message': f"Network error: {str(e)}"
+        }), 500
+    except Exception as e:
+        logger.error(f"Unexpected error during learning objectives reload: {e}")
+        return jsonify({
+            'status': 'error',
+            'message': f"Unexpected error: {str(e)}"
+        }), 500
+
 @app.route('/health')
 def health():
     """Health check endpoint"""
