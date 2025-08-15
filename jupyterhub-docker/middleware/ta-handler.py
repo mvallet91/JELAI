@@ -24,7 +24,7 @@ load_dotenv()
 DATABASE_FILE = "/app/chat_histories/chat_history.db"  # for docker
 EXPERIMENT_CONFIG_FILE = Path(__file__).parent / "inputs" / "ab_experiments.json" # Added
 
-EA_URL = "http://localhost:8003/expert_query" 
+EA_URL = os.getenv("EA_MIDDLEWARE_URL", "http://localhost:8003") + "/expert_query"
 
 # Use .env variables or fall back to defaults
 WEBUI_API_BASE = os.getenv("webui_url", "http://localhost:3000") 

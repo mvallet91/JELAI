@@ -214,36 +214,35 @@ class ChatHandler(FileSystemEventHandler):
             if not matching_log_files:
                 logging.warning(f"No *.json log files found in {self.processed_logs_dir}")
                 return None
-            
-            # Collect logs from all JSON files
-            matching_logs = []
-            for log_file_name in matching_log_files:
-                log_file_path = os.path.join(self.processed_logs_dir, log_file_name)
+            # Aggregate logs from all valid JSON files in the directory
+            all_logs = []
+            for fname in matching_log_files:
+                log_file_path = os.path.join(self.processed_logs_dir, fname)
                 logging.info(f"Reading log file: {log_file_path}")
                 try:
                     with open(log_file_path, 'r') as log_file:
-                        try: all_logs = json.load(log_file)
-                        except json.JSONDecodeError: logging.error(f"Error decoding JSON: {log_file_path}"); continue
-                        if not isinstance(all_logs, list): logging.error(f"Log file not a list: {log_file_path}"); continue
-
-                    # Process logs from this file
-                    for log in all_logs:
-                        notebook_path = log.get('notebook', '')
-                        if notebook_path:
-                            notebook_name = os.path.basename(notebook_path).removesuffix(".ipynb")
-                            sanitized_notebook_name = re.sub(r'^rtc[^a-zA-Z0-9]*', '', notebook_name, flags=re.IGNORECASE)
-                            sanitized_notebook_name = re.sub(r'[^a-zA-Z0-9_\-\.]', '_', sanitized_notebook_name).lower()
-                            if sanitized_notebook_name == session_id: matching_logs.append(log)
-                except FileNotFoundError: 
-                    logging.warning(f"Log file not found: {log_file_path}")
+                        logs = json.load(log_file)
+                except json.JSONDecodeError:
+                    logging.error(f"Error decoding JSON: {log_file_path}")
                     continue
-                except Exception as e: 
-                    logging.error(f"Error processing log file {log_file_path}: {e}")
+                except Exception as e:
+                    logging.error(f"Error reading {log_file_path}: {e}")
                     continue
+                if not isinstance(logs, list):
+                    logging.error(f"Log file not a list: {log_file_path}")
+                    continue
+                all_logs.extend(logs)
 
-            if not matching_logs: 
-                logging.info(f"No matching logs for '{session_id}' found in any log files in {self.processed_logs_dir}")
-                return None
+            matching_logs = []
+            for log in all_logs:
+                notebook_path = log.get('notebook', '')
+                if notebook_path:
+                    notebook_name = os.path.basename(notebook_path).removesuffix(".ipynb")
+                    sanitized_notebook_name = re.sub(r'^rtc[^a-zA-Z0-9]*', '', notebook_name, flags=re.IGNORECASE)
+                    sanitized_notebook_name = re.sub(r'[^a-zA-Z0-9_\-\.]', '_', sanitized_notebook_name).lower()
+                    if sanitized_notebook_name == session_id: matching_logs.append(log)
+
+            if not matching_logs: logging.info(f"No matching logs for '{session_id}' in any JSON file"); return None
 
             # apply limit if given, otherwise use entire session
             if limit is not None and len(matching_logs) > limit:

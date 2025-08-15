@@ -1,4 +1,4 @@
-    #!/usr/bin/env python3
+#!/usr/bin/env python3
 """
 JELAI Admin Dashboard - Web interface for educators to manage the system
 """
@@ -30,13 +30,15 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
 
 # Configuration
-MIDDLEWARE_URL = os.environ.get('MIDDLEWARE_URL', 'http://middleware:8005')
-JUPYTERHUB_URL = os.environ.get('JUPYTERHUB_URL', 'http://hub:8000')
-
+MIDDLEWARE_URL = os.getenv('MIDDLEWARE_URL', 'http://middleware:8005')
 HUB_API_URL = os.getenv("JUPYTERHUB_API_URL", "http://jupyterhub:8080")
-# OAuth client for this service (default matches JupyterHub convention)
 JUPYTERHUB_CLIENT_ID = os.getenv("JUPYTERHUB_CLIENT_ID", "service-learn-dashboard")
 SERVICE_TOKEN = os.getenv("JUPYTERHUB_API_TOKEN")
+PORT = int(os.getenv("PORT", "8006"))
+
+# Validate required environment variables
+if not SERVICE_TOKEN:
+    raise RuntimeError("JUPYTERHUB_API_TOKEN environment variable is required")
 
 TOKEN_COOKIE_NAME = "jhub_service_oauth_token"
 
@@ -190,5 +192,5 @@ async def get_user(user=Depends(get_current_user)):
     return {"name": user.get("name"), "admin": user.get("admin", False)}
 
 if __name__ == '__main__':
-    logger.info("Starting JELAI Admin Dashboard on port 8006")
-    uvicorn.run(app, host="0.0.0.0", port=8006)
+    logger.info(f"Starting JELAI Admin Dashboard on port {PORT}")
+    uvicorn.run(app, host="0.0.0.0", port=PORT)

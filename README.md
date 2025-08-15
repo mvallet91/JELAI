@@ -35,7 +35,6 @@ The system consists of a JupyterHub server, individual user Jupyter servers, a m
     - Configure learning objectives for specific tasks and assignments
     - Monitor student analytics and engagement metrics
     - Access the dashboard through JupyterHub's admin interface
-    - Both agents are started via the `start.sh` script.
     - The LA module (in progress) processes telemetry logs to generate insights.
 - **Fluent** is used to collect logs from the individual containers and send them to the middleware container for storage and processing with the LA module.
 - The **Ollama** server can run locally in the host machine or on a separate one. Cloud or third-party services can also be used, but the system is designed to work with a self-hosted server. 
@@ -44,6 +43,7 @@ The system consists of a JupyterHub server, individual user Jupyter servers, a m
 The JELAI system includes a comprehensive web-based admin dashboard that provides educators with powerful tools to manage and monitor the learning environment.
 
 ### Features
+- **AI Configuration**: Customize system prompts for both the Tutor Agent (Juno) and Expert Agent to control their behavior and personality
 - **Workspace Templates Management**: Upload and manage individual files that are copied to each student's workspace during environment setup (e.g., starter notebooks, assignment files)
 - **Shared Resources Management**: Upload and organize common files accessible to all students at runtime (e.g., datasets, reference materials)
 - **Learning Objectives Configuration**: Define and edit learning objectives for specific tasks and assignments
@@ -54,7 +54,10 @@ The JELAI system includes a comprehensive web-based admin dashboard that provide
   - Individual student activity details
 
 ### Access and Authentication
-- **URL**: The learn dashboard is accessible through JupyterHub's admin interface in Services > Learn Dashboard
+- **Access Method**: The admin dashboard is accessible through JupyterHub's admin interface:
+  1. Log into JupyterHub (by default on port 9000)
+  2. Access the Admin panel (available only to admin users)
+  3. Navigate to the Services section to find the "learn-dashboard" service
 - **Authentication**: Uses JupyterHub's OAuth2 system for secure authentication
 - **Authorization**: Requires admin privileges in JupyterHub (only admin users can access the dashboard)
 - **Integration**: Seamlessly integrated with JupyterHub's user management and security system
@@ -87,9 +90,9 @@ Build and run the JupyterHub server using docker compose. This will create a Jup
     - Navigate to the `jupyterhub-docker/middleware` directory.
     - Copy the example environment file: `cp .env.example .env`
     - Edit the new `.env` file with a text editor.
-    - Set `ollama_url` to the correct address of your Ollama server (e.g., `http://localhost:11434` if running locally).
-    - *(Optional)* If using an OpenAI-compatible WebUI instead of or alongside Ollama, uncomment and set `webui_url` and `webui_api_key`. Providing a `webui_api_key` will make the system prefer the WebUI.
-    - *(Optional)* Uncomment and set specific model names if you don't want to use the defaults (`gemma3:4b`).
+    - Set `ollama_url` to the correct address of your Ollama server (e.g., `http://localhost:11434` if running locally) and download `gemma3:4b`, the default model.
+    - *(Optional)* If using WebUI (https://docs.openwebui.com/), instead of or alongside Ollama, uncomment and set `webui_url` and `webui_api_key`. Providing a `webui_api_key` will make the system prefer the WebUI.
+    - *(Optional)* Set specific model names if you don't want to use the default (`gemma3:4b`).
 - **Configure the admin dashboard authentication:**
     - Navigate to the `jupyterhub-docker` directory.
     - Generate a secure token: `echo "LEARN_DASHBOARD_TOKEN=$(openssl rand -hex 32)" >> .env`
@@ -97,8 +100,8 @@ Build and run the JupyterHub server using docker compose. This will create a Jup
 - Go back to the **jupyterhub-docker** directory in the terminal
 - Run `docker compose build` to build the containers
 - Run `docker compose up -d` to start the container in detached mode.
-- Access the JupyterHub server at `http://localhost:8000` in your browser (see *Nginx* below for public access). 
-- Access the Learn Dashboard directly via the JupyterHub admin interface (requires admin login through JupyterHub).
+- Access the JupyterHub server at `http://localhost:9000` in your browser (see *Nginx* below for public access). 
+- Access the Admin Dashboard through JupyterHub's admin interface: log in as an admin user, go to the Admin panel, and find the "learn-dashboard" service in the Services section.
 - The default admin user is `admin`, create a new user called admin, with a new password, to access the system.
 - To stop the system, run `docker compose down`.
 

@@ -640,3 +640,75 @@ textarea:focus {
     font-size: 0.95rem;
     line-height: 1.6;
 }
+
+/* AI Configuration Styles */
+.ai-config-management {
+    display: grid;
+    gap: 2rem;
+}
+
+.prompt-section {
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 15px;
+    padding: 2rem;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.prompt-section h3 {
+    color: #2d3748;
+    margin-bottom: 0.5rem;
+    font-size: 1.3rem;
+    font-weight: 600;
+}
+
+.prompt-section p {
+    color: #718096;
+    margin-bottom: 1.5rem;
+    font-size: 0.95rem;
+    line-height: 1.6;
+}
+
+.prompt-area textarea {
+    width: 100%;
+    min-height: 200px;
+    padding: 1rem;
+    border: 2px solid #e2e8f0;
+    border-radius: 8px;
+    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+    font-size: 0.9rem;
+    line-height: 1.6;
+    resize: vertical;
+    background: #f8fafc;
+    transition: all 0.3s ease;
+}
+
+.prompt-area textarea:focus {
+    outline: none;
+    border-color: #3498db;
+    box-shadow: 0 0 10px rgba(52, 152, 219, 0.2);
+    background: white;
+}
+
+.prompt-area textarea:disabled {
+    background: #f1f5f9;
+    color: #94a3b8;
+    cursor: not-allowed;
+}
+
+.prompt-actions {
+    display: flex;
+    gap: 1rem;
+    margin-top: 1rem;
+    justify-content: flex-start;
+}
+
+.prompt-actions .button.secondary {
+    background: #6c757d;
+}
+
+.prompt-actions .button.secondary:hover {
+    background: #5a6268;
+    transform: translateY(-2px);
+}

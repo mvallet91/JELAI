@@ -26,6 +26,7 @@ WORKSPACE_TEMPLATES_DIR = '/app/workspace_templates'
 SHARED_RESOURCES_DIR = '/app/shared_resources'
 LEARNING_OBJECTIVES_DIR = '/app/learning_objectives'
 CHAT_DB_PATH = '/app/chat_histories/chat_history.db'
+BUILD_STATUS_FILE = '/app/logs/build_status.txt'  # Use logs directory instead of /tmp
 
 # Ensure directories exist
 os.makedirs(INPUTS_DIR, exist_ok=True)
@@ -35,6 +36,7 @@ os.makedirs(WORKSPACE_TEMPLATES_DIR, exist_ok=True)
 os.makedirs(SHARED_RESOURCES_DIR, exist_ok=True)
 os.makedirs(LEARNING_OBJECTIVES_DIR, exist_ok=True)
 os.makedirs(os.path.dirname(CHAT_DB_PATH), exist_ok=True)  # Create chat_histories directory
+os.makedirs(os.path.dirname(BUILD_STATUS_FILE), exist_ok=True)  # Create logs directory
 
 @app.route('/')
 def dashboard():
@@ -702,7 +704,7 @@ def rebuild_workspaces():
                     logger.info(f"Template available for auto-sync: {file}")
         
         # Write success status for dashboard
-        with open('/tmp/build_status.txt', 'w') as f:
+        with open(BUILD_STATUS_FILE, 'w') as f:
             f.write(f'completed: Templates ready for auto-sync ({len(template_files)} files)')
         
         logger.info(f"Template sync completed - {len(template_files)} files ready for user container auto-sync")
@@ -716,7 +718,7 @@ def rebuild_workspaces():
         
     except Exception as e:
         logger.error(f"Error in template sync: {e}")
-        with open('/tmp/build_status.txt', 'w') as f:
+        with open(BUILD_STATUS_FILE, 'w') as f:
             f.write(f'failed: {str(e)}')
         return jsonify({'error': str(e)}), 500
 
@@ -724,8 +726,8 @@ def rebuild_workspaces():
 def get_build_status():
     """Get the current status of workspace template sync"""
     try:
-        if os.path.exists('/tmp/build_status.txt'):
-            with open('/tmp/build_status.txt', 'r') as f:
+        if os.path.exists(BUILD_STATUS_FILE):
+            with open(BUILD_STATUS_FILE, 'r') as f:
                 status_text = f.read().strip()
                 
                 # Parse status format: "status: message"
@@ -734,13 +736,13 @@ def get_build_status():
                     return jsonify({
                         'status': status.strip(), 
                         'message': message.strip(),
-                        'timestamp': os.path.getmtime('/tmp/build_status.txt')
+                        'timestamp': os.path.getmtime(BUILD_STATUS_FILE)
                     })
                 else:
                     return jsonify({
                         'status': status_text, 
                         'message': 'Template sync status',
-                        'timestamp': os.path.getmtime('/tmp/build_status.txt')
+                        'timestamp': os.path.getmtime(BUILD_STATUS_FILE)
                     })
         else:
             return jsonify({

@@ -7,7 +7,7 @@ let analyticsData = null;
 function apiUrl(endpoint) {
     const prefix = window.SERVICE_PREFIX || '';
     const url = prefix + '/api/proxy/' + endpoint;
-    console.log('API URL:', url, 'for endpoint:', endpoint, 'with prefix:', prefix);
+    // console.log('API URL:', url, 'for endpoint:', endpoint, 'with prefix:', prefix);
     return url;
 }
 
@@ -318,10 +318,10 @@ function editObjective(taskName) {
             
             if (data.content && data.content.trim()) {
                 textarea.value = data.content;
-                console.log(`Loaded content for ${taskName}:`, data.content.substring(0, 50) + '...');
+                // console.log(`Loaded content for ${taskName}:`, data.content.substring(0, 50) + '...');
             } else {
                 textarea.value = '';
-                console.log(`No content found for ${taskName}, starting with empty form`);
+                // console.log(`No content found for ${taskName}, starting with empty form`);
             }
         })
         .catch(error => {
@@ -462,10 +462,111 @@ function showStudentDetails(studentId) {
     alert(details);
 }
 
+// AI Configuration Functions
+function loadTutorPrompt() {
+    fetch(apiUrl('prompts/tutor'))
+        .then(response => response.json())
+        .then(data => {
+            const textarea = document.getElementById('tutorPrompt');
+            textarea.disabled = false;
+            textarea.value = data.content || '';
+            textarea.placeholder = 'Enter the system prompt for the Tutor Agent (Juno)...';
+        })
+        .catch(error => {
+            showMessage('Failed to load tutor prompt: ' + error.message, 'error');
+            document.getElementById('tutorPrompt').disabled = false;
+        });
+}
+
+function loadExpertPrompt() {
+    fetch(apiUrl('prompts/expert'))
+        .then(response => response.json())
+        .then(data => {
+            const textarea = document.getElementById('expertPrompt');
+            textarea.disabled = false;
+            textarea.value = data.content || '';
+            textarea.placeholder = 'Enter the system prompt for the Expert Agent...';
+        })
+        .catch(error => {
+            showMessage('Failed to load expert prompt: ' + error.message, 'error');
+            document.getElementById('expertPrompt').disabled = false;
+        });
+}
+
+function saveTutorPrompt() {
+    const content = document.getElementById('tutorPrompt').value;
+    
+    fetch(apiUrl('prompts/tutor'), {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ content: content })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showMessage('Tutor prompt saved successfully!', 'success');
+        } else {
+            showMessage('Failed to save tutor prompt: ' + (data.error || 'Unknown error'), 'error');
+        }
+    })
+    .catch(error => {
+        showMessage('Save failed: ' + error.message, 'error');
+    });
+}
+
+function saveExpertPrompt() {
+    const content = document.getElementById('expertPrompt').value;
+    
+    fetch(apiUrl('prompts/expert'), {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ content: content })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showMessage('Expert prompt saved successfully!', 'success');
+        } else {
+            showMessage('Failed to save expert prompt: ' + (data.error || 'Unknown error'), 'error');
+        }
+    })
+    .catch(error => {
+        showMessage('Save failed: ' + error.message, 'error');
+    });
+}
+
+function resetTutorPrompt() {
+    if (!confirm('Are you sure you want to reset the tutor prompt to default? This will overwrite any custom changes.')) {
+        return;
+    }
+    
+    // You could implement a default prompt restoration here
+    // For now, just clear the textarea
+    document.getElementById('tutorPrompt').value = '';
+    showMessage('Tutor prompt cleared. Enter a new prompt and save.', 'info');
+}
+
+function resetExpertPrompt() {
+    if (!confirm('Are you sure you want to reset the expert prompt to default? This will overwrite any custom changes.')) {
+        return;
+    }
+    
+    // You could implement a default prompt restoration here
+    // For now, just clear the textarea
+    document.getElementById('expertPrompt').value = '';
+    showMessage('Expert prompt cleared. Enter a new prompt and save.', 'info');
+}
+
 // Initialize dashboard when page loads
 window.onload = function() {
     loadWorkspaceTemplates();
     loadSharedResources();
     loadObjectives();
     loadAnalytics();
+    loadTutorPrompt();
+    loadExpertPrompt();
 };

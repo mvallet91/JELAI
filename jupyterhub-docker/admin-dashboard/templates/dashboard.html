@@ -42,6 +42,40 @@
             </div>
         </div>
 
+        <!-- AI Configuration Section -->
+        <div class="section">
+            <h2>🤖 AI Configuration</h2>
+            <p class="section-description">Configure system prompts for the AI tutors. Changes take effect immediately for new conversations.</p>
+            
+            <div class="ai-config-management">
+                <!-- Tutor Agent Prompt -->
+                <div class="prompt-section">
+                    <h3>📚 Tutor Agent (Juno) System Prompt</h3>
+                    <p>The main system prompt that guides the Tutor Agent's behavior and personality.</p>
+                    <div class="prompt-area">
+                        <textarea id="tutorPrompt" placeholder="Loading tutor prompt..." disabled></textarea>
+                        <div class="prompt-actions">
+                            <button onclick="saveTutorPrompt()" class="button">Save Tutor Prompt</button>
+                            <button onclick="resetTutorPrompt()" class="button secondary">Reset to Default</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Expert Agent Prompt -->
+                <div class="prompt-section">
+                    <h3>🔬 Expert Agent System Prompt</h3>
+                    <p>The system prompt for the Expert Agent that provides technical assistance to the Tutor Agent.</p>
+                    <div class="prompt-area">
+                        <textarea id="expertPrompt" placeholder="Loading expert prompt..." disabled></textarea>
+                        <div class="prompt-actions">
+                            <button onclick="saveExpertPrompt()" class="button">Save Expert Prompt</button>
+                            <button onclick="resetExpertPrompt()" class="button secondary">Reset to Default</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Learning Objectives Section -->
         <div class="section">
             <h2>🎯 Learning Objectives</h2>
