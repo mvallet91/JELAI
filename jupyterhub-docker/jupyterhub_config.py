@@ -72,3 +72,20 @@ if admin:
 
 # Allow all signed-up users to login
 c.Authenticator.allow_all = True
+
+# --- Proxied Service: learn-dashboard (served at /services/learn-dashboard/) ---
+# Strong token shared with the dashboard so it can call Hub’s API
+learn_dashboard_token = os.environ.get("LEARN_DASHBOARD_TOKEN")
+
+if not learn_dashboard_token:
+    raise RuntimeError(
+        "LEARN_DASHBOARD_TOKEN is not set. Define it in your environment/docker-compose and pass it to both JupyterHub and the admin-dashboard."
+    )
+
+c.JupyterHub.services.append({
+    "name": "learn-dashboard",                 # URL path: /services/learn-dashboard/
+    "url": "http://admin-dashboard:8006",      # internal DNS name:port of the dashboard container
+    "oauth_no_confirm": True,                  # skip consent screen
+    "api_token": learn_dashboard_token,        # lets the app verify users via Hub API
+    "oauth_redirect_uri": "/services/learn-dashboard/oauth_callback",  # path-only redirect URI
+})

@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>JELAI Admin Dashboard</title>
-    <link rel="stylesheet" href="/static/dashboard.css">
+    <link rel="stylesheet" href="{{ request.url_for('static', path='dashboard.css') }}">
 </head>
 <body>
     <div class="container">
@@ -82,6 +82,10 @@
         </div>
     </div>
 
-    <script src="/static/dashboard.js"></script>
+    <script>
+        // Pass the service prefix to JavaScript
+        window.SERVICE_PREFIX = "{{ request.scope.get('root_path', '') }}";
+    </script>
+    <script src="{{ request.url_for('static', path='dashboard.js') }}"></script>
 </body>
 </html>

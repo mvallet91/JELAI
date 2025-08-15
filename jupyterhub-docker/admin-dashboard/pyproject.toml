@@ -10,7 +10,8 @@ dependencies = [
     "python-multipart",
     "httpx",
     "PyJWT",
-    "python-jose[cryptography]"
+    "python-jose[cryptography]",
+    "jupyterhub>=3.0.0"
 ]
 
 [tool.hatch.build.targets.wheel]

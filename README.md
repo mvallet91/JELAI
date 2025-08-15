@@ -30,11 +30,11 @@ The system consists of a JupyterHub server, individual user Jupyter servers, a m
     - The Expert Agent (`ea-handler.py`) provides concise, factual technical information based on context provided by the TA.
     - The Admin API (`admin_api.py`) provides a REST interface for the admin dashboard to manage system configuration, learning materials, and analytics.
 - The **admin dashboard** container provides a web-based interface for educators to:
-    - Configure AI tutor behavior and prompts
-    - Manage learning objectives for different tasks
-    - Upload and organize learning materials
+    - Manage workspace templates (files copied to each student's environment)
+    - Upload and organize shared resources (read-only files accessible to all students)
+    - Configure learning objectives for specific tasks and assignments
     - Monitor student analytics and engagement metrics
-    - Access the dashboard at `http://localhost:8006` after deployment
+    - Access the dashboard through JupyterHub's admin interface
     - Both agents are started via the `start.sh` script.
     - The LA module (in progress) processes telemetry logs to generate insights.
 - **Fluent** is used to collect logs from the individual containers and send them to the middleware container for storage and processing with the LA module.
@@ -44,27 +44,26 @@ The system consists of a JupyterHub server, individual user Jupyter servers, a m
 The JELAI system includes a comprehensive web-based admin dashboard that provides educators with powerful tools to manage and monitor the learning environment.
 
 ### Features
-- **AI Tutor Configuration**: Customize system prompts, learning objectives, and assignment descriptions for both the Tutor Agent (Juno) and Expert Agent
-- **Learning Materials Management**: Upload and organize course materials, datasets, and notebooks that will be available to all students
+- **Workspace Templates Management**: Upload and manage individual files that are copied to each student's workspace during environment setup (e.g., starter notebooks, assignment files)
+- **Shared Resources Management**: Upload and organize common files accessible to all students at runtime (e.g., datasets, reference materials)
+- **Learning Objectives Configuration**: Define and edit learning objectives for specific tasks and assignments
 - **Student Analytics**: Monitor student engagement with real-time metrics including:
   - Total number of active students
   - Message counts and interaction patterns
   - Average messages per student
   - Individual student activity details
-- **System Health Monitoring**: Check the status of middleware services and container health
-- **Workspace Templates**: Manage and deploy notebook templates and starter materials for different assignments
 
-### Access and Usage
-- **URL**: The admin dashboard is accessible at `http://localhost:8006` after system deployment
-- **Modern Interface**: Features a sleek, responsive design with glassmorphism effects and intuitive navigation
-- **Real-time Updates**: Analytics and system status update automatically without page refresh
-- **Mobile Friendly**: Optimized for both desktop and mobile access
+### Access and Authentication
+- **URL**: The learn dashboard is accessible through JupyterHub's admin interface in Services > Learn Dashboard
+- **Authentication**: Uses JupyterHub's OAuth2 system for secure authentication
+- **Authorization**: Requires admin privileges in JupyterHub (only admin users can access the dashboard)
+- **Integration**: Seamlessly integrated with JupyterHub's user management and security system
 
 ### Technical Details
 - **Technology Stack**: Built with FastAPI and modern web technologies, using UV for dependency management
-- **Architecture**: Runs as a separate container that communicates with the middleware via REST API
+- **Architecture**: Runs as a JupyterHub proxied service that communicates with the middleware via REST API
 - **Data Integration**: Seamlessly integrates with the chat history database and telemetry logs
-- **Security**: Designed for secure deployment in educational environments
+- **Security**: OAuth2 authentication with admin-only access controls and secure API proxy
 
 The admin dashboard serves as the central control hub for educators, providing insights into student learning patterns and enabling data-driven pedagogical decisions.
 
@@ -91,11 +90,15 @@ Build and run the JupyterHub server using docker compose. This will create a Jup
     - Set `ollama_url` to the correct address of your Ollama server (e.g., `http://localhost:11434` if running locally).
     - *(Optional)* If using an OpenAI-compatible WebUI instead of or alongside Ollama, uncomment and set `webui_url` and `webui_api_key`. Providing a `webui_api_key` will make the system prefer the WebUI.
     - *(Optional)* Uncomment and set specific model names if you don't want to use the defaults (`gemma3:4b`).
+- **Configure the admin dashboard authentication:**
+    - Navigate to the `jupyterhub-docker` directory.
+    - Generate a secure token: `echo "LEARN_DASHBOARD_TOKEN=$(openssl rand -hex 32)" >> .env`
+    - This token enables secure communication between JupyterHub and the admin dashboard.
 - Go back to the **jupyterhub-docker** directory in the terminal
 - Run `docker compose build` to build the containers
 - Run `docker compose up -d` to start the container in detached mode.
 - Access the JupyterHub server at `http://localhost:8000` in your browser (see *Nginx* below for public access). 
-- Access the Admin Dashboard at `http://localhost:8006` for system management and analytics.
+- Access the Learn Dashboard directly via the JupyterHub admin interface (requires admin login through JupyterHub).
 - The default admin user is `admin`, create a new user called admin, with a new password, to access the system.
 - To stop the system, run `docker compose down`.
 
@@ -157,11 +160,11 @@ To access JupyterHub from outside the local network, follow the official [Jupyte
 
 ## FAQ:
 - Where can I edit the system prompt for the assistant?
-    - The main system prompt for the Tutor Agent (Juno) can be edited in the **jupyterhub-docker/middleware/inputs/ta-system-prompt.txt** file. See the *Pedagogical Configuration* section for other related files. You can also use the Admin Dashboard at `http://localhost:8006` for a user-friendly interface to manage prompts and configuration.
+    - The main system prompt for the Tutor Agent (Juno) can be edited in the **jupyterhub-docker/middleware/inputs/ta-system-prompt.txt** file. See the *Pedagogical Configuration* section for other related files. You can also use the Learn Dashboard for a user-friendly interface to manage prompts and configuration.
 - Can I add notebooks or materials so they are available to all users?
-    - Yes, you can add course materials to the **working-directory** in the user-notebook image, using the Dockerfile. Alternatively, use the Admin Dashboard's learning materials management feature to upload files through the web interface.
+    - Yes, you can add course materials to the **working-directory** in the user-notebook image, using the Dockerfile. Alternatively, use the Learn Dashboard's learning materials management feature to upload files through the web interface.
 - How can I monitor student progress and engagement?
-    - Use the Admin Dashboard at `http://localhost:8006` to view real-time analytics including student message counts, interaction patterns, and individual activity details.
+    - Use the Learn Dashboard to view real-time analytics including student message counts, interaction patterns, and individual activity details.
 - What if I can't run Ollama locally?
     - You can use a third-party service that provides a REST API for the chatbot server to interact with. The system is designed to work with a self-hosted server, but other services can be used.
 

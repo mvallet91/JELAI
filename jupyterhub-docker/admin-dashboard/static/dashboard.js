@@ -3,6 +3,14 @@
 // Global variables
 let analyticsData = null;
 
+// Helper function to build API URLs with service prefix
+function apiUrl(endpoint) {
+    const prefix = window.SERVICE_PREFIX || '';
+    const url = prefix + '/api/proxy/' + endpoint;
+    console.log('API URL:', url, 'for endpoint:', endpoint, 'with prefix:', prefix);
+    return url;
+}
+
 // Utility functions
 function showMessage(message, type = 'info') {
     const messageDiv = document.createElement('div');
@@ -44,7 +52,7 @@ function uploadWorkspaceTemplate() {
         const formData = new FormData();
         formData.append('file', file);
         
-        fetch('/api/proxy/workspace-templates', {
+        fetch(apiUrl('workspace-templates'), {
             method: 'POST',
             body: formData
         })
@@ -92,7 +100,7 @@ function uploadWorkspaceTemplate() {
 }
 
 function loadWorkspaceTemplates() {
-    fetch('/api/proxy/workspace-templates')
+    fetch(apiUrl('workspace-templates'))
         .then(response => response.json())
         .then(data => {
             const templatesList = document.getElementById('workspaceTemplatesList');
@@ -117,7 +125,7 @@ function loadWorkspaceTemplates() {
 function deleteWorkspaceTemplate(filename) {
     if (!confirm(`Are you sure you want to delete ${filename}?`)) return;
     
-    fetch(`/api/proxy/workspace-templates/${filename}`, {
+    fetch(apiUrl(`workspace-templates/${filename}`), {
         method: 'DELETE'
     })
     .then(response => response.json())
@@ -153,7 +161,7 @@ function uploadSharedResource() {
         const formData = new FormData();
         formData.append('file', file);
         
-        fetch('/api/proxy/shared-resources', {
+        fetch(apiUrl('shared-resources'), {
             method: 'POST',
             body: formData
         })
@@ -201,7 +209,7 @@ function uploadSharedResource() {
 }
 
 function loadSharedResources() {
-    fetch('/api/proxy/shared-resources')
+    fetch(apiUrl('shared-resources'))
         .then(response => response.json())
         .then(data => {
             const resourcesList = document.getElementById('sharedResourcesList');
@@ -226,7 +234,7 @@ function loadSharedResources() {
 function deleteSharedResource(filename) {
     if (!confirm(`Are you sure you want to delete ${filename}?`)) return;
     
-    fetch(`/api/proxy/shared-resources/${filename}`, {
+    fetch(apiUrl(`shared-resources/${filename}`), {
         method: 'DELETE'
     })
     .then(response => response.json())
@@ -245,7 +253,7 @@ function deleteSharedResource(filename) {
 
 // Learning Objectives Functions
 function loadObjectives() {
-    fetch('/api/proxy/learning-objectives')
+    fetch(apiUrl('learning-objectives'))
         .then(response => response.json())
         .then(data => {
             const objectivesList = document.getElementById('objectivesList');
@@ -301,7 +309,7 @@ function editObjective(taskName) {
     document.getElementById('objectiveModal').style.display = 'block';
     
     // Load current objective content
-    fetch(`/api/proxy/learning-objectives/${taskName}`)
+    fetch(apiUrl(`learning-objectives/${taskName}`))
         .then(response => response.json())
         .then(data => {
             const textarea = document.getElementById('objectiveText');
@@ -339,7 +347,7 @@ function saveObjective(event, taskName) {
     
     // Allow saving empty content (to clear objectives)
     
-    fetch(`/api/proxy/learning-objectives/${taskName}`, {
+    fetch(apiUrl(`learning-objectives/${taskName}`), {
         method: 'PUT',
         headers: {
             'Content-Type': 'application/json',
@@ -384,7 +392,7 @@ function toggleAnalytics() {
 }
 
 function loadAnalytics() {
-    fetch('/api/proxy/analytics/students')
+    fetch(apiUrl('analytics/students'))
         .then(response => response.json())
         .then(students => {
             // Calculate summary statistics from raw student data
