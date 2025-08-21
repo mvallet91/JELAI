@@ -38,6 +38,13 @@ ENV PATH="/app/.venv/bin:$PATH"
 COPY ea-handler.py ta-handler.py utils.py start.sh .env analytics_cli.py admin_api.py courses.py seed_courses.py /app/
 RUN chmod +x /app/start.sh
 COPY inputs/ /app/inputs/
+# Copy tests into the image so pytest can be run inside the container without extra steps
+COPY tests/ /app/tests/
+
+# Install pytest and install the middleware package in editable mode so
+# tests and in-container workflows don't require manual pip installs.
+RUN pip install --no-cache-dir pytest || true
+RUN pip install --no-cache-dir -e /app || true
 
 # Fluentd config
 RUN mkdir -p /fluent/etc

@@ -42,3 +42,7 @@ wiki/
 
 # User Notebook
 /jupyterhub-docker/user-notebook/user-venv/
+
+# Ignore documentation and GitHub workflow/config directories
+docs/
+.github/

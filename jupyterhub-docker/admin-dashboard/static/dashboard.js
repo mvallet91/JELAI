@@ -591,6 +591,27 @@ function reloadLearningObjectives() {
 }
 
 // Initialize dashboard when page loads
+window.currentUserObj = { name: 'unknown', admin: false, teacher_of: [], enrolled_in: [] };
+function showServerMessage(msg, isError) {
+    let el = document.getElementById('server-message');
+    if (!el) {
+        el = document.createElement('div');
+        el.id = 'server-message';
+        el.style.position = 'fixed';
+        el.style.top = '10px';
+        el.style.right = '10px';
+        el.style.zIndex = '2000';
+        el.style.padding = '10px';
+        el.style.borderRadius = '4px';
+        el.style.boxShadow = '0 2px 6px rgba(0,0,0,0.2)';
+        document.body.appendChild(el);
+    }
+    el.textContent = msg;
+    el.style.background = isError ? '#f8d7da' : '#d4edda';
+    el.style.color = isError ? '#721c24' : '#155724';
+    setTimeout(() => { if (el && el.parentNode) el.parentNode.removeChild(el); }, 4000);
+}
+
 window.onload = function() {
     loadWorkspaceTemplates();
     loadSharedResources();
@@ -599,7 +620,12 @@ window.onload = function() {
     loadTutorPrompt();
     loadExpertPrompt();
     // Load current user first, then refresh courses so UI can hide/show controls
-    loadCurrentUser().then(() => refreshCourses());
+    loadCurrentUser().then(u => {
+        // hide create button unless admin
+        const createBtn = document.getElementById('create-course-btn');
+        if (createBtn) createBtn.style.display = (u && u.admin) ? 'inline-block' : 'none';
+        refreshCourses();
+    });
 };
 
 // --- Courses UI functions ---
@@ -644,11 +670,14 @@ function renderCourses(courses) {
     const user = window.currentUserObj || { name: 'unknown', admin: false, teacher_of: [], enrolled_in: [] };
 
     container.innerHTML = courses.map(c => {
-        const isAdmin = !!user.admin;
-        const isTeacher = Array.isArray(user.teacher_of) && user.teacher_of.indexOf(c.id) !== -1;
-        const canEnroll = isAdmin || isTeacher;
-        const assignBtn = isAdmin ? `<button onclick="assignMeAsTeacher('${c.id}')" class="button small">Assign Me as Teacher</button>` : '';
-        const enrollBtn = canEnroll ? `<button onclick="promptEnroll('${c.id}')" class="button small">Enroll Student</button>` : '';
+    const isAdmin = !!user.admin;
+    const isTeacher = Array.isArray(user.teacher_of) && user.teacher_of.indexOf(c.id) !== -1;
+    const isEnrolled = Array.isArray(user.enrolled_in) && user.enrolled_in.indexOf(c.id) !== -1;
+    const canEnroll = isAdmin || isTeacher;
+    const assignBtn = (isAdmin || isTeacher) ? `<button onclick="assignMeAsTeacher('${c.id}')" class="button small">Assign Me as Teacher</button>` : '';
+    const enrollBtn = canEnroll ? `<button onclick="promptEnroll('${c.id}')" class="button small">Enroll Student</button>` : '';
+    const teacherBadge = isTeacher ? `<span class="badge">Teacher</span>` : '';
+    const enrolledBadge = isEnrolled ? `<span class="badge">Enrolled</span>` : '';
         const selectBtn = `<button onclick="selectCourse('${c.id}', '${escapeHtml(c.title)}')" class="button small">Select Course</button>`;
 
         return `
@@ -657,6 +686,7 @@ function renderCourses(courses) {
             <p>${c.description || ''}</p>
             <p>Teachers: ${c.teachers.join(', ') || 'None'}</p>
             <p>Students: ${c.students.join(', ') || 'None'}</p>
+            <div class="course-badges">${teacherBadge}${enrolledBadge}</div>
             <div class="course-actions">
                 ${assignBtn}
                 ${enrollBtn}

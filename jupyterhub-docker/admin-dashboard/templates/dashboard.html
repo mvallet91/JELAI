@@ -98,9 +98,9 @@
             <p class="section-description">Manage courses, assign teachers, and enroll students. Select the active course for quick testing.</p>
             <div id="coursesSection">
                 <div id="coursesList"></div>
-                <div style="margin-top:10px">
+                    <div style="margin-top:10px">
                     <button onclick="refreshCourses()" class="button">Refresh Courses</button>
-                    <button onclick="createCoursePrompt()" class="button">Create Course</button>
+                    <button id="create-course-btn" onclick="createCoursePrompt()" class="button">Create Course</button>
                     <span id="currentCourseDisplay" style="margin-left:20px; font-weight:bold"></span>
                 </div>
             </div>
