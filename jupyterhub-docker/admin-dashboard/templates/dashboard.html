@@ -92,6 +92,20 @@
             <div id="objectivesList" class="objectives-grid"></div>
         </div>
 
+        <!-- Courses Section -->
+        <div class="section">
+            <h2>📚 Courses</h2>
+            <p class="section-description">Manage courses, assign teachers, and enroll students. Select the active course for quick testing.</p>
+            <div id="coursesSection">
+                <div id="coursesList"></div>
+                <div style="margin-top:10px">
+                    <button onclick="refreshCourses()" class="button">Refresh Courses</button>
+                    <button onclick="createCoursePrompt()" class="button">Create Course</button>
+                    <span id="currentCourseDisplay" style="margin-left:20px; font-weight:bold"></span>
+                </div>
+            </div>
+        </div>
+
         <!-- Analytics Section -->
         <div class="section">
             <div class="section-header" onclick="toggleAnalytics()" style="cursor: pointer; display: flex; justify-content: space-between; align-items: center;">
@@ -129,6 +143,7 @@
         // Pass the service prefix to JavaScript
         window.SERVICE_PREFIX = "{{ request.scope.get('root_path', '') }}";
     </script>
-    <script src="{{ request.url_for('static', path='dashboard.js') }}"></script>
+    <!-- Cache-busted static JS so browsers fetch the updated file after deployments -->
+    <script src="{{ request.url_for('static', path='dashboard.js') }}?v=2"></script>
 </body>
 </html>

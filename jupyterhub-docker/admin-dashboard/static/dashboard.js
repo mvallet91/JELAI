@@ -598,4 +598,122 @@ window.onload = function() {
     loadAnalytics();
     loadTutorPrompt();
     loadExpertPrompt();
+    loadCurrentUser();
+    refreshCourses();
 };
+
+// --- Courses UI functions ---
+function loadCurrentUser() {
+    fetch('/services/learn-dashboard/api/user')
+        .then(r => r.json())
+        .then(user => {
+            window.currentUser = user.name || 'unknown';
+            const el = document.getElementById('currentCourseDisplay');
+            if (el && localStorage.getItem('selectedCourseTitle')) {
+                el.textContent = `Selected: ${localStorage.getItem('selectedCourseTitle')}`;
+            }
+        })
+        .catch(err => {
+            console.warn('Could not fetch current user', err);
+            window.currentUser = 'unknown';
+        });
+}
+
+function refreshCourses() {
+    fetch(apiUrl('courses'))
+        .then(r => r.json())
+        .then(courses => renderCourses(courses))
+        .catch(err => showMessage('Failed to load courses: ' + err.message, 'error'));
+}
+
+function renderCourses(courses) {
+    const container = document.getElementById('coursesList');
+    if (!container) return;
+    if (!courses || courses.length === 0) {
+        container.innerHTML = '<p>No courses available.</p>';
+        return;
+    }
+
+    container.innerHTML = courses.map(c => `
+        <div class="course-card">
+            <h4>${c.title}</h4>
+            <p>${c.description || ''}</p>
+            <p>Teachers: ${c.teachers.join(', ') || 'None'}</p>
+            <p>Students: ${c.students.join(', ') || 'None'}</p>
+            <div class="course-actions">
+                <button onclick="assignMeAsTeacher('${c.id}')" class="button small">Assign Me as Teacher</button>
+                <button onclick="promptEnroll('${c.id}')" class="button small">Enroll Student</button>
+                <button onclick="selectCourse('${c.id}', '${escapeHtml(c.title)}')" class="button small">Select Course</button>
+            </div>
+        </div>
+    `).join('');
+}
+
+function escapeHtml(s) {
+    return s.replace(/'/g, "\\'").replace(/"/g, '\\"');
+}
+
+function createCoursePrompt() {
+    const title = prompt('Enter course title:');
+    if (!title) return;
+    const description = prompt('Enter course description (optional):') || '';
+    fetch(apiUrl('courses'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: title, description: description })
+    })
+    .then(r => r.json())
+    .then(data => {
+        showMessage('Course created: ' + (data.title || data.id), 'success');
+        refreshCourses();
+    })
+    .catch(err => showMessage('Failed to create course: ' + err.message, 'error'));
+}
+
+function assignMeAsTeacher(courseId) {
+    // POST to assign-teacher with form body
+    const form = new URLSearchParams();
+    form.append('teacher', window.currentUser || 'admin');
+    fetch(apiUrl(`courses/${courseId}/assign-teacher`), {
+        method: 'POST',
+        body: form
+    })
+    .then(r => r.json())
+    .then(data => {
+        showMessage('Assigned as teacher', 'success');
+        refreshCourses();
+    })
+    .catch(err => showMessage('Failed to assign teacher: ' + err.message, 'error'));
+}
+
+function promptEnroll(courseId) {
+    const student = prompt('Enter student username to enroll:');
+    if (!student) return;
+    const form = new URLSearchParams();
+    form.append('student', student);
+    fetch(apiUrl(`courses/${courseId}/enroll`), {
+        method: 'POST',
+        body: form
+    })
+    .then(r => r.json())
+    .then(data => {
+        showMessage('Student enrolled', 'success');
+        refreshCourses();
+    })
+    .catch(err => showMessage('Failed to enroll student: ' + err.message, 'error'));
+}
+
+function selectCourse(courseId, title) {
+    localStorage.setItem('selectedCourse', courseId);
+    localStorage.setItem('selectedCourseTitle', title);
+    const el = document.getElementById('currentCourseDisplay');
+    if (el) el.textContent = `Selected: ${title}`;
+    showMessage('Selected course: ' + title, 'success');
+}
+
+// Expose functions to global window so inline onclick handlers work even if JS executes in strict mode
+window.refreshCourses = refreshCourses;
+window.createCoursePrompt = createCoursePrompt;
+window.assignMeAsTeacher = assignMeAsTeacher;
+window.promptEnroll = promptEnroll;
+window.selectCourse = selectCourse;

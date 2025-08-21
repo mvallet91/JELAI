@@ -12,9 +12,15 @@ import json
 import sqlite3
 from datetime import datetime
 import shutil
+import logging
+
+# Course management
+from courses import list_courses, get_course, create_course, assign_teacher, enroll_student, unenroll_student, load_courses
 
 # Initialize FastAPI app
 app = FastAPI(title="JELAI Admin API", version="1.0.0")
+
+logger = logging.getLogger('middleware_admin')
 
 # Configuration
 MAX_UPLOAD_SIZE = 100 * 1024 * 1024  # 100MB
@@ -119,6 +125,20 @@ class StudentAnalytics(BaseModel):
     first_interaction: str
     last_interaction: str
 
+
+class CourseCreateRequest(BaseModel):
+    title: str
+    description: Optional[str] = ""
+
+
+class CourseResponse(BaseModel):
+    id: str
+    title: str
+    description: Optional[str]
+    materials: List[str]
+    teachers: List[str]
+    students: List[str]
+
 # Utility functions
 def secure_filename(filename: str) -> str:
     """Secure a filename by removing problematic characters"""
@@ -148,6 +168,62 @@ def get_file_info(directory: str) -> List[FileInfo]:
                     modified=datetime.fromtimestamp(stat.st_mtime).isoformat()
                 ))
     return files
+
+
+# --- Simple RBAC helpers (stubbed for now) ---
+def get_user_from_request(request: Request) -> str:
+    """Extract a username from Authorization header or query for demo/testing."""
+    # If the proxy includes an X-JELAI-ADMIN header set to 'true', map that to the
+    # configured admin username so middleware RBAC treats the request as admin.
+    xadmin = request.headers.get('X-JELAI-ADMIN', '').lower()
+    # Print headers for debugging (visible in container logs)
+    try:
+        print('DEBUG_HEADERS:', dict(request.headers))
+    except Exception:
+        pass
+    if xadmin == 'true':
+        logger.info(f"Detected X-JELAI-ADMIN header -> treating as admin ({os.environ.get('ADMIN_USER','admin')})")
+        return os.environ.get('ADMIN_USER', 'admin')
+
+    auth = request.headers.get('Authorization') or request.query_params.get('user')
+    logger.info(f"Authorization header: {request.headers.get('Authorization')}, query user: {request.query_params.get('user')}")
+    if not auth:
+        return 'anonymous'
+    # If header is like 'Bearer username' or just 'username'
+    parts = auth.split()
+    # If this looks like an OAuth token ("Bearer <token>" or "token <token>"),
+    # try to introspect it against the Hub API to obtain the canonical username.
+    if len(parts) == 2 and parts[0].lower() in ("bearer", "token"):
+        token = parts[1]
+        # If the token is a short username-like string, just return it. Otherwise
+        # attempt Hub introspection. We use a heuristic: tokens are longer than
+        # 20 characters in our environment.
+        if len(token) <= 20 and token.isalnum():
+            return token
+        # Attempt to call Hub to resolve token->user. Use env var if available.
+        HUB_API = os.environ.get('JUPYTERHUB_API_URL', 'http://jupyterhub:8080')
+        try:
+            import requests
+            r = requests.get(f"{HUB_API}/hub/api/user", headers={"Authorization": f"token {token}"}, timeout=5)
+            if r.status_code == 200:
+                info = r.json()
+                return info.get('name')
+        except Exception as e:
+            logger.debug(f"Hub introspection failed: {e}")
+        # Fallback: return the token string (old behavior)
+        return token
+    # Otherwise, treat the last token as the username
+    return parts[-1]
+
+
+def is_teacher_of(course: dict, username: str) -> bool:
+    return username in course.get('teachers', [])
+
+
+def is_admin_user(username: str) -> bool:
+    # For now, treat 'admin' or env ADMIN_USER as admin
+    admin_user = os.environ.get('ADMIN_USER', 'admin')
+    return username == admin_user
 
 # Health check endpoint
 @app.get("/")
@@ -221,6 +297,34 @@ async def get_learning_objectives(task_name: str):
             return PromptResponse(content=f.read())
     except FileNotFoundError:
         return PromptResponse(content='')
+
+
+@app.get('/api/user')
+async def api_get_user(req: Request):
+    """Return resolved user identity and role memberships.
+
+    Response shape:
+    {
+      "name": "username",
+      "admin": true|false,
+      "teacher_of": ["course-id", ...],
+      "enrolled_in": ["course-id", ...]
+    }
+    """
+    try:
+        username = get_user_from_request(req)
+        admin = is_admin_user(username)
+        # Build lists of course ids the user teaches or is enrolled in
+        try:
+            courses = list_courses()
+        except Exception:
+            courses = []
+        teacher_of = [c.get('id') for c in courses if username in c.get('teachers', [])]
+        enrolled_in = [c.get('id') for c in courses if username in c.get('students', [])]
+        return {"name": username, "admin": admin, "teacher_of": teacher_of, "enrolled_in": enrolled_in}
+    except Exception as e:
+        logger.exception('Error resolving /api/user')
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.put("/api/learning-objectives/{task_name}")
 async def update_learning_objectives(task_name: str, request: PromptRequest):
@@ -353,6 +457,100 @@ async def get_build_status():
             return {"status": f.read().strip()}
     except FileNotFoundError:
         return {"status": "No build information available"}
+
+
+# --- Courses endpoints ---
+@app.get('/api/courses')
+async def api_list_courses(req: Request):
+    """List courses visible to the caller. Admins see all courses; teachers
+    see courses they teach; students see courses they're enrolled in.
+    """
+    try:
+        user = get_user_from_request(req)
+        print(f'API_LIST_COURSES_RESOLVED_USER: {user}')
+        courses = list_courses()
+        if is_admin_user(user):
+            return courses
+        # Return courses where user is a teacher or is enrolled as a student
+        filtered = [c for c in courses if user in c.get('teachers', []) or user in c.get('students', [])]
+        return filtered
+    except Exception as e:
+        print(f"Error listing courses: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post('/api/courses', response_model=CourseResponse)
+async def api_create_course(request: CourseCreateRequest, req: Request):
+    # Debug incoming headers and resolved user for RBAC troubleshooting
+    try:
+        print('API_CREATE_HEADERS:', dict(req.headers))
+    except Exception:
+        pass
+    user = get_user_from_request(req)
+    print(f'API_CREATE_RESOLVED_USER: {user}')
+    if not is_admin_user(user):
+        raise HTTPException(status_code=403, detail='admin privileges required')
+    course = create_course(title=request.title, description=request.description)
+    return course
+
+
+@app.get('/api/courses/{course_id}', response_model=CourseResponse)
+async def api_get_course(course_id: str):
+    course = get_course(course_id)
+    if not course:
+        raise HTTPException(status_code=404, detail='course not found')
+    return course
+
+
+@app.post('/api/courses/{course_id}/assign-teacher')
+async def api_assign_teacher(course_id: str, teacher: str = Form(...), req: Request = None):
+    try:
+        print('API_ASSIGN_HEADERS:', dict(req.headers if req else {}))
+    except Exception:
+        pass
+    user = get_user_from_request(req) if req else 'anonymous'
+    print(f'API_ASSIGN_RESOLVED_USER: {user}, teacher param: {teacher}')
+    if not is_admin_user(user):
+        raise HTTPException(status_code=403, detail='admin privileges required')
+    try:
+        return assign_teacher(course_id, teacher)
+    except KeyError:
+        raise HTTPException(status_code=404, detail='course not found')
+
+
+@app.post('/api/courses/{course_id}/enroll')
+async def api_enroll_student(course_id: str, student: str = Form(...), req: Request = None):
+    # Allow teachers of the course or admin to enroll
+    try:
+        print('API_ENROLL_HEADERS:', dict(req.headers if req else {}))
+    except Exception:
+        pass
+    user = get_user_from_request(req) if req else 'anonymous'
+    print(f'API_ENROLL_RESOLVED_USER: {user}, student param (raw): {student}')
+    course = get_course(course_id)
+    if not course:
+        raise HTTPException(status_code=404, detail='course not found')
+    if not (is_admin_user(user) or is_teacher_of(course, user)):
+        raise HTTPException(status_code=403, detail='insufficient privileges')
+    try:
+        return enroll_student(course_id, student)
+    except KeyError:
+        raise HTTPException(status_code=404, detail='course not found')
+
+
+@app.post('/api/courses/{course_id}/unenroll')
+async def api_unenroll_student(course_id: str, student: str = Form(...), req: Request = None):
+    user = get_user_from_request(req) if req else 'anonymous'
+    course = get_course(course_id)
+    if not course:
+        raise HTTPException(status_code=404, detail='course not found')
+    if not (is_admin_user(user) or is_teacher_of(course, user)):
+        raise HTTPException(status_code=403, detail='insufficient privileges')
+    try:
+        return unenroll_student(course_id, student)
+    except KeyError:
+        raise HTTPException(status_code=404, detail='course not found')
+
 
 @app.get("/api/materials/{filename}")
 async def download_material(filename: str):

@@ -35,7 +35,7 @@ COPY --from=builder /app/.venv /app/.venv
 ENV PATH="/app/.venv/bin:$PATH" 
 
 # Copy application code
-COPY ea-handler.py ta-handler.py utils.py start.sh .env analytics_cli.py admin_api.py /app/
+COPY ea-handler.py ta-handler.py utils.py start.sh .env analytics_cli.py admin_api.py courses.py seed_courses.py /app/
 RUN chmod +x /app/start.sh
 COPY inputs/ /app/inputs/
 

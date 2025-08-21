@@ -13,6 +13,9 @@ COPY uv.lock /app/
 # Install dependencies (not frozen to pick up new deps during development)
 RUN uv sync
 
+# Copy development environment variables when available
+COPY .env /app/.env
+
 # Copy source code
 COPY app.py /app/
 COPY templates/ /app/templates/

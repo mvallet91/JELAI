@@ -11,6 +11,12 @@ fluentd -c /fluent/etc/td-agent.conf -p /fluent/plugins > /var/log/llm-handler/f
 # Change to the app directory
 cd /app
 
+# Run seeder to ensure default courses exist (idempotent)
+if [ -f ./seed_courses.py ]; then
+    echo "Seeding courses..."
+    python3 ./seed_courses.py || echo "Seeder failed or already ran"
+fi
+
 echo "Starting services..."
 
 # Start EA Handler in the background on port 8003

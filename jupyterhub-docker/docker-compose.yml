@@ -64,6 +64,7 @@ services:
       - jupyterhub-network
     volumes:
       - "middleware-data:/var/log/jelai"
+      - "courses-data:/app/data"
       - "chat-histories:/app/chat_histories"
       - "./middleware/inputs:/app/inputs:rw"
       - "learning-materials:/app/learning_materials:rw"
@@ -79,6 +80,8 @@ services:
       # Port 8005 admin API is now internal only - accessed via admin dashboard
     depends_on:
       - hub
+    environment:
+      - COURSES_DATA_DIR=/app/data
 
   admin-dashboard:
     build:
@@ -116,6 +119,7 @@ volumes:
   workspace-templates:     # Individual files copied to each student
   shared-resources:        # Read-only shared files mounted for all
   learning-objectives:     # Learning objectives storage
+  courses-data:            # Persisted courses and enrollments
 
 networks:
   jupyterhub-network:
