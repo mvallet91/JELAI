@@ -598,24 +598,30 @@ window.onload = function() {
     loadAnalytics();
     loadTutorPrompt();
     loadExpertPrompt();
-    loadCurrentUser();
-    refreshCourses();
+    // Load current user first, then refresh courses so UI can hide/show controls
+    loadCurrentUser().then(() => refreshCourses());
 };
 
 // --- Courses UI functions ---
 function loadCurrentUser() {
-    fetch('/services/learn-dashboard/api/user')
+    // Use the admin-dashboard proxy to resolve the effective user and roles
+    return fetch(apiUrl('user'))
         .then(r => r.json())
         .then(user => {
-            window.currentUser = user.name || 'unknown';
+            // user shape: { name, admin, teacher_of: [...], enrolled_in: [...] }
+            window.currentUserObj = user || { name: 'unknown', admin: false, teacher_of: [], enrolled_in: [] };
+            window.currentUser = window.currentUserObj.name || 'unknown';
             const el = document.getElementById('currentCourseDisplay');
             if (el && localStorage.getItem('selectedCourseTitle')) {
                 el.textContent = `Selected: ${localStorage.getItem('selectedCourseTitle')}`;
             }
+            return window.currentUserObj;
         })
         .catch(err => {
             console.warn('Could not fetch current user', err);
-            window.currentUser = 'unknown';
+            window.currentUserObj = { name: 'unknown', admin: false, teacher_of: [], enrolled_in: [] };
+            window.currentUser = window.currentUserObj.name;
+            return window.currentUserObj;
         });
 }
 
@@ -634,19 +640,31 @@ function renderCourses(courses) {
         return;
     }
 
-    container.innerHTML = courses.map(c => `
+    // Ensure we have the current user roles resolved
+    const user = window.currentUserObj || { name: 'unknown', admin: false, teacher_of: [], enrolled_in: [] };
+
+    container.innerHTML = courses.map(c => {
+        const isAdmin = !!user.admin;
+        const isTeacher = Array.isArray(user.teacher_of) && user.teacher_of.indexOf(c.id) !== -1;
+        const canEnroll = isAdmin || isTeacher;
+        const assignBtn = isAdmin ? `<button onclick="assignMeAsTeacher('${c.id}')" class="button small">Assign Me as Teacher</button>` : '';
+        const enrollBtn = canEnroll ? `<button onclick="promptEnroll('${c.id}')" class="button small">Enroll Student</button>` : '';
+        const selectBtn = `<button onclick="selectCourse('${c.id}', '${escapeHtml(c.title)}')" class="button small">Select Course</button>`;
+
+        return `
         <div class="course-card">
             <h4>${c.title}</h4>
             <p>${c.description || ''}</p>
             <p>Teachers: ${c.teachers.join(', ') || 'None'}</p>
             <p>Students: ${c.students.join(', ') || 'None'}</p>
             <div class="course-actions">
-                <button onclick="assignMeAsTeacher('${c.id}')" class="button small">Assign Me as Teacher</button>
-                <button onclick="promptEnroll('${c.id}')" class="button small">Enroll Student</button>
-                <button onclick="selectCourse('${c.id}', '${escapeHtml(c.title)}')" class="button small">Select Course</button>
+                ${assignBtn}
+                ${enrollBtn}
+                ${selectBtn}
             </div>
         </div>
-    `).join('');
+    `;
+    }).join('');
 }
 
 function escapeHtml(s) {
