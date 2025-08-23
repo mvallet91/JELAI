@@ -3,11 +3,14 @@
 ARG JUPYTERHUB_VERSION
 FROM quay.io/jupyterhub/jupyterhub:$JUPYTERHUB_VERSION
 
+COPY scripts/ /srv/jupyterhub/scripts/
+
 # Install dockerspawner, nativeauthenticator
 # hadolint ignore=DL3013
 RUN python3 -m pip install --no-cache-dir \
     dockerspawner \
     jupyterhub-nativeauthenticator \
-    jupyterhub-idle-culler
+    jupyterhub-idle-culler \
+    httpx
 
 CMD ["jupyterhub", "-f", "/srv/jupyterhub/jupyterhub_config.py"]

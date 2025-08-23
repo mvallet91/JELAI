@@ -1,3 +1,5 @@
+
+from traitlets.config import get_config
 import logging
 
 # --- Define the Filter ---
@@ -31,3 +33,30 @@ log.addFilter(SelectiveLogFilter())
 # We still need to tell the Jupyter App to process INFO-level logs
 c = get_config()
 c.Application.log_level = 'INFO'
+
+# Inject custom JS to hide the Services tab for all users
+import os
+from notebook.utils import url_path_join
+from notebook.base.handlers import IPythonHandler
+import tornado.web
+
+def _inject_hide_services_tab_for_students():
+    # Only inject the JS for students (not teachers or admins)
+    user_role = os.environ.get('JELAI_USER_ROLE', '').lower()
+    if user_role != 'student':
+        return
+    class HideServicesTabHandler(IPythonHandler):
+        @tornado.web.authenticated
+        def get(self):
+            js_path = os.path.join(os.path.dirname(__file__), 'static', 'hide_services_tab.js')
+            self.set_header('Content-Type', 'application/javascript')
+            with open(js_path, 'r') as f:
+                self.write(f.read())
+
+    def load_jupyter_server_extension(nbapp):
+        web_app = nbapp.web_app
+        route_pattern = url_path_join(web_app.settings['base_url'], '/static/hide_services_tab.js')
+        web_app.add_handlers('.*', [(route_pattern, HideServicesTabHandler)])
+    c.NotebookApp.server_extensions = getattr(c.NotebookApp, 'server_extensions', []) + [load_jupyter_server_extension]
+
+_inject_hide_services_tab_for_students()

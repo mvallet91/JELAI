@@ -81,6 +81,7 @@ COPY chat_interact.py /home/jovyan/
 COPY process_logs.py /home/jovyan/
 COPY utils.py /home/jovyan/
 COPY template_sync.py /home/jovyan/
+COPY course_material_sync.py /home/jovyan/
 
 # Get container ID and export it as an environment variable
 RUN echo 'export CONTAINER_ID=$(cat /proc/self/cgroup | grep "docker" | sed "s/^.*\///" | tail -n1)' >> /home/jovyan/.bashrc
@@ -90,6 +91,7 @@ CMD ["/bin/bash", "-c", "\
 source /home/jovyan/.bashrc && \
 /opt/td-agent-bit/bin/td-agent-bit -c /etc/td-agent-bit/td-agent-bit.conf  & \
 . /home/jovyan/venv/bin/activate && \
+python /home/jovyan/course_material_sync.py >> /home/jovyan/logs/course_material_sync.log 2>&1 & \
 python /home/jovyan/template_sync.py >> /home/jovyan/logs/template_sync.log 2>&1 & \
 . /home/jovyan/venv/bin/activate && \
 python /home/jovyan/chat_interact.py /home/jovyan/work/${CHAT_DIR} /home/jovyan/logs/processed >> /home/jovyan/logs/processed/chat_interact.log 2>&1 & \

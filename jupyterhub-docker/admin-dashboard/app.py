@@ -190,20 +190,24 @@ async def require_admin(user: dict = Depends(get_current_user)) -> dict:
     return user
 
 @app.get("/")
-async def dashboard_root(request: Request, user: dict = Depends(get_current_user)):
+async def dashboard_root(request: Request):
     """Main dashboard page (redirect to login if needed, but allow health checks)
     Allows any authenticated user (teacher or admin) to view the dashboard; the
     template can conditionally render admin-only controls using `user['admin']`.
     """
-    # If this is a simple GET without browser headers, treat as health check
     user_agent = request.headers.get("user-agent", "")
+    # Always try to resolve user; if not authenticated, redirect to login (even for browser or curl)
+    try:
+        user = await get_current_user(request)
+    except HTTPException as e:
+        if e.status_code == 401:
+            # Redirect to login for OAuth
+            next_url = request.url.path
+            return RedirectResponse(url=f"/login?next={next_url}")
+        raise
+    # If user-agent is missing or is a script, allow health check
     if not user_agent or "curl" in user_agent.lower() or "python" in user_agent.lower():
         return {"status": "healthy", "service": "learn-dashboard"}
-
-    # Authenticated users are injected via dependency; if get_current_user raises
-    # it will return a 401/403 and redirect flow will be handled by the caller.
-    # Render the dashboard template and include the resolved `user` so frontend
-    # can show/hide admin controls.
     return templates.TemplateResponse("dashboard.html", {"request": request, "user": user})
 
 @app.get("/login")
@@ -245,9 +249,17 @@ async def oauth_callback(request: Request, code: Optional[str] = None, state: Op
     if not token:
         raise HTTPException(status_code=401, detail="No access token")
     # Set token cookie and redirect to state or root
-    response = RedirectResponse(url=state or f"{ROOT_PATH}/")
-    # Secure cookie flags: Hub may be behind HTTPS at the edge; set httponly
-    response.set_cookie(TOKEN_COOKIE_NAME, token, httponly=True, secure=False, samesite="lax", path=ROOT_PATH or "/")
+    cookie_path = "/services/learn-dashboard/"  # Hardcoded for reliability
+    logger.info(f"Setting token cookie: name={TOKEN_COOKIE_NAME}, path={cookie_path}, value={token[:8]}... (truncated)")
+    response = RedirectResponse(url=state or f"{cookie_path}")
+    response.set_cookie(
+        TOKEN_COOKIE_NAME,
+        token,
+        httponly=True,
+        secure=False,  # Set to True in production with HTTPS
+        samesite="lax",
+        path=cookie_path
+    )
     return response
 
 @app.get("/health")

@@ -46,3 +46,5 @@ wiki/
 # Ignore documentation and GitHub workflow/config directories
 docs/
 .github/
+
+/jupyterhub-docker/middleware/data

@@ -67,6 +67,8 @@ services:
       - "courses-data:/app/data"
       - "chat-histories:/app/chat_histories"
       - "./middleware/inputs:/app/inputs:rw"
+      # Mount repository tests into the container for in-container test runs
+      - "./tests:/app/tests:ro"
       - "learning-materials:/app/learning_materials:rw"
       - "workspace-templates:/app/workspace_templates:rw"
       - "shared-resources:/app/shared_resources:rw"

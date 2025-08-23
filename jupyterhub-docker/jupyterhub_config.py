@@ -2,18 +2,22 @@
 # Fully adapted for JELAI 2025 (by M. Valle)
 # Distributed under the terms of the Modified BSD License.
 
+
 # Configuration file for JupyterHub
 import os
+import sys
+sys.path.append(os.path.join(os.path.dirname(__file__), 'scripts'))
+from course_spawner import CourseDockerSpawner
+from traitlets.config import get_config
 
-c = get_config()  # noqa: F821
-
+c = get_config()
 # We rely on environment variables to configure JupyterHub so that we
 # avoid having to rebuild the JupyterHub container every time we change a
 # configuration parameter.
 
 # --- Core Hub and Spawner Configuration ---
 c.JupyterHub.port = 9000
-c.JupyterHub.spawner_class = "dockerspawner.DockerSpawner"
+c.JupyterHub.spawner_class = CourseDockerSpawner
 
 c.DockerSpawner.image = os.environ["DOCKER_NOTEBOOK_IMAGE"]
 network_name = os.environ["DOCKER_NETWORK_NAME"]
@@ -21,7 +25,8 @@ c.DockerSpawner.network_name = network_name
 
 c.DockerSpawner.environment = {
     "JUPYTERHUB_SINGLEUSER_APP": "jupyter-server",
-    "TA_MIDDLEWARE_URL": "http://middleware:8004"
+    "TA_MIDDLEWARE_URL": "http://middleware:8004",
+    "MIDDLEWARE_URL": os.environ.get("MIDDLEWARE_URL", "http://middleware:8005")
 }
 
 c.DockerSpawner.use_internal_ip = True
@@ -43,14 +48,31 @@ c.JupyterHub.services = [
 c.DockerSpawner.mem_limit = "400M" # Limit memory to 400MB
 c.DockerSpawner.cpu_limit = 0.5 # Limit CPU to 0.5 cores
 
-c.DockerSpawner.stop_timeout = 30 
 
 # --- Storage and Data Persistence ---
-notebook_dir = os.environ.get("DOCKER_NOTEBOOK_DIR", "/home/jovyan/work")
-c.DockerSpawner.notebook_dir = notebook_dir
-c.DockerSpawner.volumes = {"jupyterhub-user-{username}": notebook_dir,
-                           "jupyterhub-logs-{username}": "/home/jovyan/logs/processed",
-                           "jupyterhub-docker_shared-resources": {"bind": "/home/jovyan/work/shared_resources", "mode": "ro"}}
+# Set the notebook directory for DockerSpawner
+c.DockerSpawner.notebook_dir = os.environ.get("DOCKER_NOTEBOOK_DIR", "/home/jovyan/work")
+
+# Use per-course volumes for workspace and logs
+def get_per_course_volumes(spawner):
+    course_id = getattr(spawner, 'course_id', '') or spawner.user_options.get('course_id', '')
+    username = spawner.user.name
+    # Always use a string for notebook_dir
+    notebook_dir = os.environ.get("DOCKER_NOTEBOOK_DIR", "/home/jovyan/work")
+    volumes = {
+        f"jupyterhub-user-{username}-{course_id}": notebook_dir,
+        f"jupyterhub-logs-{username}-{course_id}": "/home/jovyan/logs/processed",
+        "jupyterhub-docker_shared-resources": {"bind": "/home/jovyan/work/shared_resources", "mode": "ro"}
+    }
+    return volumes
+
+c.DockerSpawner.notebook_dir = os.environ.get("DOCKER_NOTEBOOK_DIR", "/home/jovyan/work")
+c.DockerSpawner.volumes = {
+    "jupyterhub-user-{username}": "/home/jovyan/work",
+    "jupyterhub-logs-{username}": "/home/jovyan/logs/processed",
+    "jupyterhub-docker_shared-resources": {"bind": "/home/jovyan/work/shared_resources", "mode": "ro"}
+}
+# NOTE: Dynamic per-course volumes require a custom spawner or post_spawn_hook.
 c.JupyterHub.cookie_secret_file = "/data/jupyterhub_cookie_secret"
 c.JupyterHub.db_url = "sqlite:////data/jupyterhub.sqlite"
 
@@ -72,6 +94,20 @@ if admin:
 
 # Allow all signed-up users to login
 c.Authenticator.allow_all = True
+
+# Define roles for teachers to allow access to the admin dashboard service
+c.JupyterHub.load_roles = [
+    {
+        "name": "teacher",
+        "scopes": [
+            # Allow access to the service page
+            "access:services!service=learn-dashboard",
+        ],
+        # This should be populated dynamically from course data in a real system.
+        # For now, hardcoding the user from the user's report.
+        "users": ["teacher1"],
+    }
+]
 
 # --- Proxied Service: learn-dashboard (served at /services/learn-dashboard/) ---
 # Strong token shared with the dashboard so it can call Hub’s API

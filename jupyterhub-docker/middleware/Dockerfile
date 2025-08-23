@@ -39,9 +39,14 @@ COPY ea-handler.py ta-handler.py utils.py start.sh .env analytics_cli.py admin_a
 RUN chmod +x /app/start.sh
 COPY inputs/ /app/inputs/
 
-# Install pytest and install the middleware package in editable mode so
-# tests and in-container workflows don't require manual pip installs.
-RUN pip install --no-cache-dir pytest || true
+# Install pytest and runtime dependencies explicitly so tests can run inside
+# the runtime image even if the builder step didn't populate everything.
+RUN pip install --no-cache-dir \
+    pytest \
+    fastapi uvicorn pydantic python-multipart python-dotenv \
+    rapidfuzz thefuzz fluent-logger httpx pandas flask werkzeug || true
+
+# Install the middleware package in editable mode so importing admin_api works
 RUN pip install --no-cache-dir -e /app || true
 
 # Fluentd config

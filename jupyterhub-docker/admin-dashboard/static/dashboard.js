@@ -670,27 +670,31 @@ function renderCourses(courses) {
     const user = window.currentUserObj || { name: 'unknown', admin: false, teacher_of: [], enrolled_in: [] };
 
     container.innerHTML = courses.map(c => {
-    const isAdmin = !!user.admin;
-    const isTeacher = Array.isArray(user.teacher_of) && user.teacher_of.indexOf(c.id) !== -1;
-    const isEnrolled = Array.isArray(user.enrolled_in) && user.enrolled_in.indexOf(c.id) !== -1;
-    const canEnroll = isAdmin || isTeacher;
-    const assignBtn = (isAdmin || isTeacher) ? `<button onclick="assignMeAsTeacher('${c.id}')" class="button small">Assign Me as Teacher</button>` : '';
-    const enrollBtn = canEnroll ? `<button onclick="promptEnroll('${c.id}')" class="button small">Enroll Student</button>` : '';
-    const teacherBadge = isTeacher ? `<span class="badge">Teacher</span>` : '';
-    const enrolledBadge = isEnrolled ? `<span class="badge">Enrolled</span>` : '';
+        const isAdmin = !!user.admin;
+        const isTeacher = Array.isArray(user.teacher_of) && user.teacher_of.indexOf(c.id) !== -1;
+        const isEnrolled = Array.isArray(user.enrolled_in) && user.enrolled_in.indexOf(c.id) !== -1;
+        const canEnroll = isAdmin || isTeacher;
+        const assignBtn = (isAdmin || isTeacher) ? `<button onclick="assignMeAsTeacher('${c.id}')" class="button small">Assign Me as Teacher</button>` : '';
+        const enrollBtn = canEnroll ? `<button onclick="promptEnroll('${c.id}')" class="button small">Enroll Student</button>` : '';
+        const unenrollBtn = canEnroll ? `<button onclick="promptUnenroll('${c.id}')" class="button small">Unenroll Student</button>` : '';
+        const teacherBadge = isTeacher ? `<span class="badge">Teacher</span>` : '';
+        const enrolledBadge = isEnrolled ? `<span class="badge">Enrolled</span>` : '';
         const selectBtn = `<button onclick="selectCourse('${c.id}', '${escapeHtml(c.title)}')" class="button small">Select Course</button>`;
+        const viewAnalyticsBtn = canEnroll ? `<button onclick="viewCourseAnalytics('${c.id}')" class="button small">View Analytics</button>` : '';
 
         return `
         <div class="course-card">
             <h4>${c.title}</h4>
             <p>${c.description || ''}</p>
             <p>Teachers: ${c.teachers.join(', ') || 'None'}</p>
-            <p>Students: ${c.students.join(', ') || 'None'}</p>
+            <p>Students: <span id="students-list-${c.id}">${c.students.join(', ') || 'None'}</span></p>
             <div class="course-badges">${teacherBadge}${enrolledBadge}</div>
             <div class="course-actions">
                 ${assignBtn}
                 ${enrollBtn}
+                ${unenrollBtn}
                 ${selectBtn}
+                ${viewAnalyticsBtn}
             </div>
         </div>
     `;
@@ -751,6 +755,68 @@ function promptEnroll(courseId) {
     .catch(err => showMessage('Failed to enroll student: ' + err.message, 'error'));
 }
 
+function promptUnenroll(courseId) {
+    const student = prompt('Enter student username to unenroll:');
+    if (!student) return;
+    const form = new URLSearchParams();
+    form.append('student', student);
+    fetch(apiUrl(`courses/${courseId}/unenroll`), {
+        method: 'POST',
+        body: form
+    })
+    .then(r => r.json())
+    .then(data => {
+        showMessage('Student unenrolled', 'success');
+        refreshCourses();
+    })
+    .catch(err => showMessage('Failed to unenroll student: ' + err.message, 'error'));
+}
+
+function viewCourseAnalytics(courseId) {
+    fetch(apiUrl(`courses/${courseId}/analytics`))
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(analytics => {
+            const analyticsContent = document.getElementById('analyticsContent');
+            analyticsContent.style.display = 'block';
+            document.getElementById('analyticsToggle').textContent = '▲';
+
+            const totalStudents = analytics.length;
+            const totalMessages = analytics.reduce((sum, student) => sum + student.message_count, 0);
+            const avgMessages = totalStudents > 0 ? Math.round(totalMessages / totalStudents * 10) / 10 : 0;
+
+            const summaryData = {
+                total_students: totalStudents,
+                total_messages: totalMessages,
+                avg_messages_per_student: avgMessages,
+                total_tasks: 0, 
+            };
+
+            updateAnalyticsSummary(summaryData);
+
+            const studentsList = document.getElementById('studentsList');
+            if (analytics.length > 0) {
+                studentsList.innerHTML = analytics.map(student => `
+                    <div class="student-card">
+                        <h4>${student.username}</h4>
+                        <p>Messages: ${student.message_count}</p>
+                        <p>First Activity: ${new Date(student.first_interaction).toLocaleDateString()}</p>
+                        <p>Last Activity: ${new Date(student.last_interaction).toLocaleDateString()}</p>
+                    </div>
+                `).join('');
+            } else {
+                studentsList.innerHTML = '<p>No student data available for this course.</p>';
+            }
+        })
+        .catch(error => {
+            showMessage('Failed to load course analytics: ' + error.message, 'error');
+        });
+}
+
 function selectCourse(courseId, title) {
     localStorage.setItem('selectedCourse', courseId);
     localStorage.setItem('selectedCourseTitle', title);
@@ -765,3 +831,5 @@ window.createCoursePrompt = createCoursePrompt;
 window.assignMeAsTeacher = assignMeAsTeacher;
 window.promptEnroll = promptEnroll;
 window.selectCourse = selectCourse;
+window.promptUnenroll = promptUnenroll;
+window.viewCourseAnalytics = viewCourseAnalytics;
