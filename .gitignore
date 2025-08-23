@@ -23,6 +23,7 @@ __pycache__
 *.Rhistory
 *.RData
 *.Rproj.user
+cookies.txt
 
 # Middleware
 /jupyterhub-docker/middleware/venv/
