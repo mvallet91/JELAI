@@ -24,6 +24,20 @@ def client(tmp_path, monkeypatch):
     # Ensure the data dir exists
     data_dir.mkdir(parents=True, exist_ok=True)
 
+    # Build DB path within the per-test data dir and set DATABASE_URL BEFORE
+    # importing the middleware so the app's `app.database` will create an
+    # engine bound to this test DB.
+    dbfile = data_dir / 'jelai_test.db'
+    # Ensure parent exists
+    dbfile.parent.mkdir(parents=True, exist_ok=True)
+    dburl = f"sqlite:///{dbfile}"
+    monkeypatch.setenv('DATABASE_URL', dburl)
+    # Prevent admin_api from running its import-time seeding; tests will start
+    # from a clean DB and create tables explicitly.
+    monkeypatch.setenv('JELAI_SKIP_DB_INIT', '1')
+    # Ensure admin_api uses local working dir as APP_ROOT to avoid '/app' writes
+    monkeypatch.setenv('JELAI_APP_ROOT', str(Path.cwd()))
+
     # Import the middleware app AFTER environment is set so modules pick up env vars
     import importlib
     # Try several import strategies in order:
@@ -56,9 +70,19 @@ def client(tmp_path, monkeypatch):
                 break
         if not loaded:
             raise
+
     # reload courses module to ensure it uses the monkeypatched COURSES_DATA_DIR
     import courses as courses_mod
     importlib.reload(courses_mod)
+
+    # Ensure the app's SQLAlchemy models/tables are created in the test DB.
+    try:
+        from app import database as orm_database, models as orm_models
+        # Create tables from scratch (no seeding) so tests start from a clean DB
+        orm_models.Base.metadata.create_all(bind=orm_database.engine)
+    except Exception:
+        # If this fails, tests will surface the error; continue to let them run
+        pass
 
     client = TestClient(admin_api.app)
     yield client

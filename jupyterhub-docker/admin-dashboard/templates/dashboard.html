@@ -7,137 +7,29 @@
     <link rel="stylesheet" href="{{ request.url_for('static', path='dashboard.css') }}">
 </head>
 <body>
-    <div class="container">
-        <header class="dashboard-header">
-            <h1>🎓 JELAI Admin Dashboard</h1>
-        </header>
-        <p class="dashboard-intro">Manage your educational workspace templates, shared resources, and learning objectives.</p>
-        
-        <!-- Workspace Management Section -->
-        <div class="section">
-            <h2>📁 Workspace Management</h2>
-            <p><strong>Workspace Templates:</strong> Individual files copied to each student's workspace at build time (e.g., starter notebooks, assignment files)</p>
-            <p><strong>Shared Resources:</strong> Common files accessible to all students at runtime (e.g., datasets, reference materials)</p>
-            
-            <div class="workspace-management">
-                <!-- Workspace Templates -->
-                <div class="workspace-section templates-section">
-                    <h3>📄 Workspace Templates</h3>
-                    <div class="upload-area">
-                        <input type="file" id="workspaceTemplateFile" multiple>
-                        <button onclick="uploadWorkspaceTemplate()" class="button">Upload Template</button>
-                    </div>
-                    <div id="workspaceTemplatesList"></div>
-                </div>
-                
-                <!-- Shared Resources -->
-                <div class="workspace-section resources-section">
-                    <h3>🔗 Shared Resources</h3>
-                    <div class="upload-area">
-                        <input type="file" id="sharedResourceFile" multiple>
-                        <button onclick="uploadSharedResource()" class="button">Upload Resource</button>
-                    </div>
-                    <div id="sharedResourcesList"></div>
-                </div>
-            </div>
-        </div>
-
-        <!-- AI Configuration Section -->
-        <div class="section">
-            <h2>🤖 AI Configuration</h2>
-            <p class="section-description">Configure system prompts for the AI tutors. Changes take effect immediately for new conversations.</p>
-            
-            <div class="ai-config-management">
-                <!-- Tutor Agent Prompt -->
-                <div class="prompt-section">
-                    <h3>📚 Tutor Agent (Juno) System Prompt</h3>
-                    <p>The main system prompt that guides the Tutor Agent's behavior and personality.</p>
-                    <div class="prompt-area">
-                        <textarea id="tutorPrompt" placeholder="Loading tutor prompt..." disabled></textarea>
-                        <div class="prompt-actions">
-                            <button onclick="saveTutorPrompt()" class="button">Save Tutor Prompt</button>
-                            <button onclick="resetTutorPrompt()" class="button secondary">Reset to Default</button>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Expert Agent Prompt -->
-                <div class="prompt-section">
-                    <h3>🔬 Expert Agent System Prompt</h3>
-                    <p>The system prompt for the Expert Agent that provides technical assistance to the Tutor Agent.</p>
-                    <div class="prompt-area">
-                        <textarea id="expertPrompt" placeholder="Loading expert prompt..." disabled></textarea>
-                        <div class="prompt-actions">
-                            <button onclick="saveExpertPrompt()" class="button">Save Expert Prompt</button>
-                            <button onclick="resetExpertPrompt()" class="button secondary">Reset to Default</button>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- System Controls -->
-                <div class="prompt-section">
-                    <h3>⚙️ System Controls</h3>
-                    <p>Reload learning objectives and other configuration changes without restarting the system.</p>
-                    <div class="prompt-actions">
-                        <button onclick="reloadLearningObjectives()" class="button">Reload Learning Objectives</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Learning Objectives Section -->
-        <div class="section">
-            <h2>🎯 Learning Objectives</h2>
-            <p class="section-description">Manage learning objectives for each task/file. Click "Edit" to modify objectives for specific tasks.</p>
-            <div id="objectivesList" class="objectives-grid"></div>
-        </div>
-
-        <!-- Courses Section -->
-        <div class="section">
-            <h2>📚 Courses</h2>
-            <p class="section-description">Manage courses, assign teachers, and enroll students. Select the active course for quick testing.</p>
-            <div id="coursesSection">
-                <div id="coursesList"></div>
-                    <div style="margin-top:10px">
-                    <button onclick="refreshCourses()" class="button">Refresh Courses</button>
-                    <button id="create-course-btn" onclick="createCoursePrompt()" class="button">Create Course</button>
-                    <span id="currentCourseDisplay" style="margin-left:20px; font-weight:bold"></span>
-                </div>
-            </div>
-        </div>
-
-        <!-- Analytics Section -->
-        <div class="section">
-            <div class="section-header" onclick="toggleAnalytics()" style="cursor: pointer; display: flex; justify-content: space-between; align-items: center;">
-                <h2>📊 Student Analytics</h2>
-                <span id="analyticsToggle" style="font-size: 1.2rem;">▲</span>
-            </div>
-            
-            <div id="analyticsContent">
-                <div class="analytics-cards">
-                    <div class="analytics-card">
-                        <h3 id="totalStudents">0</h3>
-                        <p>Total Students</p>
-                    </div>
-                    <div class="analytics-card">
-                        <h3 id="totalMessages">0</h3>
-                        <p>Total Messages</p>
-                    </div>
-                    <div class="analytics-card">
-                        <h3 id="avgMessages">0</h3>
-                        <p>Avg Messages/Student</p>
-                    </div>
-                    <div class="analytics-card">
-                        <h3 id="totalTasks">0</h3>
-                        <p>Unique Tasks</p>
-                    </div>
-                </div>
-                
-                <h3>👥 Students Overview</h3>
-                <div id="studentsList" class="students-grid"></div>
-            </div>
-        </div>
+    {% extends "base.html" %}
+{% block content %}
+<div class="container">
+    <header class="dashboard-header">
+        <h1>🎓 JELAI Admin Dashboard</h1>
+        <div id="userInfo">Welcome, {{ user.name }}</div>
+    </header>
+    
+    {% if user.admin %}
+    <!-- Admin View -->
+    <p class="dashboard-intro">Platform-wide management of courses, users, and system settings.</p>
+    <div id="admin-view">
+        {% include 'admin_dashboard.html' %}
     </div>
+    {% else %}
+    <!-- Teacher View -->
+    <p class="dashboard-intro">Manage your courses, enrollments, and view student progress.</p>
+    <div id="teacher-view">
+        {% include 'teacher_dashboard.html' %}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
 
     <script>
         // Pass the service prefix to JavaScript

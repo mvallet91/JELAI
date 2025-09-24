@@ -670,14 +670,16 @@ function renderCourses(courses) {
     const user = window.currentUserObj || { name: 'unknown', admin: false, teacher_of: [], enrolled_in: [] };
 
     container.innerHTML = courses.map(c => {
-    const isAdmin = !!user.admin;
-    const isTeacher = Array.isArray(user.teacher_of) && user.teacher_of.indexOf(c.id) !== -1;
-    const isEnrolled = Array.isArray(user.enrolled_in) && user.enrolled_in.indexOf(c.id) !== -1;
-    const canEnroll = isAdmin || isTeacher;
-    const assignBtn = (isAdmin || isTeacher) ? `<button onclick="assignMeAsTeacher('${c.id}')" class="button small">Assign Me as Teacher</button>` : '';
-    const enrollBtn = canEnroll ? `<button onclick="promptEnroll('${c.id}')" class="button small">Enroll Student</button>` : '';
-    const teacherBadge = isTeacher ? `<span class="badge">Teacher</span>` : '';
-    const enrolledBadge = isEnrolled ? `<span class="badge">Enrolled</span>` : '';
+        const isAdmin = !!user.admin;
+        const isTeacher = Array.isArray(user.teacher_of) && user.teacher_of.indexOf(c.id) !== -1;
+        const isEnrolled = Array.isArray(user.enrolled_in) && user.enrolled_in.indexOf(c.id) !== -1;
+        const canEnroll = isAdmin || isTeacher;
+        const assignBtn = (isAdmin || isTeacher) ? `<button onclick="assignMeAsTeacher('${c.id}')" class="button small">Assign Me as Teacher</button>` : '';
+        const enrollBtn = canEnroll ? `<button onclick="promptEnroll('${c.id}')" class="button small">Enroll Student</button>` : '';
+        const unenrollBtn = canEnroll ? `<button onclick="promptUnenroll('${c.id}')" class="button small">Unenroll Student</button>` : '';
+        const teacherBadge = isTeacher ? `<span class="badge">Teacher</span>` : '';
+        const enrolledBadge = isEnrolled ? `<span class="badge">Enrolled</span>` : '';
+        // Only show a single clear 'Select Course' button for course launching
         const selectBtn = `<button onclick="selectCourse('${c.id}', '${escapeHtml(c.title)}')" class="button small">Select Course</button>`;
 
         return `

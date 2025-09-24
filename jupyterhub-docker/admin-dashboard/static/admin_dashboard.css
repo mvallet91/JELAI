@@ -1,0 +1,54 @@
+/* Admin Dashboard Styles */
+body {
+    font-family: Arial, sans-serif;
+    background-color: #f4f4f9;
+    margin: 0;
+    padding: 20px;
+}
+
+.container {
+    max-width: 1200px;
+    margin: auto;
+    background: #fff;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #ddd;
+    padding-bottom: 10px;
+    margin-bottom: 20px;
+}
+
+h1, h2 {
+    color: #333;
+}
+
+#courses-list {
+    margin-top: 10px;
+}
+
+.course-item {
+    padding: 10px;
+    border: 1px solid #eee;
+    margin-bottom: 5px;
+    border-radius: 4px;
+}
+
+#add-course-btn {
+    background-color: #007bff;
+    color: white;
+    padding: 10px 15px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 16px;
+}
+
+#add-course-btn:hover {
+    background-color: #0056b3;
+}

@@ -28,7 +28,7 @@ services:
       - "9000:9000"
     environment:
       # This username will be a JupyterHub admin
-      JUPYTERHUB_ADMIN: admin
+      JUPYTERHUB_ADMIN: jelai-admin
       # All containers will join this network
       DOCKER_NETWORK_NAME: jupyterhub-network
       # JupyterHub will spawn this Notebook image for users

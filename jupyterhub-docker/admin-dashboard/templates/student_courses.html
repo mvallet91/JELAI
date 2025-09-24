@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}Course Selection{% endblock %}
+{% block head %}
+    <link rel="stylesheet" href="{{ request.url_for('static', path='student_courses.css') }}">
+{% endblock %}
+{% block content %}
+    <div class="student-container">
+        <header>
+            <h1>📚 Select Your Course</h1>
+            <div id="studentName"></div>
+        </header>
+        <section id="coursesSection">
+            <div id="coursesList"></div>
+            <div id="noCourses" style="display:none;">No courses available yet.</div>
+        </section>
+    </div>
+{% endblock %}
+{% block scripts %}
+    <script src="{{ request.url_for('static', path='student_courses.js') }}"></script>
+{% endblock %}

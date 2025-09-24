@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block title %}Teacher Dashboard{% endblock %}
+{% block head %}
+    <link rel="stylesheet" href="{{ request.url_for('static', path='teacher_dashboard.css') }}">
+{% endblock %}
+{% block content %}
+    <div class="teacher-container">
+        <header>
+            <h1>👩‍🏫 Teacher Dashboard</h1>
+            <div id="teacherName"></div>
+        </header>
+        <section id="coursesSection">
+            <h2>Your Courses</h2>
+            <div id="coursesList"></div>
+        </section>
+        <section id="courseDetailSection" style="display:none;">
+            <button id="backToCourses" class="button">← Back to Courses</button>
+            <h2 id="courseTitle"></h2>
+            <div class="tabs">
+                <button class="tab-btn active" data-tab="students">Students</button>
+                <button class="tab-btn" data-tab="assignments">Assignments</button>
+                <button class="tab-btn" data-tab="analytics">Analytics</button>
+            </div>
+            <div class="tab-content" id="studentsTab">
+                <h3>Enrolled Students</h3>
+                <div id="studentsList"></div>
+                <button id="enrollStudentBtn" class="button">Enroll Student</button>
+            </div>
+            <div class="tab-content" id="assignmentsTab" style="display:none;">
+                <h3>Assignments</h3>
+                <div id="assignmentsList"></div>
+                <button id="addAssignmentBtn" class="button">Add Assignment</button>
+            </div>
+            <div class="tab-content" id="analyticsTab" style="display:none;">
+                <h3>Analytics</h3>
+                <div class="analytics-cards">
+                    <div class="analytics-card">
+                        <h3 id="totalStudents">0</h3>
+                        <p>Total Students</p>
+                    </div>
+                    <div class="analytics-card">
+                        <h3 id="totalMessages">0</h3>
+                        <p>Total Messages</p>
+                    </div>
+                    <div class="analytics-card">
+                        <h3 id="avgMessages">0</h3>
+                        <p>Avg Messages/Student</p>
+                    </div>
+                    <div class="analytics-card">
+                        <h3 id="totalTasks">0</h3>
+                        <p>Unique Tasks</p>
+                    </div>
+                </div>
+                <h3>👥 Students Overview</h3>
+                <div id="studentsOverviewList" class="students-grid"></div>
+            </div>
+        </section>
+    </div>
+{% endblock %}
+{% block scripts %}
+    <script src="{{ request.url_for('static', path='teacher_dashboard.js') }}"></script>
+{% endblock %}

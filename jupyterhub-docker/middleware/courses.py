@@ -3,17 +3,24 @@ import json
 from typing import Dict, List, Optional
 from uuid import uuid4
 
-DATA_DIR = os.environ.get('COURSES_DATA_DIR', '/app/data')
-COURSES_FILE = os.path.join(DATA_DIR, 'courses.json')
+def get_data_dir():
+    return os.environ.get('COURSES_DATA_DIR', '/app/data')
+
+
+def get_courses_file():
+    return os.path.join(get_data_dir(), 'courses.json')
+
 
 def ensure_data_dir():
-    os.makedirs(DATA_DIR, exist_ok=True)
+    os.makedirs(get_data_dir(), exist_ok=True)
+
 
 def load_courses() -> Dict[str, dict]:
     ensure_data_dir()
-    if not os.path.exists(COURSES_FILE):
+    courses_file = get_courses_file()
+    if not os.path.exists(courses_file):
         return {}
-    with open(COURSES_FILE, 'r') as f:
+    with open(courses_file, 'r') as f:
         try:
             return json.load(f)
         except Exception:
@@ -21,7 +28,8 @@ def load_courses() -> Dict[str, dict]:
 
 def save_courses(courses: Dict[str, dict]):
     ensure_data_dir()
-    with open(COURSES_FILE, 'w') as f:
+    courses_file = get_courses_file()
+    with open(courses_file, 'w') as f:
         json.dump(courses, f, indent=2)
 
 def list_courses() -> List[dict]:

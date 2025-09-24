@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}Admin Dashboard{% endblock %}
+{% block head %}
+    <link rel="stylesheet" href="{{ request.url_for('static', path='admin_dashboard.css') }}">
+{% endblock %}
+{% block content %}
+    <div class="container">
+        <header>
+            <h1>JELAI Admin Dashboard</h1>
+            <div id="userInfo"></div>
+        </header>
+        <main>
+            <section id="courses-section">
+                <h2>Courses</h2>
+                <div id="courses-list"></div>
+                <button id="add-course-btn">Add New Course</button>
+            </section>
+            <section id="course-detail-view" style="display:none;">
+                <button id="back-to-courses-btn">Back to Courses</button>
+                <h2 id="course-detail-name"></h2>
+                <div class="course-details">
+                    <div>
+                        <h3>Teachers</h3>
+                        <ul id="course-teachers-list"></ul>
+                    </div>
+                    <div>
+                        <h3>Students</h3>
+                        <ul id="course-students-list"></ul>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+{% endblock %}
+{% block scripts %}
+    <script src="{{ request.url_for('static', path='admin_dashboard.js') }}"></script>
+{% endblock %}

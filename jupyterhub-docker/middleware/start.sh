@@ -17,6 +17,12 @@ if [ -f ./seed_courses.py ]; then
     python3 ./seed_courses.py || echo "Seeder failed or already ran"
 fi
 
+# Initialize normalized database schema & seed data (idempotent)
+if [ -f ./scripts/initialize_db.py ]; then
+    echo "Initializing database schema..."
+    python3 ./scripts/initialize_db.py || echo "Database initialization script encountered an error"
+fi
+
 echo "Starting services..."
 
 # Start EA Handler in the background on port 8003

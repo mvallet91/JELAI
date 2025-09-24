@@ -1,0 +1,14 @@
+body { font-family: 'Segoe UI', Arial, sans-serif; background: #f8f9fa; margin: 0; }
+.teacher-container { max-width: 800px; margin: 40px auto; background: #fff; border-radius: 12px; box-shadow: 0 2px 16px rgba(0,0,0,0.07); padding: 32px; }
+header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
+h1 { font-size: 2rem; margin: 0; }
+.tabs { display: flex; gap: 8px; margin: 24px 0 12px 0; }
+.tab-btn { background: #e3e7ed; border: none; border-radius: 6px 6px 0 0; padding: 8px 20px; font-size: 1rem; cursor: pointer; transition: background 0.2s; }
+.tab-btn.active { background: #1976d2; color: #fff; }
+.tab-content { animation: fadeIn 0.3s; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+.button { background: #1976d2; color: #fff; border: none; border-radius: 6px; padding: 8px 18px; font-size: 1rem; cursor: pointer; margin-top: 12px; transition: background 0.2s; }
+.button:hover { background: #1251a3; }
+#coursesList, #studentsList, #assignmentsList { margin-top: 12px; }
+.card { background: #f1f3f6; border-radius: 8px; padding: 12px 18px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; transition: box-shadow 0.2s; }
+.card:hover { box-shadow: 0 2px 8px rgba(25,118,210,0.08); }

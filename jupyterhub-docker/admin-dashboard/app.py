@@ -185,6 +185,7 @@ async def get_current_user(request: Request) -> dict:
     return user  # includes name/admin/groups
 
 async def require_admin(user: dict = Depends(get_current_user)) -> dict:
+    # Only use this dependency for endpoints that must be admin-only.
     if not user.get("admin", False):
         raise HTTPException(status_code=403)
     return user
@@ -194,9 +195,26 @@ async def dashboard_root(request: Request, user: dict = Depends(get_current_user
     """Main dashboard page (redirect to login if needed, but allow health checks)
     Allows any authenticated user (teacher or admin) to view the dashboard; the
     template can conditionally render admin-only controls using `user['admin']`.
+    Teachers (non-admin) can view and use the dashboard, but admin-only controls are hidden.
     """
     # If this is a simple GET without browser headers, treat as health check
     user_agent = request.headers.get("user-agent", "")
+    # Always try to resolve user; if not authenticated, redirect to login (even for browser or curl)
+    try:
+        user = await get_current_user(request)
+    except HTTPException as e:
+        if e.status_code == 401:
+            # Redirect to login for OAuth
+            next_url = request.url.path
+            return RedirectResponse(url=f"/login?next={next_url}")
+        raise
+    
+    # If user is a student, show them the course selection page.
+    # This is a basic role check. A more robust system would use groups or a dedicated role field.
+    if not user.get("admin") and not user.get("groups"): # Heuristic for student
+        return RedirectResponse(url=f"{ROOT_PATH}/student-courses")
+
+    # If user-agent is missing or is a script, allow health check
     if not user_agent or "curl" in user_agent.lower() or "python" in user_agent.lower():
         return {"status": "healthy", "service": "learn-dashboard"}
 
@@ -347,6 +365,38 @@ async def proxy_to_middleware(request: Request, endpoint: str, user=Depends(get_
 async def get_user(user=Depends(get_current_user)):
     """Get current user info"""
     return {"name": user.get("name"), "admin": user.get("admin", False)}
+
+def _require_user(user: dict):
+    if not user:
+        raise HTTPException(status_code=401)
+    return user
+
+def _is_admin(user: dict) -> bool:
+    return bool(user.get('admin'))
+
+@app.get("/courses", response_class=HTMLResponse)
+async def courses_root(request: Request, user=Depends(get_current_user)):
+    """Admin course management landing or teacher course list depending on role."""
+    if _is_admin(user):
+        return templates.TemplateResponse("dashboard.html", {"request": request, "user": user, "admin_view": True})
+    # Teacher view: list their courses (front-end JS will call proxy API)
+    return templates.TemplateResponse("teacher_dashboard.html", {"request": request, "user": user})
+
+@app.get("/courses/{course_id}", response_class=HTMLResponse)
+async def course_detail(course_id: int, request: Request, user=Depends(get_current_user)):
+    """Teacher per-course dashboard or admin view of a specific course."""
+    if not _is_admin(user):
+        # For teacher ensure they have access — deferred to API proxy (JS fetch will fail otherwise)
+        pass
+    return templates.TemplateResponse("teacher_dashboard.html", {"request": request, "user": user, "course_id": course_id})
+
+@app.get("/teacher-dashboard", response_class=HTMLResponse)
+def teacher_dashboard(request: Request, user=Depends(get_current_user)):
+    return templates.TemplateResponse("teacher_dashboard.html", {"request": request, "user": user})
+
+@app.get("/student-courses", response_class=HTMLResponse)
+def student_courses(request: Request, user=Depends(get_current_user)):
+    return templates.TemplateResponse("student_courses.html", {"request": request, "user": user})
 
 if __name__ == '__main__':
     logger.info(f"Starting JELAI Admin Dashboard on port {PORT}")

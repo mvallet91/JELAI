@@ -1,0 +1,8 @@
+body { font-family: 'Segoe UI', Arial, sans-serif; background: #f8f9fa; margin: 0; }
+.student-container { max-width: 600px; margin: 40px auto; background: #fff; border-radius: 12px; box-shadow: 0 2px 16px rgba(0,0,0,0.07); padding: 32px; }
+header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
+h1 { font-size: 2rem; margin: 0; }
+#coursesList { margin-top: 24px; }
+.card { background: #f1f3f6; border-radius: 8px; padding: 18px 24px; margin-bottom: 16px; font-size: 1.1rem; cursor: pointer; transition: box-shadow 0.2s, transform 0.2s; display: flex; align-items: center; }
+.card:hover { box-shadow: 0 2px 8px rgba(25,118,210,0.10); transform: translateY(-2px) scale(1.02); background: #e3e7ed; }
+#noCourses { color: #888; font-size: 1.1rem; text-align: center; margin-top: 32px; }

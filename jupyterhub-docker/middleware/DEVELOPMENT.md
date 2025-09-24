@@ -1,67 +1,94 @@
-Development notes — in-place iteration vs rebuild
+# Middleware Development Guide
 
-Goal
-----
-Document the fast "in-place" workflow (what we used in the container) and the steps required to make those changes persistent in an image rebuild.
+## 1. Overview
+This document outlines the development workflow for the JELAI middleware service. The middleware is a FastAPI application that serves as the backend for the JELAI platform. It is responsible for handling course management, user roles, enrollments, and analytics data, as defined in the multi-course technical specification.
 
-What we changed during iteration
-- Added `__init__.py` to make the middleware a package.
-- Added `setup.cfg` / `pyproject.toml` so the project can be installed editable (`pip install -e /app`).
-- Edited `admin_api.py` (role-filtered `/api/courses`) and `tests/conftest.py` to make tests import robust.
+## 2. Project Structure
+To support the new features, the middleware will be organized as a Python package. Key files and directories include:
+- `app/`: The main application source directory.
+  - `__init__.py`: Makes the `app` directory a package.
+  - `main.py`: The main FastAPI application entry point (renamed from `admin_api.py`).
+  - `database.py`: Handles database connection, session management, and engine creation.
+  - `models.py`: Contains all SQLAlchemy ORM models (e.g., `Course`, `User`, `UserRole`, `Enrollment`).
+  - `schemas.py`: Contains all Pydantic schemas for API request/response validation.
+  - `crud.py`: Contains functions for all database CRUD (Create, Read, Update, Delete) operations.
+  - `api/`: Directory for API route modules.
+- `scripts/`:
+  - `initialize_db.py`: A script to create the database schema and seed it with initial test data.
+- `tests/`:
+  - Contains all `pytest` tests. Tests should be organized to mirror the application structure.
+- `pyproject.toml` & `setup.cfg`: Packaging and project configuration files.
 
-Quick in-place iteration (fast, used for dev)
-1. Copy updated files from host into the running middleware container:
+## 3. Setting Up the Development Environment
 
-```bash
-# run from repo root in WSL
-CONTAINER=<middleware_container_name_or_id>
-# copy tests and packaging files
-docker cp jupyterhub-docker/tests/. $CONTAINER:/app/tests
-docker cp jupyterhub-docker/middleware/pyproject.toml $CONTAINER:/app/pyproject.toml
-docker cp jupyterhub-docker/middleware/setup.cfg $CONTAINER:/app/setup.cfg
-docker cp jupyterhub-docker/middleware/__init__.py $CONTAINER:/app/__init__.py
-# copy updated source files (e.g. admin_api.py, courses.py)
-docker cp jupyterhub-docker/middleware/admin_api.py $CONTAINER:/app/admin_api.py
-docker cp jupyterhub-docker/middleware/courses.py $CONTAINER:/app/courses.py
-```
+### Prerequisites
+- Docker and Docker Compose must be installed.
 
-2. Install editable and run tests inside container:
+### Initial Setup
+1.  **Start the service:** From the `jupyterhub-docker` directory, run:
+    ```bash
+    docker compose up -d --build middleware
+    ```
+    This will build the middleware image and start the container. The `chat_history.db` SQLite file will be created and persisted in the `jupyterhub-docker/middleware/` directory on the host.
 
-```bash
-# inside host shell
-docker exec -u root $CONTAINER bash -lc "pip install -e /app || true && pip install pytest || true && pytest -q /app/tests || true"
-```
+2.  **Initialize the Database:** The new tables required for the multi-course feature must be created and seeded.
+    Run the initialization script inside the running container:
+    ```bash
+    # Get the container ID
+    CONTAINER_ID=$(docker compose ps -q middleware)
+    # Execute the script
+    docker exec $CONTAINER_ID python /app/scripts/initialize_db.py
+    ```
+    This script will create the `courses`, `user_roles`, `enrollments`, and `course_teachers` tables. You can modify this script to add or change the default seed data (e.g., test users, courses, and teachers) for your development needs.
 
-Notes
-- This in-place approach is fast for iteration, but it mutates the running container only — these changes will be lost if the container is recreated from the image.
-- Keep a short record of exact commands you run (this file) so you can reproduce them before a rebuild.
+## 4. Development Workflow
 
-Making changes persistent (rebuild)
-1. Ensure packaging files are committed to the repo (`pyproject.toml`, `setup.cfg`, `middleware/__init__.py`).
-2. Ensure the Dockerfile in this directory copies the packaging files (the current Dockerfile already copies `pyproject.toml`). If you want `pip install -e /app` during build, add a build step to install editable there (not recommended for production but useful for dev images).
-3. Rebuild and restart the service:
+### Fast Iteration (In-Place Editing)
+For rapid development, you can copy files into the running container and reinstall the package in editable mode. This avoids a full image rebuild for every change.
 
-```bash
-cd jupyterhub-docker
-# rebuild the middleware image
-docker compose build middleware
-# restart middleware
-docker compose up -d middleware
-# run tests inside the freshly built container
-CONTAINER=$(docker compose ps -q middleware)
-docker exec -u root $CONTAINER bash -lc "pytest -q /app/tests || true"
-```
+1.  **Copy updated files into the container:**
+    From the repository root (`JELAI/`), run the following commands.
+    ```bash
+    CONTAINER_ID=$(docker-compose -f jupyterhub-docker/docker-compose.yml ps -q middleware)
+    # Copy the entire app directory
+    docker cp jupyterhub-docker/middleware/app/. $CONTAINER_ID:/app/app
+    # Copy tests
+    docker cp jupyterhub-docker/tests/. $CONTAINER_ID:/app/tests
+    # Copy other files if they change
+    docker cp jupyterhub-docker/middleware/scripts/initialize_db.py $CONTAINER_ID:/app/scripts/initialize_db.py
+    ```
 
-Recommended diff for Dockerfile (optional): to make editable installs automatic in a dev image, add after copying app files:
+2.  **Install and run tests inside the container:**
+    The middleware service runs as the `appuser`. For package management tasks, you need to execute commands as `root`.
+    ```bash
+    # Install the package in editable mode
+    docker exec -u root $CONTAINER_ID pip install -e /app
+    # Run tests to validate your changes
+    docker exec -u root $CONTAINER_ID pytest -q /app/tests
+    ```
+    *Note: The service will automatically reload when it detects source code changes.*
 
-```dockerfile
-# (dev-only) install editable local package
-RUN pip install -e /app
-```
+### Making Changes Persistent (Rebuilding the Image)
+Once your changes are complete and tested, you must rebuild the Docker image to make them permanent.
 
-Keep CI using the canonical build (not editable install) for reproducibility.
+1.  **Ensure all new and modified files are committed to the repository.** This includes new source files (`database.py`, `models.py`, etc.) and any changes to the `Dockerfile`.
 
-Why tracking this matters
-- The in-place approach is excellent for fast iteration, but you must include the same steps or the same packaging files in your Docker build so CI/rebuilds reflect the working state.
-- This file documents exactly what we ran so the next rebuild step can reproduce the same environment.
+2.  **Rebuild and restart the service:**
+    From the `jupyterhub-docker` directory:
+    ```bash
+    # Rebuild the middleware image
+    docker compose build middleware
+    # Restart the service to apply changes
+    docker compose up -d middleware
+    ```
+
+## 5. Testing
+The testing strategy relies on `pytest` and a seeded database.
+
+- **Test Database:** Tests will run against the same `chat_history.db` file used for development. The `initialize_db.py` script is the source of truth for the test data.
+- **Running Tests:** As shown above, tests can be executed directly inside the container. For more detailed output, remove the `-q` flag:
+  ```bash
+  docker exec -u root $(docker compose ps -q middleware) pytest /app/tests
+  ```
+- **Writing Tests:** When adding new features, create corresponding tests. Use the seeded data to test API endpoints for different user roles (`student`, `teacher`, `admin`) and ensure course isolation is enforced correctly.
 
