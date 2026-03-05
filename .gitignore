@@ -45,3 +45,9 @@ wiki/
 
 # Logs
 *.log
+
+# Teacher Chat Secrets
+teacher-chat/.env
+
+# Agents
+.agents/

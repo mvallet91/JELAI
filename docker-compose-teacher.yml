@@ -1,0 +1,92 @@
+# Teacher Chat Integration Stack
+# Runs alongside (but independently of) docker-compose-dev.yml
+# Usage: docker compose -f docker-compose-teacher.yml up -d
+
+services:
+  clickhouse:
+    image: clickhouse/clickhouse-server:latest
+    container_name: clickhouse
+    ports:
+      - "8123:8123" # HTTP interface (playground at /play)
+      - "9000:9000" # Native TCP protocol
+    volumes:
+      - clickhouse-data:/var/lib/clickhouse
+      - ./teacher-chat/clickhouse/init:/docker-entrypoint-initdb.d
+    environment:
+      - CLICKHOUSE_DB=teacher_analytics
+      - CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT=1
+    networks:
+      - teacher-chat-network
+    healthcheck:
+      test: [ "CMD", "clickhouse-client", "--query", "SELECT 1" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  librechat-mongo:
+    image: mongo:latest
+    container_name: librechat-mongo
+    volumes:
+      - librechat-mongo-data:/data/db
+    networks:
+      - teacher-chat-network
+    healthcheck:
+      test: [ "CMD", "mongosh", "--eval", "db.runCommand('ping').ok" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  librechat:
+    image: ghcr.io/danny-avila/librechat:latest
+    container_name: librechat
+    ports:
+      - "3080:3080"
+    volumes:
+      - ./teacher-chat/librechat/librechat.yaml:/app/librechat.yaml
+    env_file:
+      - ./teacher-chat/.env
+    environment:
+      - MONGO_URI=mongodb://librechat-mongo:27017/LibreChat
+      - ALLOW_REGISTRATION=true
+      - ALLOW_SOCIAL_LOGIN=false
+      - CONFIG_PATH=/app/librechat.yaml
+    depends_on:
+      librechat-mongo:
+        condition: service_healthy
+      mcp-middleware:
+        condition: service_started
+    networks:
+      - teacher-chat-network
+
+  mcp-middleware:
+    build:
+      context: ./teacher-chat/mcp-middleware
+      dockerfile: Dockerfile
+    container_name: mcp-middleware
+    ports:
+      - "8005:8005"
+    volumes:
+      - ./teacher-chat/scripts:/app/scripts
+      - "C:/Users/mvall/Downloads/Integrated Chat and Programming Logs from Data Science Tasks with an AI Tutor_1_all:/app/datasets"
+    environment:
+      - CLICKHOUSE_HOST=clickhouse
+      - CLICKHOUSE_PORT=8123
+      - CLICKHOUSE_DB=teacher_analytics
+      - OLLAMA_URL=https://llm.learn.ewi.tudelft.nl
+      - OLLAMA_MODEL=gemma3:27b
+      - EMBEDDING_MODEL=bge-m3
+    depends_on:
+      clickhouse:
+        condition: service_healthy
+    networks:
+      - teacher-chat-network
+
+volumes:
+  clickhouse-data:
+  librechat-mongo-data:
+
+
+networks:
+  teacher-chat-network:
+    name: teacher-chat-network
+    driver: bridge

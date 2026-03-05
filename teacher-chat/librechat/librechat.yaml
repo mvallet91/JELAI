@@ -1,0 +1,30 @@
+# LibreChat configuration
+# See: https://www.librechat.ai/docs/configuration/librechat_yaml
+version: 1.2.1
+
+cache: true
+
+endpoints:
+  custom:
+    - name: "Ollama (TU Delft)"
+      apiKey: "ollama"
+      baseURL: "https://llm.learn.ewi.tudelft.nl/v1/"
+      models:
+        default: ["gemma3:27b", "qwen3:32b", "gemma3:4b", "mistral-small3.1:latest", "deepseek-r1:32b"]
+        fetch: false
+      titleConversation: true
+      titleModel: "gemma3:4b"
+      summarize: false
+      forcePrompt: false
+      modelDisplayLabel: "Ollama"
+
+mcpSettings:
+  allowedDomains:
+    - "mcp-middleware"
+
+mcpServers:
+  teacher-analytics:
+    type: sse
+    url: http://mcp-middleware:8005/sse
+    timeout: 120000
+
