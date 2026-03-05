@@ -64,7 +64,7 @@ ENV CHAT_DIR=${CHAT_DIR}
 
 # Change default chat location 
 RUN mkdir -p /home/jovyan/.jupyter/lab/user-settings/jupyterlab-chat-extension && \
-   echo '{"defaultDirectory": "'"${CHAT_DIR}"'"}' > /home/jovyan/.jupyter/lab/user-settings/jupyterlab-chat-extension/factory.jupyterlab-settings
+    echo '{"defaultDirectory": "'"${CHAT_DIR}"'"}' > /home/jovyan/.jupyter/lab/user-settings/jupyterlab-chat-extension/factory.jupyterlab-settings
 
 # Create a virtual environment
 RUN python -m venv /home/jovyan/venv
@@ -77,16 +77,19 @@ RUN /home/jovyan/venv/bin/pip install --no-cache-dir -r /home/jovyan/chat_intera
 COPY chat_interact.py /home/jovyan/
 COPY process_logs.py /home/jovyan/
 COPY utils.py /home/jovyan/
+COPY etherpad_logger.py /home/jovyan/
 
 # Get container ID and export it as an environment variable
 RUN echo 'export CONTAINER_ID=$(cat /proc/self/cgroup | grep "docker" | sed "s/^.*\///" | tail -n1)' >> /home/jovyan/.bashrc
 
 # Start Fluent Bit, chat_interact.py, and Jupyter Notebook
 CMD ["/bin/bash", "-c", "\
-source /home/jovyan/.bashrc && \
-/opt/td-agent-bit/bin/td-agent-bit -c /etc/td-agent-bit/td-agent-bit.conf  & \
-. /home/jovyan/venv/bin/activate && \
-python /home/jovyan/chat_interact.py /home/jovyan/work/${CHAT_DIR} /home/jovyan/logs/processed >> /home/jovyan/logs/processed/chat_interact.log 2>&1 & \
-. /home/jovyan/venv/bin/activate && \
-python /home/jovyan/process_logs.py /home/jovyan/logs/log /home/jovyan/logs/processed >> /home/jovyan/logs/processed/process_logs.log 2>&1 & \
-start-notebook.py"]
+    source /home/jovyan/.bashrc && \
+    /opt/td-agent-bit/bin/td-agent-bit -c /etc/td-agent-bit/td-agent-bit.conf  & \
+    . /home/jovyan/venv/bin/activate && \
+    python /home/jovyan/chat_interact.py /home/jovyan/work/${CHAT_DIR} /home/jovyan/logs/processed >> /home/jovyan/logs/processed/chat_interact.log 2>&1 & \
+    . /home/jovyan/venv/bin/activate && \
+    python /home/jovyan/process_logs.py /home/jovyan/logs/log /home/jovyan/logs/processed >> /home/jovyan/logs/processed/process_logs.log 2>&1 & \
+    . /home/jovyan/venv/bin/activate && \
+    python /home/jovyan/etherpad_logger.py jovyan /home/jovyan/logs/log >> /home/jovyan/logs/processed/etherpad_logger.log 2>&1 & \
+    start-notebook.py"]

@@ -8,6 +8,7 @@ import logging
 import uuid
 import asyncio
 import random
+import hashlib
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 import httpx
@@ -16,21 +17,79 @@ from typing import Optional, Dict, Any
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - CHAT_INTERACT - %(message)s')
 
 # --- Configuration ---
-# def is_running_in_docker():
-#     return os.path.exists('/.dockerenv')
-
-# if is_running_in_docker():
-#     TA_URL = "http://host.docker.internal:8004/receive_student_message"
-# else:
-#     TA_URL = "http://localhost:8004/receive_student_message"
+PROACTIVITY_URL_BASE = os.getenv("TA_MIDDLEWARE_URL", "http://localhost:8004")
+PROACTIVITY_URL = f"{PROACTIVITY_URL_BASE}/evaluate_proactivity"
+AGENT_CONFIG_URL = f"{PROACTIVITY_URL_BASE}/agent_config"
 
 TA_URL_BASE = os.getenv("TA_MIDDLEWARE_URL", "http://localhost:8004")
 TA_URL = f"{TA_URL_BASE}/receive_student_message"
 LOG_ENTRY_LIMIT = 10
 
+# --- Message Gateway ---
+class MessageGateway:
+    """Final filter — only clean student-facing messages reach the chat."""
+
+    DEFAULT_BLOCKED_PATTERNS = [
+        "NO_INTERVENTION", "[INTERNAL CONTEXT]", "[END INTERNAL",
+        "Profile Hint", "Learning Objective", "should intervene",
+        "The student seems", "The student is mostly", "The student has executed",
+        "I notice the student", "Based on the logs", "Based on the context",
+        "Question Classification:", "Technical Information:",
+    ]
+
+    def __init__(self, config: dict = None):
+        gw_config = (config or {}).get("message_gateway", {})
+        self.blocked_patterns = gw_config.get("blocked_patterns", self.DEFAULT_BLOCKED_PATTERNS)
+        self.min_length = gw_config.get("min_message_length", 15)
+        self.max_length = gw_config.get("max_message_length", 2000)
+        logging.info(f"MessageGateway initialized with {len(self.blocked_patterns)} blocked patterns")
+
+    def validate(self, text: str) -> tuple:
+        """Returns (is_valid, cleaned_text). Rejects leaked internals."""
+        if not text or not text.strip():
+            return False, ""
+
+        # Reject if it starts with NO_INTERVENTION
+        if text.strip().upper().startswith("NO_INTERVENTION"):
+            return False, ""
+
+        # Strip any reasoning preamble (LLM sometimes prefixes analysis)
+        cleaned = self._strip_reasoning_preamble(text)
+
+        # Reject if blocked patterns remain in the cleaned text
+        for pattern in self.blocked_patterns:
+            if pattern.lower() in cleaned.lower():
+                logging.warning(f"Gateway blocked message containing '{pattern}'")
+                return False, ""
+
+        # Length checks
+        if len(cleaned.strip()) < self.min_length:
+            logging.warning(f"Gateway blocked message: too short ({len(cleaned)} chars)")
+            return False, ""
+        if len(cleaned.strip()) > self.max_length:
+            cleaned = cleaned[:self.max_length].rsplit(' ', 1)[0] + "..."
+
+        return True, cleaned.strip()
+
+    def _strip_reasoning_preamble(self, text: str) -> str:
+        """Strip common LLM reasoning preambles before the actual message."""
+        # Pattern: LLM writes analysis then double-newline then the actual message
+        parts = text.split("\n\n")
+        if len(parts) >= 2:
+            # Check if the first part looks like internal reasoning
+            first = parts[0].lower()
+            reasoning_indicators = [
+                "the student", "i should", "i will", "based on",
+                "it looks like", "they seem", "they haven't",
+                "analysis:", "observation:", "reasoning:"
+            ]
+            if any(indicator in first for indicator in reasoning_indicators):
+                return "\n\n".join(parts[1:])
+        return text
+
+
 class ChatHandler(FileSystemEventHandler):
     def __init__(self, chat_directory, loop, processed_logs_dir):
-        # (Initialization remains the same)
         self.chat_directory = os.path.abspath(chat_directory)
         self.processed_logs_dir = os.path.abspath(processed_logs_dir)
         os.makedirs(self.chat_directory, exist_ok=True)
@@ -38,8 +97,38 @@ class ChatHandler(FileSystemEventHandler):
         self.last_processed_messages: Dict[str, Dict[str, Any]] = {}
         self.working_message_ids: Dict[str, str] = {}
         self.loop = loop
+        
+        # --- Proactivity state ---
+        self.last_intervention_time: Dict[str, float] = {}   # chat_file -> timestamp
+        self.last_log_hash: Dict[str, str] = {}              # chat_file -> hash of logs
+        self.last_intervention_text: Dict[str, str] = {}     # chat_file -> last message text
+        self.unanswered_count: Dict[str, int] = {}           # chat_file -> consecutive unanswered
+        self.last_activity_time: float = time.time()         # for dynamic interval
+        
+        # --- Gateway and config ---
+        self.agent_config = self._fetch_agent_config()
+        self.gateway = MessageGateway(self.agent_config)
+        
         logging.info(f"Monitoring directory: {self.chat_directory}")
         logging.info(f"Looking for processed logs in: {self.processed_logs_dir}")
+
+    def _fetch_agent_config(self) -> dict:
+        """Fetch central agent config from the middleware at startup."""
+        try:
+            response = httpx.get(AGENT_CONFIG_URL, timeout=5.0)
+            if response.status_code == 200:
+                config = response.json()
+                logging.info(f"Loaded agent config from middleware: {list(config.keys())}")
+                return config
+        except Exception as e:
+            logging.warning(f"Could not fetch agent config from middleware: {e}")
+        # Return defaults
+        return {
+            "proactivity": {"min_cooldown_seconds": 300, "max_unanswered_interventions": 2, "wait_for_student_response": True,
+                            "poll_interval_active": 30, "poll_interval_idle": 300, "idle_threshold_seconds": 180},
+            "message_gateway": {"blocked_patterns": MessageGateway.DEFAULT_BLOCKED_PATTERNS, "min_message_length": 15}
+        }
+
 
     def on_modified(self, event):
         if event.is_directory:
@@ -80,6 +169,8 @@ class ChatHandler(FileSystemEventHandler):
                 if (last_message != self.last_processed_messages.get(file_path) and
                         not last_message.get("automated", False) and
                         "body" in last_message and "sender" in last_message):
+                    # Student sent a message — reset proactivity state
+                    self._reset_unanswered_count(file_path)
 
                     self.last_processed_messages[file_path] = last_message
                     logging.info(f"New message detected in {file_path} from {last_message['sender']}: '{last_message['body'][:50]}...'")
@@ -190,35 +281,37 @@ class ChatHandler(FileSystemEventHandler):
                      logging.error(f"Failed to write final/error message to {file_path}: {write_err}")
 
     def extract_session_id_from_filename(self, file_path: str) -> str:
-        # (Same as before)
         file_name = os.path.basename(file_path)
         session_id = file_name.replace(".chat", "")
         session_id = re.sub(r'[^a-zA-Z0-9_\-\.]', '_', session_id).lower()
         return session_id
 
     def format_log_entry(self, log: Dict[str, Any]) -> str:
-       # (Same as before)
        event_type = log.get('event', 'Unknown Event')
        cell_index = log.get('cell_index', 'N/A')
        timestamp = log.get('time', '')
+       source = log.get('source', 'jupyter')
+       notebook = os.path.basename(log.get('notebook', ''))
        details = ""
        if event_type == "Executed cells": details = f"Input: {log.get('input', '')[:200]} Output: {log.get('output', '')[:200]}"
        if event_type == "Executed cells with error": details = f"Input: {log.get('content', '')[:200]} Error: {log.get('error', '')[:200]}"
        if event_type in ["Edited cell", "Pasted content"]: details = f"Content: {log.get('content', '')[:200]}"
-       return f"{timestamp} - {event_type} (Cell {cell_index}): {details}"
+       if event_type == "Edited Pad": details = f"Content: {log.get('content', '')[:500]}"
+       return f"[{source.upper()}] {timestamp} - {event_type} ({notebook}, Cell {cell_index}): {details}"
 
     def get_processed_log_data(self, session_id: str, limit: Optional[int] = LOG_ENTRY_LIMIT) -> Optional[str]:
-        logging.debug(f"Looking for logs matching session_id: {session_id} in {self.processed_logs_dir}")
+        """Aggregate logs from ALL processed JSON files — unified view across Jupyter + Etherpad."""
+        logging.debug(f"Aggregating all logs from {self.processed_logs_dir}")
         try:
-            matching_log_files = [ f for f in os.listdir(self.processed_logs_dir) if f.endswith('.json') ]
+            matching_log_files = [f for f in os.listdir(self.processed_logs_dir) if f.endswith('.json')]
             if not matching_log_files:
                 logging.warning(f"No *.json log files found in {self.processed_logs_dir}")
                 return None
-            # Aggregate logs from all valid JSON files in the directory
+            
+            # Aggregate ALL logs from ALL files (unified view)
             all_logs = []
             for fname in matching_log_files:
                 log_file_path = os.path.join(self.processed_logs_dir, fname)
-                logging.info(f"Reading log file: {log_file_path}")
                 try:
                     with open(log_file_path, 'r') as log_file:
                         logs = json.load(log_file)
@@ -233,35 +326,38 @@ class ChatHandler(FileSystemEventHandler):
                     continue
                 all_logs.extend(logs)
 
-            matching_logs = []
-            for log in all_logs:
-                notebook_path = log.get('notebook', '')
-                if notebook_path:
-                    notebook_name = os.path.basename(notebook_path).removesuffix(".ipynb")
-                    sanitized_notebook_name = re.sub(r'^rtc[^a-zA-Z0-9]*', '', notebook_name, flags=re.IGNORECASE)
-                    sanitized_notebook_name = re.sub(r'[^a-zA-Z0-9_\-\.]', '_', sanitized_notebook_name).lower()
-                    if sanitized_notebook_name == session_id: matching_logs.append(log)
+            if not all_logs:
+                logging.info(f"No log entries found in any JSON file")
+                return None
 
-            if not matching_logs: logging.info(f"No matching logs for '{session_id}' in any JSON file"); return None
-
-            # apply limit if given, otherwise use entire session
-            if limit is not None and len(matching_logs) > limit:
-                selected = matching_logs[-limit:]
-            else:
-                selected = matching_logs
-            formatted_logs = [
-                self.format_log_entry(log)
-                for log in selected
+            # Filter out noise events
+            relevant_logs = [
+                log for log in all_logs
                 if log.get('event') not in ["Notebook became visible", "Closed notebook"]
             ]
+
+            if not relevant_logs:
+                return None
+
+            # Sort by time and apply limit
+            relevant_logs.sort(key=lambda x: x.get('time', ''))
+            if limit is not None and len(relevant_logs) > limit:
+                selected = relevant_logs[-limit:]
+            else:
+                selected = relevant_logs
+
+            formatted_logs = [self.format_log_entry(log) for log in selected]
             log_context = "\n".join(formatted_logs)
-            logging.info(f"Found {len(formatted_logs)} relevant log entries.")
+            logging.info(f"Found {len(formatted_logs)} relevant log entries across all sources.")
             return log_context
-        except FileNotFoundError: logging.warning(f"Log dir not found: {self.processed_logs_dir}"); return None
-        except Exception as e: logging.error(f"Error processing logs for {session_id}: {e}", exc_info=True); return None
+        except FileNotFoundError:
+            logging.warning(f"Log dir not found: {self.processed_logs_dir}")
+            return None
+        except Exception as e:
+            logging.error(f"Error processing logs: {e}", exc_info=True)
+            return None
 
     async def send_working_messages(self, content: Dict[str, Any], file_path: str):
-        # (Same as before)
         working_phrases = [ "Juno is working on it...", "Just a moment, processing...", "Thinking...", "Checking notes...", ]
         idx = 0; message_id = str(uuid.uuid4())
         self.working_message_ids[file_path] = message_id
@@ -279,7 +375,6 @@ class ChatHandler(FileSystemEventHandler):
         except Exception as e: logging.error(f"Error in send_working_messages loop for {file_path}: {e}", exc_info=True)
 
     def update_working_message(self, working_message: Dict[str, Any], content: Dict[str, Any], file_path: str):
-        # (Same as before - updates 'content' dict and writes to file)
         message_id = working_message["id"]; found = False
         current_messages = content.get("messages", [])
         for i, msg in enumerate(current_messages):
@@ -291,7 +386,6 @@ class ChatHandler(FileSystemEventHandler):
         except Exception as e: logging.error(f"Error writing working message to {file_path}: {e}")
 
     def replace_working_message(self, final_response: Dict[str, Any], content: Dict[str, Any], file_path: str):
-        # (Same as before - replaces message by ID or appends, updates 'content' dict and writes file)
         working_message_id = self.working_message_ids.get(file_path); found = False
         current_messages = content.get("messages", [])
         if working_message_id:
@@ -309,6 +403,165 @@ class ChatHandler(FileSystemEventHandler):
             with open(file_path, 'w') as file: json.dump(content, file, indent=4)
         except Exception as e: logging.error(f"Error writing final response to {file_path}: {e}")
         
+    async def proactivity_loop(self):
+        """Adaptive proactivity loop with cooldown, dedup, and gateway filtering."""
+        logging.info("Starting adaptive proactivity loop...")
+        
+        proactivity_cfg = self.agent_config.get("proactivity", {})
+        min_cooldown = proactivity_cfg.get("min_cooldown_seconds", 300)
+        max_unanswered = proactivity_cfg.get("max_unanswered_interventions", 2)
+        wait_for_response = proactivity_cfg.get("wait_for_student_response", True)
+        poll_active = proactivity_cfg.get("poll_interval_active", 30)
+        poll_idle = proactivity_cfg.get("poll_interval_idle", 300)
+        idle_threshold = proactivity_cfg.get("idle_threshold_seconds", 180)
+        
+        logging.info(f"Proactivity config: cooldown={min_cooldown}s, max_unanswered={max_unanswered}, "
+                     f"poll_active={poll_active}s, poll_idle={poll_idle}s")
+        
+        while True:
+            # Dynamic interval: poll faster when active, slower when idle
+            since_activity = time.time() - self.last_activity_time
+            poll_interval = poll_active if since_activity < idle_threshold else poll_idle
+            await asyncio.sleep(poll_interval)
+            
+            try:
+                chat_files = [
+                    os.path.join(self.chat_directory, f)
+                    for f in os.listdir(self.chat_directory)
+                    if f.endswith('.chat')
+                ]
+                
+                for file_path in chat_files:
+                    if not os.path.exists(file_path):
+                        continue
+                    
+                    try:
+                        await self._evaluate_proactivity_for_chat(
+                            file_path, min_cooldown, max_unanswered, wait_for_response
+                        )
+                    except Exception as e:
+                        logging.error(f"Error in proactivity evaluation for {file_path}: {e}")
+                        
+            except Exception as e:
+                logging.error(f"Error in proactivity loop: {e}")
+
+    async def _evaluate_proactivity_for_chat(
+        self, file_path: str, min_cooldown: int, max_unanswered: int, wait_for_response: bool
+    ):
+        """Evaluate proactivity for a single chat file with all safeguards."""
+        
+        # --- Check 1: Cooldown ---
+        last_time = self.last_intervention_time.get(file_path, 0)
+        if time.time() - last_time < min_cooldown:
+            logging.debug(f"Cooldown active for {file_path}, skipping")
+            return
+        
+        # --- Check 2: Max unanswered interventions ---
+        if self.unanswered_count.get(file_path, 0) >= max_unanswered:
+            logging.debug(f"Max unanswered ({max_unanswered}) reached for {file_path}, backing off")
+            return
+        
+        # --- Read chat file ---
+        with open(file_path, 'r') as f:
+            content = json.load(f)
+        
+        messages = content.get("messages", [])
+        
+        # --- Check 3: Wait for student response ---
+        if wait_for_response and messages:
+            last_msg = messages[-1]
+            if last_msg.get("automated", False) and last_msg.get("sender") == "Juno":
+                logging.debug(f"Waiting for student response in {file_path}, skipping")
+                return
+        
+        # --- Get student ID ---
+        student_id = "unknown_student"
+        for msg in reversed(messages):
+            if not msg.get("automated", False):
+                student_id = msg.get("sender", "unknown_student")
+                break
+        
+        # --- Get logs ---
+        file_name = os.path.basename(file_path)
+        session_id = self.extract_session_id_from_filename(file_path)
+        processed_log_data = self.get_processed_log_data(session_id, limit=20)
+        
+        if not processed_log_data:
+            return
+        
+        # --- Check 4: Content hash dedup (skip if logs haven't changed) ---
+        log_hash = hashlib.md5(processed_log_data.encode()).hexdigest()
+        if self.last_log_hash.get(file_path) == log_hash:
+            logging.debug(f"Logs unchanged for {file_path}, skipping LLM call")
+            return
+        self.last_log_hash[file_path] = log_hash
+        
+        # --- Call TA for evaluation ---
+        async with httpx.AsyncClient() as client:
+            logging.info(f"Evaluating proactivity for {student_id} ({file_name})...")
+            response = await client.post(
+                PROACTIVITY_URL,
+                json={
+                    "student_id": student_id,
+                    "file_name": file_name,
+                    "processed_logs": processed_log_data
+                },
+                timeout=60.0
+            )
+            response.raise_for_status()
+            intervention_data = response.json()
+            intervention_text = intervention_data.get("intervention", "NO_INTERVENTION")
+        
+        # --- Check 5: NO_INTERVENTION ---
+        if not intervention_text or "NO_INTERVENTION" in intervention_text.upper():
+            logging.info(f"No intervention needed for {student_id}")
+            return
+        
+        # --- Check 6: Message Gateway (client-side final filter) ---
+        is_valid, cleaned_text = self.gateway.validate(intervention_text)
+        if not is_valid:
+            logging.info(f"Gateway rejected proactive message for {student_id}")
+            return
+        
+        # --- Check 7: Message dedup (don't repeat same message) ---
+        if self.last_intervention_text.get(file_path) == cleaned_text:
+            logging.info(f"Duplicate intervention for {file_path}, skipping")
+            return
+        
+        # --- All checks passed: write the message ---
+        logging.info(f"Proactive intervention for {student_id}: {cleaned_text[:80]}...")
+        
+        intervention_message = {
+            "body": cleaned_text,
+            "sender": "Juno",
+            "type": "msg",
+            "id": str(uuid.uuid4()),
+            "time": time.time(),
+            "raw_time": False,
+            "automated": True
+        }
+        
+        # Re-read file to avoid race conditions
+        with open(file_path, 'r') as f:
+            current_content = json.load(f)
+        current_messages = current_content.get("messages", [])
+        current_messages.append(intervention_message)
+        current_content["messages"] = current_messages
+        with open(file_path, 'w') as f:
+            json.dump(current_content, f, indent=4)
+        
+        # Update state
+        self.last_intervention_time[file_path] = time.time()
+        self.last_intervention_text[file_path] = cleaned_text
+        self.unanswered_count[file_path] = self.unanswered_count.get(file_path, 0) + 1
+        
+        logging.info(f"Proactive message written to {file_path} (unanswered count: {self.unanswered_count[file_path]})")
+
+    def _reset_unanswered_count(self, file_path: str):
+        """Called when a student sends a message — resets the unanswered counter."""
+        if file_path in self.unanswered_count:
+            self.unanswered_count[file_path] = 0
+        self.last_activity_time = time.time()
 
 # --- Main Function ---
 def main(directory_path, processed_logs_dir):
@@ -326,13 +579,15 @@ def main(directory_path, processed_logs_dir):
     observer.schedule(event_handler, path=chat_directory, recursive=False)
     observer.start()
     logging.info("Watchdog observer started.")
+    
+    # Start proactivity loop
+    loop.create_task(event_handler.proactivity_loop())
 
     # --- Run Observer Loop ---
     try:
         print(f"Monitoring directory: {chat_directory}")
         print(f"Using processed logs from: {processed_logs_path}")
         print(f"TA URL: {TA_URL}")
-        # REMOVED: print(f"Chat Interact receiver running...")
         print("Press Ctrl+C to exit.")
         # Run the asyncio loop forever to keep watchdog alive
         loop.run_forever()

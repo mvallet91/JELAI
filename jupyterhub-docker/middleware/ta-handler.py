@@ -6,11 +6,12 @@ import re
 import os
 import httpx
 import logging
-import json # Added
-import hashlib # Added
-from pathlib import Path # Added
+import json
+import hashlib
+from pathlib import Path
 from dotenv import load_dotenv
 import uvicorn
+import yaml
 from typing import Optional, List 
 from thefuzz import process
 from sentence_transformers import SentenceTransformer, util
@@ -18,12 +19,35 @@ import torch # May be needed depending on sentence-transformers version/setup
 import glob
 import asyncio
 
+from learning_story import build_canvas, canvas_to_prompt
+from learner_model import update_rule_based_state
+from teacher_view import router as teacher_router
+
 # --- Configuration ---
 load_dotenv()
 
 # DATABASE_FILE = "chat_history.db" # for local testing
 DATABASE_FILE = "/app/chat_histories/chat_history.db"  # for docker
 EXPERIMENT_CONFIG_FILE = Path(__file__).parent / "inputs" / "ab_experiments.json" # Added
+AGENT_CONFIG_FILE = Path(__file__).parent / "inputs" / "agent_config.yaml"
+
+# --- Load Central Agent Config ---
+def load_agent_config():
+    try:
+        with open(AGENT_CONFIG_FILE, 'r') as f:
+            config = yaml.safe_load(f)
+        logging.info(f"Loaded agent config from {AGENT_CONFIG_FILE}")
+        return config
+    except Exception as e:
+        logging.warning(f"Failed to load agent config: {e}. Using defaults.")
+        return {
+            "agent": {"name": "Juno"},
+            "proactivity": {"min_cooldown_seconds": 300, "max_unanswered_interventions": 2, "wait_for_student_response": True},
+            "message_gateway": {"blocked_patterns": ["NO_INTERVENTION"], "min_message_length": 15, "max_message_length": 2000},
+            "models": {"classification": "gemma3:27b", "response": "gemma3:27b", "proactivity": "gemma3:27b"}
+        }
+
+AGENT_CONFIG = load_agent_config()
 
 EA_URL = "http://localhost:8003/expert_query" 
 
@@ -106,6 +130,7 @@ except Exception as e:
     NEXT_STEPS_MAP = {"default": ["No next steps available."]}
 
 app = FastAPI(title="Multi-Agent Flow")
+app.include_router(teacher_router)
 
 # --- Global variable for experiment config ---
 ACTIVE_EXPERIMENT_CONFIG = None # Added
@@ -171,8 +196,16 @@ def init_db():
                     PRIMARY KEY (student_id, experiment_id)
                 )
             """)
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS learner_models (
+                    student_id TEXT PRIMARY KEY,
+                    profile_data TEXT NOT NULL,
+                    last_updated REAL NOT NULL,
+                    last_llm_eval REAL NOT NULL
+                )
+            """)
             conn.commit()
-            logging.info("Database initialized (chat_history, student_profiles & student_experiment_assignments tables checked/created).")
+            logging.info("Database initialized (chat_history, student_profiles, student_experiment_assignments, & learner_models tables checked/created).")
     except sqlite3.Error as e:
         logging.error(f"Database initialization failed: {e}")
         raise
@@ -990,6 +1023,164 @@ Please return to the Qualtrics survey tab and enter the following code to finali
 @app.get("/verify_ta")
 def verify():
     return {"message": "Tutor Agent (Sync Response) is working"}
+
+@app.get("/agent_config")
+def get_agent_config():
+    """Returns the central agent config so notebook clients can fetch gateway rules."""
+    return AGENT_CONFIG
+
+class ProactivityRequest(BaseModel):
+    student_id: str
+    file_name: str
+    processed_logs: str
+
+class ProactivityResponse(BaseModel):
+    intervention: str
+    reasoning: str = ""
+
+@app.post("/evaluate_proactivity", response_model=ProactivityResponse)
+async def evaluate_proactivity(request: ProactivityRequest):
+    """
+    Evaluates the student's recent logs and conversation history to determine 
+    if a proactive intervention is needed. Uses structured JSON output to
+    separate internal reasoning from the student-facing message.
+    """
+    logging.info(f"Evaluating proactivity for {request.student_id}...")
+    
+    proactivity_config = AGENT_CONFIG.get("proactivity", {})
+    agent_name = AGENT_CONFIG.get("agent", {}).get("name", "Juno")
+    
+    try:
+        # Get recent history
+        conversation_history_messages = get_history(request.student_id, request.file_name, limit=10)
+        formatted_history = format_history_for_prompt(conversation_history_messages)
+        
+        # Determine assignment context
+        assignment_id = derive_assignment_id(request.file_name)
+        assignment_desc = ASSIGNMENT_DESCRIPTIONS.get(assignment_id, DEFAULT_ASSIGNMENT_DESCRIPTION)
+        learning_objs = LEARNING_OBJECTIVES_MAP.get(assignment_id, DEFAULT_LEARNING_OBJECTIVES)
+        
+        # Build the Student Activity Canvas and update Learner Model
+        try:
+            canvas = build_canvas(request.student_id)
+            canvas_text = canvas_to_prompt(canvas)
+            learner_state = update_rule_based_state(request.student_id, canvas)
+            learner_state_text = (
+                f"\n=== LEARNER STATE ===\n"
+                f"Knowledge Proficiency: {learner_state['knowledge']}\n"
+                f"Metacognitive State: {learner_state['metacognition']['state']}\n"
+                f"Affect/Emotion: {learner_state['affect']['state']}\n"
+                f"=== END LEARNER STATE ===\n"
+            )
+        except Exception as ce:
+            logging.warning(f"Failed to build canvas/model, falling back to raw logs: {ce}")
+            canvas_text = f"Raw Activity Logs:\n{request.processed_logs}"
+            learner_state_text = ""
+        
+        proactivity_prompt = [
+            {"role": "system", "content": f"""You are {agent_name}, a proactive pedagogical agent observing a student working across three tools: Jupyter Notebook (code), Etherpad (report writing), and Chat (questions).
+
+Your task: Analyze the Student Activity Canvas below and decide whether to send a CROSS-TOOL NUDGE.
+
+TYPES OF NUDGES (pick the most relevant):
+1. CODE-to-WRITING: Student ran code with interesting output but hasn't written about it. Suggest they document the finding.
+2. WRITING-to-CODE: Student claims something in writing but hasn't verified it with code. Suggest they test it with specific code.
+3. STUCK-SCAFFOLD: Student has repeated errors and hasn't asked for help. Offer gentle help with a specific hint.
+4. PROGRESS-CELEBRATION: Student overcame a struggle or made meaningful progress. Brief acknowledgment.
+5. IDLE-CHECK-IN: No activity across all tools for a while. Gentle, non-pushy suggestion for next step.
+
+DO NOT NUDGE if:
+- The student is making steady progress
+- You already sent a similar message recently (check conversation history)
+- The student just asked a question or received a response
+- The student hasn't responded to your last message
+- There are no cross-tool gaps to address
+
+CRITICAL RULES:
+- Your response must be valid JSON with exactly two fields
+- The "reasoning" field is INTERNAL ONLY and will NEVER be shown to the student
+- The "message" field is the ONLY thing the student will see
+- The message must be natural, friendly, student-facing. No meta-commentary or analysis.
+- If no nudge is needed, set message to exactly "NO_INTERVENTION"
+- Reference specific things the student did (their code, their writing, their question)
+
+Respond with this exact JSON format:
+{{"reasoning": "your internal analysis here", "message": "friendly nudge to student OR NO_INTERVENTION"}}"""},
+            {"role": "user", "content": f"""Assignment: {assignment_desc}
+
+Learning Objectives: {', '.join(learning_objs)}
+
+{canvas_text}
+{learner_state_text}
+Recent Conversation History:
+{formatted_history}
+
+Respond with the JSON object only. No other text."""}
+        ]
+        
+        proactivity_model = AGENT_CONFIG.get("models", {}).get("proactivity", RESPONSE_MODEL_NAME)
+        intervention_response = await call_llm(
+            proactivity_prompt,
+            model_name=proactivity_model,
+            purpose="proactivity evaluation"
+        )
+        
+        # Parse the structured JSON response
+        reasoning = ""
+        message = "NO_INTERVENTION"
+        
+        raw = intervention_response.strip()
+        # Try to extract JSON from the response
+        try:
+            # Handle markdown code fences
+            if "```" in raw:
+                raw = re.sub(r'```(?:json)?\s*', '', raw).strip().rstrip('`').strip()
+            parsed = json.loads(raw)
+            reasoning = parsed.get("reasoning", "")
+            message = parsed.get("message", "NO_INTERVENTION")
+        except json.JSONDecodeError:
+            # Fallback: treat as plain text (old behavior)
+            logging.warning(f"Failed to parse proactivity JSON, falling back to plain text: {raw[:100]}")
+            message = raw
+        
+        logging.info(f"Proactivity reasoning for {request.student_id}: {reasoning[:100]}")
+        
+        # Robust NO_INTERVENTION check
+        if "NO_INTERVENTION" in message.upper():
+            logging.info(f"No intervention needed for {request.student_id}")
+            return ProactivityResponse(intervention="NO_INTERVENTION", reasoning=reasoning)
+        
+        # Server-side blocked pattern check (defense in depth — client also checks)
+        gateway_config = AGENT_CONFIG.get("message_gateway", {})
+        blocked_patterns = gateway_config.get("blocked_patterns", [])
+        for pattern in blocked_patterns:
+            if pattern.lower() in message.lower():
+                logging.warning(f"Blocked pattern '{pattern}' found in proactive message for {request.student_id}. Suppressing.")
+                return ProactivityResponse(intervention="NO_INTERVENTION", reasoning=f"Blocked: {pattern} found in message")
+        
+        # Check minimum message length
+        min_len = gateway_config.get("min_message_length", 15)
+        if len(message.strip()) < min_len:
+            logging.warning(f"Proactive message too short ({len(message)} chars) for {request.student_id}. Suppressing.")
+            return ProactivityResponse(intervention="NO_INTERVENTION", reasoning="Message too short")
+        
+        logging.info(f"Proactive intervention generated for {request.student_id}: {message[:80]}...")
+        
+        # Store the proactive intervention in history
+        add_to_history(
+            student_id=request.student_id, 
+            message_type="response",
+            message_text=message, 
+            message_classification=None,
+            file_name=request.file_name
+        )
+        
+        return ProactivityResponse(intervention=message, reasoning=reasoning)
+            
+    except Exception as e:
+        logging.error(f"Error during proactivity evaluation: {e}", exc_info=True)
+        return ProactivityResponse(intervention="NO_INTERVENTION", reasoning=str(e))
+
 
 # Load model (do this once at startup, outside the request handler)
 # Use a lightweight model suitable for the task

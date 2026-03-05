@@ -14,7 +14,8 @@ dependencies = [
     "fluent-logger",
     "httpx",
     "sentence-transformers",
-    "asyncio"
+    "asyncio",
+    "pyyaml"
 ]
 
 [[tool.uv.index]]

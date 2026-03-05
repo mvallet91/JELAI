@@ -42,3 +42,6 @@ wiki/
 
 # User Notebook
 /jupyterhub-docker/user-notebook/user-venv/
+
+# Logs
+*.log

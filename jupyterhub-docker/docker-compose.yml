@@ -49,6 +49,19 @@ services:
     networks:
       - jupyterhub-network
 
+  etherpad:
+    image: etherpad/etherpad:latest
+    container_name: etherpad
+    networks:
+      - jupyterhub-network
+    ports:
+      - "9001:9001"
+    environment:
+      - REQUIRE_AUTHENTICATION=false
+      - AUTHENTICATION_METHOD=apikey
+    volumes:
+      - ./etherpad/APIKEY.txt:/opt/etherpad-lite/APIKEY.txt
+
   middleware:
     build:
       context: ./middleware
@@ -63,8 +76,8 @@ services:
       - "./middleware/inputs:/app/inputs:ro"
     ports:
       - "24224:24224"
-      - "8004:8004" 
-      - "8003:8003"  
+      - "8004:8004"
+      - "8003:8003"
     depends_on:
       - hub
 
@@ -72,6 +85,7 @@ volumes:
   jupyterhub-data:
   middleware-data:
   chat-histories:
+
 
 networks:
   jupyterhub-network:

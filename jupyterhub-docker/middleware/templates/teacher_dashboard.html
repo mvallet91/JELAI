@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JELAI Teacher Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0f1117;
+            --bg-secondary: #1a1d27;
+            --bg-card: #222536;
+            --bg-hover: #2a2e42;
+            --text-primary: #e8eaed;
+            --text-secondary: #9aa0b0;
+            --text-muted: #6b7280;
+            --accent-blue: #5b8def;
+            --accent-green: #4ade80;
+            --accent-orange: #f59e0b;
+            --accent-red: #ef4444;
+            --accent-purple: #a78bfa;
+            --border: #2d3148;
+            --jupyter: #f59e0b;
+            --etherpad: #a78bfa;
+            --chat: #5b8def;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+        }
+
+        .header {
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border);
+            padding: 16px 32px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header h1 {
+            font-size: 20px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .header h1 span {
+            font-size: 24px;
+        }
+
+        .refresh-btn {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            color: var(--text-primary);
+            padding: 8px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 13px;
+            transition: background 0.2s;
+        }
+
+        .refresh-btn:hover {
+            background: var(--bg-hover);
+        }
+
+        .container {
+            display: grid;
+            grid-template-columns: 320px 1fr;
+            gap: 0;
+            height: calc(100vh - 57px);
+        }
+
+        /* --- Student List --- */
+        .student-list {
+            background: var(--bg-secondary);
+            border-right: 1px solid var(--border);
+            overflow-y: auto;
+            padding: 16px;
+        }
+
+        .student-list h2 {
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 12px;
+        }
+
+        .student-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 14px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .student-card:hover,
+        .student-card.active {
+            background: var(--bg-hover);
+            border-color: var(--accent-blue);
+        }
+
+        .student-card .name {
+            font-weight: 500;
+            font-size: 14px;
+            margin-bottom: 6px;
+        }
+
+        .student-card .stats {
+            display: flex;
+            gap: 12px;
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .student-card .stats .stat {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .student-card .stats .stat .icon {
+            font-size: 14px;
+        }
+
+        .status-dot {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-right: 6px;
+        }
+
+        .status-dot.active {
+            background: var(--accent-green);
+        }
+
+        .status-dot.idle {
+            background: var(--accent-orange);
+        }
+
+        .status-dot.inactive {
+            background: var(--accent-red);
+        }
+
+        /* --- Main Content --- */
+        .main-content {
+            overflow-y: auto;
+            padding: 24px 32px;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 60px;
+            color: var(--text-muted);
+        }
+
+        .story-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 24px;
+        }
+
+        .story-header h2 {
+            font-size: 22px;
+            font-weight: 600;
+        }
+
+        .story-header .duration {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            padding: 6px 14px;
+            border-radius: 8px;
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        .summary-box {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 24px;
+            line-height: 1.6;
+            color: var(--text-secondary);
+            font-size: 14px;
+        }
+
+        .summary-box strong {
+            color: var(--text-primary);
+        }
+
+        /* --- Sections --- */
+        .section {
+            margin-bottom: 28px;
+        }
+
+        .section h3 {
+            font-size: 14px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-secondary);
+            margin-bottom: 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* --- Timeline --- */
+        .timeline {
+            position: relative;
+            padding-left: 30px;
+        }
+
+        .timeline::before {
+            content: '';
+            position: absolute;
+            left: 10px;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: var(--border);
+        }
+
+        .timeline-event {
+            position: relative;
+            padding: 10px 16px;
+            margin-bottom: 4px;
+            border-radius: 8px;
+            font-size: 13px;
+            transition: background 0.2s;
+        }
+
+        .timeline-event:hover {
+            background: var(--bg-card);
+        }
+
+        .timeline-event::before {
+            content: '';
+            position: absolute;
+            left: -24px;
+            top: 14px;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            border: 2px solid var(--border);
+            background: var(--bg-primary);
+        }
+
+        .timeline-event.source-jupyter::before {
+            border-color: var(--jupyter);
+            background: var(--jupyter);
+        }
+
+        .timeline-event.source-etherpad::before {
+            border-color: var(--etherpad);
+            background: var(--etherpad);
+        }
+
+        .timeline-event.source-chat::before {
+            border-color: var(--chat);
+            background: var(--chat);
+        }
+
+        .timeline-event .time {
+            color: var(--text-muted);
+            font-size: 11px;
+            font-family: monospace;
+            margin-right: 8px;
+        }
+
+        .timeline-event .source-badge {
+            display: inline-block;
+            padding: 1px 6px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-right: 8px;
+        }
+
+        .source-badge.jupyter {
+            background: rgba(245, 158, 11, 0.15);
+            color: var(--jupyter);
+        }
+
+        .source-badge.etherpad {
+            background: rgba(167, 139, 250, 0.15);
+            color: var(--etherpad);
+        }
+
+        .source-badge.chat {
+            background: rgba(91, 141, 239, 0.15);
+            color: var(--chat);
+        }
+
+        .timeline-event .event-text {
+            color: var(--text-primary);
+        }
+
+        .timeline-event.type-code_error .event-text {
+            color: var(--accent-red);
+        }
+
+        .timeline-event.type-code_success .event-text code {
+            background: rgba(74, 222, 128, 0.1);
+            color: var(--accent-green);
+            padding: 1px 4px;
+            border-radius: 3px;
+            font-size: 12px;
+        }
+
+        /* --- Insights --- */
+        .insights-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        .insight-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 16px;
+        }
+
+        .insight-card .label {
+            font-size: 11px;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-muted);
+            margin-bottom: 6px;
+        }
+
+        .insight-card .value {
+            font-size: 14px;
+            color: var(--text-primary);
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 6px;
+            background: var(--bg-primary);
+            border-radius: 3px;
+            margin-top: 6px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: var(--accent-blue);
+            border-radius: 3px;
+            transition: width 0.3s ease;
+        }
+
+        /* --- Recommendations --- */
+        .recommendation {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-left: 3px solid var(--accent-blue);
+            border-radius: 0 10px 10px 0;
+            padding: 12px 16px;
+            margin-bottom: 8px;
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        /* --- Legend --- */
+        .legend {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 12px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        .legend-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+
+        .legend-dot.jupyter {
+            background: var(--jupyter);
+        }
+
+        .legend-dot.etherpad {
+            background: var(--etherpad);
+        }
+
+        .legend-dot.chat {
+            background: var(--chat);
+        }
+
+        /* --- Empty state --- */
+        .empty-state {
+            text-align: center;
+            padding: 80px 32px;
+            color: var(--text-muted);
+        }
+
+        .empty-state .icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+        }
+
+        .empty-state h3 {
+            font-size: 18px;
+            margin-bottom: 8px;
+            color: var(--text-secondary);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="header">
+        <h1><span>📊</span> JELAI Teacher Dashboard</h1>
+        <button class="refresh-btn" onclick="loadStudents()">🔄 Refresh</button>
+    </div>
+    <div class="container">
+        <div class="student-list">
+            <h2>Students</h2>
+            <div id="student-list-content">
+                <div class="loading">Loading students...</div>
+            </div>
+        </div>
+        <div class="main-content" id="main-content">
+            <div class="empty-state">
+                <div class="icon">🎓</div>
+                <h3>Select a student</h3>
+                <p>Click on a student to view their learning story</p>
+            </div>
+        </div>
+    </div>
+    <script>
+        let currentStudentId = null;
+
+        async function loadStudents() {
+            try {
+                const resp = await fetch('/teacher/students');
+                const data = await resp.json();
+                const container = document.getElementById('student-list-content');
+
+                if (!data.students || data.students.length === 0) {
+                    container.innerHTML = '<div class="loading">No students found</div>';
+                    return;
+                }
+
+                container.innerHTML = data.students.map(s => {
+                    const lastSeen = s.last_seen ? new Date(s.last_seen * 1000) : null;
+                    const minsAgo = lastSeen ? Math.floor((Date.now() - lastSeen) / 60000) : Infinity;
+                    const statusClass = minsAgo < 5 ? 'active' : minsAgo < 30 ? 'idle' : 'inactive';
+                    const shortId = s.student_id.substring(0, 8) + '...';
+                    return `
+                        <div class="student-card ${s.student_id === currentStudentId ? 'active' : ''}"
+                             onclick="loadStory('${s.student_id}')">
+                            <div class="name">
+                                <span class="status-dot ${statusClass}"></span>
+                                ${shortId}
+                            </div>
+                            <div class="stats">
+                                <span class="stat"><span class="icon">💬</span> ${s.message_count} msgs</span>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            } catch (e) {
+                document.getElementById('student-list-content').innerHTML =
+                    '<div class="loading">Error loading students</div>';
+            }
+        }
+
+        async function loadStory(studentId) {
+            currentStudentId = studentId;
+            loadStudents(); // refresh active state
+            const main = document.getElementById('main-content');
+            main.innerHTML = '<div class="loading">Building learning story...</div>';
+
+            try {
+                const resp = await fetch(`/teacher/student/${studentId}/story`);
+                const story = await resp.json();
+                renderStory(story);
+            } catch (e) {
+                main.innerHTML = `<div class="loading">Error: ${e.message}</div>`;
+            }
+        }
+
+        function renderStory(story) {
+            const main = document.getElementById('main-content');
+            const shortId = story.student_id.substring(0, 12) + '...';
+
+            main.innerHTML = `
+                <div class="story-header">
+                    <h2>${shortId}</h2>
+                    <div class="duration">⏱ ${story.session_duration}</div>
+                </div>
+
+                <div class="summary-box">
+                    <strong>📖 Learning Story</strong><br>
+                    ${story.summary}
+                </div>
+
+                <div class="section">
+                    <h3>📅 Activity Timeline</h3>
+                    <div class="legend">
+                        <span class="legend-item"><span class="legend-dot jupyter"></span> Jupyter</span>
+                        <span class="legend-item"><span class="legend-dot etherpad"></span> Etherpad</span>
+                        <span class="legend-item"><span class="legend-dot chat"></span> Chat</span>
+                    </div>
+                    <div class="timeline">
+                        ${renderTimeline(story.timeline)}
+                    </div>
+                </div>
+
+                <div class="section">
+                    <h3>🔍 Insights</h3>
+                    <div class="insights-grid">
+                        ${renderInsights(story.insights)}
+                    </div>
+                </div>
+                
+                <div class="section">
+                    <h3>🧠 Learner State</h3>
+                    <div class="insights-grid">
+                        ${renderLearnerModel(story.learner_model)}
+                    </div>
+                </div>
+
+                ${story.recommendations.length > 0 ? `
+                <div class="section">
+                    <h3>💡 Suggestions</h3>
+                    ${story.recommendations.map(r => `<div class="recommendation">${r}</div>`).join('')}
+                </div>
+                ` : ''}
+
+                ${story.canvas.cross_tool_gaps.length > 0 ? `
+                <div class="section">
+                    <h3>⚠️ Cross-Tool Gaps</h3>
+                    ${story.canvas.cross_tool_gaps.map(g => `
+                        <div class="recommendation" style="border-left-color: var(--accent-orange)">
+                            <strong>${g.type.replace(/_/g, ' ')}</strong>: ${g.detail}
+                        </div>
+                    `).join('')}
+                </div>
+                ` : ''}
+            `;
+        }
+
+        function renderTimeline(timeline) {
+            if (!timeline || timeline.length === 0) {
+                return '<div class="loading">No activity recorded</div>';
+            }
+            // Show last 50 events
+            const events = timeline.slice(-50);
+            return events.map(evt => {
+                const timeStr = evt.time ? evt.time.split(' ')[1] || evt.time : '';
+                const shortTime = timeStr.substring(0, 5);
+                return `
+                    <div class="timeline-event source-${evt.source} type-${evt.type}">
+                        <span class="time">${shortTime}</span>
+                        <span class="source-badge ${evt.source}">${evt.source}</span>
+                        <span class="event-text">${escapeHtml(evt.summary).substring(0, 150)}</span>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function renderInsights(insights) {
+            const cards = [
+                { label: 'Concepts Explored', value: insights.concepts_explored.join(', ') || 'None yet' },
+                { label: 'Engagement Level', value: insights.engagement_level },
+                { label: 'Writing Quality', value: insights.writing_quality },
+                { label: 'Help Seeking', value: insights.help_seeking },
+                { label: 'Code vs Writing', value: insights.code_vs_writing_gap },
+                { label: 'Struggles', value: insights.struggles.join(', ') || 'None observed' },
+            ];
+            return cards.map(c => `
+                <div class="insight-card">
+                    <div class="label">${c.label}</div>
+                    <div class="value">${c.value}</div>
+                </div>
+            `).join('');
+        }
+
+        function renderLearnerModel(model) {
+            if (!model) return '<div class="insight-card">No model data yet.</div>';
+
+            // Format Knowledge
+            let kHtml = '<div class="insight-card"><div class="label">Knowledge Trace</div><div style="margin-top: 12px;">';
+            const kmap = { 'data_loading': 'Data Loading', 'data_exploration': 'Exploration', 'data_manipulation': 'Manipulation', 'visualization': 'Visualization', 'data_interpretation': 'Interpretation' };
+            for (const [key, val] of Object.entries(model.knowledge || {})) {
+                if (kmap[key]) {
+                    const pct = Math.min(100, Math.round(val.score * 100));
+                    kHtml += `<div style="margin-bottom:10px; font-size:12px; color:var(--text-secondary);">
+                                <div style="display:flex; justify-content:space-between;"><span>${kmap[key]}</span><span>${pct}%</span></div>
+                                <div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>
+                              </div>`;
+                }
+            }
+            kHtml += '</div></div>';
+
+            const mHtml = `
+                <div class="insight-card">
+                    <div style="margin-bottom:20px;">
+                        <div class="label">Behavioral State</div>
+                        <div class="value" style="font-size: 16px; font-weight: 500;">${model.metacognition?.state || 'Unknown'}</div>
+                    </div>
+                    <div>
+                        <div class="label">Affect / Emotion</div>
+                        <div class="value" style="font-size: 16px; font-weight: 500; color: ${model.affect?.state === 'Frustrated' ? 'var(--accent-red)' : (model.affect?.state === 'Flow' ? 'var(--accent-green)' : 'var(--text-primary)')}">
+                            ${model.affect?.state || 'Neutral'}
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            return mHtml + kHtml;
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Load students on page load
+        loadStudents();
+    </script>
+</body>
+
+</html>

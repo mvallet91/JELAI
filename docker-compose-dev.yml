@@ -9,35 +9,39 @@ services:
       args:
         - CHAT_DIR=chats
     volumes:
-        # Mount notebook workspace and log data for development
-        - "notebook-workspace:/home/jovyan/work"
-        - "log-data:/home/jovyan/logs" 
+      # Mount notebook workspace and log data for development
+      - "notebook-workspace:/home/jovyan/work"
+      - "log-data:/home/jovyan/logs"
+      # Mount python scripts for development
+      - "./jupyterhub-docker/user-notebook/chat_interact.py:/home/jovyan/chat_interact.py"
+      - "./jupyterhub-docker/user-notebook/process_logs.py:/home/jovyan/process_logs.py"
+      - "./jupyterhub-docker/user-notebook/utils.py:/home/jovyan/utils.py"
+      - "./jupyterhub-docker/user-notebook/etherpad_logger.py:/home/jovyan/etherpad_logger.py"
     environment:
-      - JUPYTER_TOKEN=dev  # Simple token for development access
+      - JUPYTER_TOKEN=dev # Simple token for development access
       - TA_MIDDLEWARE_URL=http://middleware-dev:8004
+      - ETHERPAD_URL=http://etherpad-dev:9001
     image: user-notebook-dev
     container_name: notebook-dev
     ports:
-      - "8888:8888"  # Expose JupyterLab directly
+      - "8888:8888" # Expose JupyterLab directly
     networks:
       - jelai-dev-network
     command: >
-      bash -c "
-      echo 'Starting background services...' &&
-      . /home/jovyan/venv/bin/activate &&
-      python /home/jovyan/chat_interact.py /home/jovyan/work/chats /home/jovyan/logs/processed >> /home/jovyan/chat_interact.log 2>&1 &
-      echo 'Processing logs...' &&
-      . /home/jovyan/venv/bin/activate &&
-      python /home/jovyan/process_logs.py /home/jovyan/logs/log /home/jovyan/logs/processed >> /home/jovyan/process_logs.log 2>&1 &
-      echo 'Starting JupyterLab...' &&
-      jupyter lab
-      --ip=0.0.0.0
-      --port=8888
-      --no-browser
-      --ServerApp.token='dev'
-      --ServerApp.password=''
-      --ServerApp.allow_remote_access=True
-      "
+      bash -c " echo 'Starting background services...' && . /home/jovyan/venv/bin/activate && python /home/jovyan/chat_interact.py /home/jovyan/work/chats /home/jovyan/logs/processed >> /home/jovyan/chat_interact.log 2>&1 & echo 'Processing logs...' && . /home/jovyan/venv/bin/activate && python /home/jovyan/process_logs.py /home/jovyan/logs/log /home/jovyan/logs/processed >> /home/jovyan/process_logs.log 2>&1 & echo 'Starting Etherpad Logger...' && . /home/jovyan/venv/bin/activate && python /home/jovyan/etherpad_logger.py test_pad /home/jovyan/logs/log >> /home/jovyan/etherpad_logger.log 2>&1 & echo 'Starting JupyterLab...' && jupyter lab --ip=0.0.0.0 --port=8888 --no-browser --ServerApp.token='dev' --ServerApp.password='' --ServerApp.allow_remote_access=True "
+
+  etherpad-dev:
+    image: etherpad/etherpad:latest
+    container_name: etherpad-dev
+    networks:
+      - jelai-dev-network
+    ports:
+      - "9001:9001"
+    environment:
+      - REQUIRE_AUTHENTICATION=false
+      - AUTHENTICATION_METHOD=apikey
+    volumes:
+      - ./jupyterhub-docker/etherpad/APIKEY.txt:/opt/etherpad-lite/APIKEY.txt
 
   middleware-dev:
     build:
@@ -51,21 +55,28 @@ services:
       # Mount middleware code for development
       - "middleware-dev-data:/var/log/jelai"
       - "chat-histories:/app/chat_histories"
-    # Mount learning objectives file for development
+      - "log-data:/app/student-logs" # Shared volume: processed logs from notebook
+      # Mount learning objectives file for development
       - "./jupyterhub-docker/middleware/ea-handler.py:/app/ea-handler.py"
       - "./jupyterhub-docker/middleware/ta-handler.py:/app/ta-handler.py"
       - "./jupyterhub-docker/middleware/utils.py:/app/utils.py"
+      - "./jupyterhub-docker/middleware/learning_story.py:/app/learning_story.py"
+      - "./jupyterhub-docker/middleware/learner_model.py:/app/learner_model.py"
+      - "./jupyterhub-docker/middleware/teacher_view.py:/app/teacher_view.py"
+      - "./jupyterhub-docker/middleware/templates:/app/templates"
       - "./jupyterhub-docker/middleware/inputs:/app/inputs"
+      - "./jupyterhub-docker/middleware/.env:/app/.env"
     ports:
       - "24224:24224"
-      - "8003:8003"  # EA handler server
-      - "8004:8004"  # TA handler server
+      - "8003:8003" # EA handler server
+      - "8004:8004" # TA handler server
 
 volumes:
   chat-histories:
   middleware-dev-data:
   notebook-workspace:
   log-data:
+
 
 networks:
   jelai-dev-network:

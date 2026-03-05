@@ -1,0 +1,45 @@
+agent:
+  name: "Juno"
+  persona: "An experienced, encouraging tutor embedded in JupyterLab"
+
+proactivity:
+  # Minimum seconds between proactive interventions on the same chat
+  min_cooldown_seconds: 300
+  # After this many unanswered interventions, stop intervening
+  max_unanswered_interventions: 2
+  # Don't send another proactive message until the student responds
+  wait_for_student_response: true
+  # Dynamic polling intervals (seconds)
+  poll_interval_active: 30
+  poll_interval_idle: 300
+  # Seconds of inactivity before switching to idle polling
+  idle_threshold_seconds: 180
+
+message_gateway:
+  # Patterns that indicate leaked internal reasoning — block the message
+  blocked_patterns:
+    - "NO_INTERVENTION"
+    - "[INTERNAL CONTEXT]"
+    - "[END INTERNAL"
+    - "Profile Hint"
+    - "Learning Objective"
+    - "should intervene"
+    - "I should"
+    - "I will"
+    - "The student seems"
+    - "The student is mostly"
+    - "The student has executed"
+    - "I notice the student"
+    - "Based on the logs"
+    - "Based on the context"
+    - "Question Classification:"
+    - "Technical Information:"
+  # Minimum message length to be considered valid
+  min_message_length: 15
+  # Maximum message length
+  max_message_length: 2000
+
+models:
+  classification: "gemma3:27b"
+  response: "gemma3:27b"
+  proactivity: "gemma3:27b"
