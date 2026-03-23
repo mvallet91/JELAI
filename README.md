@@ -6,15 +6,24 @@
 ## Overview
 JELAI is a system that integrates a Jupyter environment with a chatbot to provide a learning analytics and AI platform. 
 The system is designed to support education using Jupyter notebooks, such as programming, data science and machine learning, by providing a collaborative environment where students can interact with Jupyter notebooks and receive assistance from a chatbot. 
-The chatbot uses a large language model (LLM) to provide responses based on the chat history and their actions as they work through the notebooks. 
-JELAI is intended to help students learn and explore, get feedback on their work, and receive guidance on problem-solving.
-For instructors, the system can provide insights into student interactions with the notebooks, allowing them to monitor progress, identify areas where students may need help, and provide targeted support.
-For researchers, the system can be used to collect data on student interactions and explore the use of LLMs in educational settings.
+The chatbot uses a large language model (LLM) to provide responses based on the chat history and the students' actions as they work through the notebooks. 
+
+What makes JELAI unique is its ability to build a **holistic Learner Model** by triangulating data from multiple sources in real-time:
+- **Code Telemetry**: The system tracks executed concepts (e.g., pandas imports, plotting functions) and execution errors to assess the student's *Knowledge* state.
+- **Chat History**: The system classifies student questions (e.g., instrumental vs. executive help-seeking) to understand their thought process.
+- **Etherpad Collaboration**: The system monitors word counts and collaborative text generation in Etherpad as a proxy for *Reflectivity*.
+
+By combining these inputs, the Tutor Agent (Juno) dynamically updates the Learner Model to assess the student's **Metacognition** (e.g., detecting "Trial and Error" vs. "Reflective" states) and **Affect** (e.g., detecting frustration from consecutive errors). This allows the agent to deliver personalized, pedagogically sound hints that aim to foster deep understanding and instrumental help-seeking.
+
+For instructors, the Teacher Chat (analytics chatbot) provides insights into student interactions, allowing them to monitor progress, identify areas where students need help, and provide targeted support.
+For researchers, the system can be used to collect multi-modal tabular data on student interactions and explore the use of LLMs in educational settings.
 
 Table of Contents:
 - [Description](#description)
 - [Setup and Configuration](#setup-and-configuration)
 - [Development and Local Experimentation](#development-and-local-experimentation)
+- [Teacher Chat (Instructor Analytics)](#teacher-chat-instructor-analytics)
+- [Etherpad Integration](#etherpad-integration)
 
 ### Description
 The system consists of a JupyterHub server, individual user Jupyter servers, a middleware server, and an Ollama server. 
@@ -32,9 +41,13 @@ The system consists of a JupyterHub server, individual user Jupyter servers, a m
     - The LA module (in progress) processes telemetry logs to generate insights.
 - **Fluent** is used to collect logs from the individual containers and send them to the middleware container for storage and processing with the LA module.
 - The **Ollama** server can run locally in the host machine or on a separate one. Cloud or third-party services can also be used, but the system is designed to work with a self-hosted server. 
+- **Etherpad** provides a collaborative text editor for students to work together in real-time, integrated into the JupyterLab environment. The `etherpad_logger.py` script logs pad changes for analytics.
+- The **Teacher Chat** stack (optional, separate compose file) provides an instructor-facing analytics chat powered by LibreChat, LiteLLM, ClickHouse, and Langfuse (see [Teacher Chat](#teacher-chat-instructor-analytics) below).
 
 ## References
 > Valle Torre, M., van der Velden, T., Specht, M., Oertel, C. (2025). JELAI: Integrating AI and Learning Analytics in Jupyter Notebooks. In: Cristea, A.I., Walker, E., Lu, Y., Santos, O.C., Isotani, S. (eds) Artificial Intelligence in Education. AIED 2025. Lecture Notes in Computer Science(), vol 15882. Springer, Cham. https://doi.org/10.1007/978-3-031-98465-5_9
+
+> Valle Torre, M., Specht, M., Oertel, C. (2026). LLM Chatbots in High School Programming: Exploring Behaviors and Interventions. In: Proceedings of the 41st ACM/SIGAPP Symposium on Applied Computing (SAC '26). Association for Computing Machinery, New York, NY, USA. https://arxiv.org/abs/2511.18985
 
 
 ## Setup and Configuration
@@ -119,6 +132,77 @@ Third-party services (cloud LLM providers) have not been evaluated, but in theor
 ### Nginx Reverse Proxy
 To access JupyterHub from outside the local network, follow the official [JupyterHub documentation](https://jupyterhub.readthedocs.io/en/stable/howto/configuration/config-proxy.html#nginx) to set up the Nginx reverse proxy. Similarly, to serve Ollama from a separate machine to the one running JELAI, you can use the Nginx reverse proxy to forward requests to Ollama, see the [Ollama server documentation](https://github.com/ollama/ollama/blob/main/docs/faq.md#how-can-i-use-ollama-with-a-proxy-server) for details.
 
+## Teacher Chat (Instructor Analytics)
+
+The Teacher Chat stack provides an instructor-facing analytics interface. It runs as a **separate Docker Compose stack** alongside the main JELAI system, using `docker-compose-teacher.yml`.
+
+### Architecture
+
+The stack consists of the following services:
+
+| Service | Purpose | Port |
+|---------|---------|------|
+| **LibreChat** | Chat UI for instructors | `3080` |
+| **LiteLLM** | LLM proxy/gateway (routes to Ollama/WebUI) | `4000` |
+| **MCP Middleware** | Provides MCP tools for querying student data | `8005` |
+| **ClickHouse** | Columnar database storing student interaction events | `8123` |
+| **Langfuse** | LLM observability and tracing | `3001` |
+| **MongoDB** | LibreChat data store | — |
+| **PostgreSQL** | Langfuse data store | — |
+
+Instructors interact with LibreChat, which uses LiteLLM as its LLM backend. LibreChat connects to the MCP Middleware via the Model Context Protocol (MCP), giving the LLM access to tools that query ClickHouse for student analytics data (event logs, semantic search over student code and chat messages).
+
+### Setup
+
+1. **Configure environment variables:**
+    - Navigate to the `teacher-chat/` directory.
+    - Copy the example file: `cp .env.teacher.example .env.teacher`
+    - Edit `.env.teacher` and set:
+      - `OLLAMA_API_KEY` — your LLM API key, if using WebUI or other OpenAI compatible API
+      - `LANGFUSE_PUBLIC_KEY` / `LANGFUSE_SECRET_KEY` — from your Langfuse dashboard (or keep defaults for local-only use)
+      - `LANGFUSE_INIT_USER_PASSWORD` — admin password for Langfuse
+      - `DATASETS_HOST_PATH` — absolute path to your datasets directory on the host
+    - The LibreChat credentials in `teacher-chat/.env` (JWT secrets) are pre-generated. Regenerate them for production.
+
+2. **Build and start the stack:**
+    ```bash
+    docker compose -f docker-compose-teacher.yml --env-file teacher-chat/.env.teacher up -d
+    ```
+
+3. **Access the services:**
+    - LibreChat (teacher analytics chat): `http://localhost:3080`
+    - Langfuse (LLM tracing dashboard): `http://localhost:3001`
+    - ClickHouse playground: `http://localhost:8123/play`
+
+4. **Stop the stack:**
+    ```bash
+    docker compose -f docker-compose-teacher.yml down
+    ```
+
+### Configuration
+
+- **LLM models**: Edit `teacher-chat/litellm/config.yaml` to add or change the available models and their API endpoint.
+- **LibreChat behavior**: Edit `teacher-chat/librechat/librechat.yaml` to configure the chat interface, system prompt, and MCP server connection.
+- **ClickHouse schema**: Initialization scripts are in `teacher-chat/clickhouse/init/`.
+- **MCP tools**: The MCP middleware (`teacher-chat/mcp-middleware/server.py`) provides tools for dataset stats, student summaries, event search, and semantic search.
+
+### Environment Files
+
+| File | Purpose | Git-tracked? |
+|------|---------|:---:|
+| `teacher-chat/.env` | LibreChat JWT/CREDS secrets | ❌ (gitignored) |
+| `teacher-chat/.env.teacher` | All teacher-chat stack secrets (API keys, DB passwords, Langfuse credentials) | ❌ (gitignored) |
+| `teacher-chat/.env.teacher.example` | Safe template with placeholders | ✅ |
+
+## Etherpad Integration
+
+JELAI integrates [Etherpad](https://etherpad.org/) as a collaborative real-time text editor for students. Etherpad runs as a separate container in both the production (`docker-compose.yml`) and development (`docker-compose-dev.yml`) stacks.
+
+- **API Key**: The Etherpad API key is stored in `jupyterhub-docker/etherpad/APIKEY.txt` and mounted into the container.
+- **Logging**: The `etherpad_logger.py` script in the user notebook image monitors pad changes and writes logs for analytics.
+- **Access**: Etherpad is available at port `9001`.
+- **Configuration**: Authentication is disabled by default (`REQUIRE_AUTHENTICATION=false`), making it suitable for classroom use.
+
 ## FAQ:
 - Where can I edit the system prompt for the assistant?
     - The main system prompt for the Tutor Agent (Juno) can be edited in the **jupyterhub-docker/middleware/inputs/ta-system-prompt.txt** file. See the *Pedagogical Configuration* section for other related files.
@@ -126,6 +210,10 @@ To access JupyterHub from outside the local network, follow the official [Jupyte
     - Yes, you can add course materials to the **working-directory** in the user-notebook image, using the Dockerfile.
 - What if I can't run Ollama locally?
     - You can use a third-party service that provides a REST API for the chatbot server to interact with. The system is designed to work with a self-hosted server, but other services can be used.
+- How do I set up the Teacher Chat stack?
+    - See the [Teacher Chat (Instructor Analytics)](#teacher-chat-instructor-analytics) section. It runs as a separate Docker Compose stack using `docker-compose-teacher.yml`.
+- Where do I put my API keys for the Teacher Chat?
+    - All secrets go in `teacher-chat/.env.teacher`. Copy `teacher-chat/.env.teacher.example` as a starting point. This file is gitignored.
 
 ## Development and Local Experimentation
 To run the system locally for development and experimentation, you can use **JupyterLab** (instead of JupyterHub) and the chatbot server in your local environment.

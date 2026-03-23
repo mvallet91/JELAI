@@ -48,6 +48,7 @@ wiki/
 
 # Teacher Chat Secrets
 teacher-chat/.env
+teacher-chat/.env.teacher
 
 # Agents
 .agents/

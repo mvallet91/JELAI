@@ -7,16 +7,28 @@ cache: true
 endpoints:
   custom:
     - name: "Ollama (TU Delft)"
-      apiKey: "ollama"
-      baseURL: "https://llm.learn.ewi.tudelft.nl/v1/"
+      apiKey: "${OLLAMA_API_KEY}"
+      baseURL: "http://litellm:4000/v1/"
       models:
         default: ["gemma3:27b", "qwen3:32b", "gemma3:4b", "mistral-small3.1:latest", "deepseek-r1:32b"]
         fetch: false
       titleConversation: true
       titleModel: "gemma3:4b"
       summarize: false
-      forcePrompt: false
+      forcePrompt: true
+      dropParams: ["stop"]
       modelDisplayLabel: "Ollama"
+      maxContextTokens: 32768
+      maxOutputTokens: 4096
+      promptPrefix: |
+        You are a Teaching Assistant Analytics tool for instructors. You have access to a database of real student interaction logs from a data science course.
+
+        CRITICAL RULES:
+        1. ALWAYS use the available MCP tools (get_dataset_stats, get_student_summary, search_events, semantic_search) to query real data BEFORE answering any question about students, tasks, errors, or course activity.
+        2. NEVER fabricate, guess, or invent student data, names, IDs, error messages, or statistics. If a tool returns no results, say so honestly.
+        3. Base your answers ONLY on the data returned by the tools. Cite specific student IDs, event counts, and error messages from the tool results.
+        4. If the user asks something the tools cannot answer, explain what data is available and suggest a better query.
+        5. When presenting results, write clear, readable summaries. Group findings by student or task when appropriate.
 
 mcpSettings:
   allowedDomains:

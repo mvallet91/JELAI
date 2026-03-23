@@ -7,7 +7,11 @@ Uses the mcp[cli] Python SDK.
 import os
 import httpx
 import clickhouse_connect
+import logging
+import time
 from mcp.server.fastmcp import FastMCP
+
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
 # --- Config ---
 CLICKHOUSE_HOST = os.getenv("CLICKHOUSE_HOST", "clickhouse")
@@ -47,6 +51,8 @@ def get_embedding(text: str) -> list[float]:
 @mcp.tool()
 def get_dataset_stats() -> str:
     """Returns basic counts of total events, unique students, and tasks in the dataset."""
+    logging.info("TOOL CALLED: get_dataset_stats()")
+    start_t = time.time()
     db = get_db()
     total = db.query("SELECT count() FROM events").result_rows[0][0]
     students = db.query("SELECT count(distinct student_id) FROM events").result_rows[0][0]
@@ -61,6 +67,8 @@ def get_student_summary(student_id: str) -> str:
     Args:
         student_id: The ID of the student (e.g. "S01C", "S15T").
     """
+    logging.info(f"TOOL CALLED: get_student_summary(student_id='{student_id}')")
+    start_t = time.time()
     db = get_db()
     
     # Check if student exists
@@ -91,7 +99,7 @@ def get_student_summary(student_id: str) -> str:
     
     err_str = "None"
     if errors.result_rows:
-        err_str = "\n".join([f"  - ({row[0]}) {row[1]} (x{row[2]})" for row in errors.result_rows])
+        err_str = "\n".join([f"  - ({row[0]}) {str(row[1])[:250].replace(chr(10), ' ')} (x{row[2]})" for row in errors.result_rows])
 
     return f"""
 Activity Summary for {student_id}:
@@ -103,7 +111,7 @@ Top Errors Encountered:
 """
 
 @mcp.tool()
-def search_events(student_id: str = "", task_label: str = "", event_type: str = "", limit: int = 20) -> str:
+def search_events(student_id: str = "", task_label: str = "", event_type: str = "", limit: int = 10) -> str:
     """
     Search chronological logs of exact events matching the given criteria.
     Args:
@@ -112,6 +120,9 @@ def search_events(student_id: str = "", task_label: str = "", event_type: str = 
         event_type: Optional event type to filter by (e.g. 'Edited cell', 'Executed cells with error')
         limit: Max number of events to return
     """
+    logging.info(f"TOOL CALLED: search_events(student_id='{student_id}', task_label='{task_label}', event_type='{event_type}', limit={limit})")
+    start_t = time.time()
+    limit = min(limit, 15)
     db = get_db()
     
     conditions = []
@@ -149,16 +160,16 @@ def search_events(student_id: str = "", task_label: str = "", event_type: str = 
         evt = r[3]
         
         detail = ""
-        if r[4]: detail += f" | Code: {r[4][:100]}..."
-        if r[5]: detail += f" | Error: {r[5][:100]}..."
-        if r[6]: detail += f" | Msg: {r[6]}"
+        if r[4]: detail += f" | Code: {str(r[4])[:250].replace(chr(10), ' ')}..."
+        if r[5]: detail += f" | Error: {str(r[5])[:250].replace(chr(10), ' ')}..."
+        if r[6]: detail += f" | Msg: {str(r[6])[:250].replace(chr(10), ' ')}..."
             
         out.append(f"[{time}] {s_id} - {t_lbl} - {evt}{detail}")
         
     return "\n".join(out)
 
 @mcp.tool()
-def semantic_search(query: str, limit: int = 15) -> str:
+def semantic_search(query: str, limit: int = 10) -> str:
     """
     Perform semantic search on student code edits, chat messages, and errors based on the meaning of a query.
     Use this when searching for concepts (e.g. "student struggling with pandas syntax" or "questions about loops").
@@ -167,6 +178,9 @@ def semantic_search(query: str, limit: int = 15) -> str:
         query: The natural language search query
         limit: Max number of results to return
     """
+    logging.info(f"TOOL CALLED: semantic_search(query='{query}', limit={limit})")
+    start_t = time.time()
+    limit = min(limit, 15)
     q_vec = get_embedding(query)
     if not q_vec:
         return "Failed to generate embedding for the query. Ollama might be unavailable."
@@ -203,9 +217,9 @@ def semantic_search(query: str, limit: int = 15) -> str:
             dist = r[6]
             
             detail = ""
-            if r[3]: detail += f" | Code: {r[3]}"
-            if r[4]: detail += f" | Error: {r[4]}"
-            if r[5]: detail += f" | Msg: {r[5]}"
+            if r[3]: detail += f" | Code: {str(r[3])[:250].replace(chr(10), ' ')}..."
+            if r[4]: detail += f" | Error: {str(r[4])[:250].replace(chr(10), ' ')}..."
+            if r[5]: detail += f" | Msg: {str(r[5])[:250].replace(chr(10), ' ')}..."
                 
             out.append(f"(Dist: {dist:.3f}) {s_id} - {t_lbl} - {evt}{detail}")
             
