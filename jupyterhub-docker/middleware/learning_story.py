@@ -17,14 +17,58 @@ DATABASE_FILE = os.getenv("DATABASE_FILE", "/app/chat_histories/chat_history.db"
 ETHERPAD_URL = os.getenv("ETHERPAD_URL", "http://etherpad-dev:9001")
 ETHERPAD_API_KEY = os.getenv("ETHERPAD_API_KEY", "jelai_secret_api_key_123")
 PROCESSED_LOGS_DIR = os.getenv("PROCESSED_LOGS_DIR", "/app/student-logs/processed")
+AGENT_CONFIG_URL = os.getenv("AGENT_CONFIG_URL", "http://localhost:8004/agent_config")
+
+# ---------------------------------------------------------------------------
+# Concept pattern defaults — used if agent_config has no concept_patterns key.
+# Each entry: {"label": str, "patterns": [str]}.
+# Patterns are matched as substrings of the executed cell source code.
+# ---------------------------------------------------------------------------
+DEFAULT_CONCEPT_PATTERNS = [
+    {"label": "pandas import",        "patterns": ["import pandas", "import pandas as pd"]},
+    {"label": "pd.read_csv",          "patterns": [".read_csv"]},
+    {"label": "df.head()",            "patterns": [".head()"]},
+    {"label": "df.describe()",        "patterns": [".describe()"]},
+    {"label": "df.groupby()",         "patterns": [".groupby("]},
+    {"label": "matplotlib/plotting",  "patterns": [".plot", "plt."]},
+    {"label": "df.mean()",            "patterns": [".mean()"]},
+    {"label": "df.value_counts()",    "patterns": [".value_counts()"]},
+    {"label": "loops",                "patterns": ["for "]},
+    {"label": "functions",            "patterns": ["def "]},
+]
+
+
+def _load_concept_patterns() -> List[Dict]:
+    """Load concept patterns from agent_config endpoint, falling back to defaults."""
+    try:
+        resp = httpx.get(AGENT_CONFIG_URL, timeout=3.0)
+        if resp.status_code == 200:
+            cfg = resp.json()
+            patterns = cfg.get("concept_patterns")
+            if patterns and isinstance(patterns, list):
+                logging.info(f"Loaded {len(patterns)} concept patterns from agent_config.")
+                return patterns
+    except Exception as e:
+        logging.warning(f"Could not load concept_patterns from agent_config: {e}")
+    logging.info("Using default concept patterns.")
+    return DEFAULT_CONCEPT_PATTERNS
+
+
+CONCEPT_PATTERNS: List[Dict] = _load_concept_patterns()
 
 
 # ---------------------------------------------------------------------------
 # 1. Data collectors — pull raw data from each source
 # ---------------------------------------------------------------------------
 
-def get_processed_logs(logs_dir: str = PROCESSED_LOGS_DIR) -> List[Dict]:
-    """Load ALL processed log JSON files and return a unified, sorted list."""
+def get_processed_logs(student_id: Optional[str] = None,
+                       logs_dir: str = PROCESSED_LOGS_DIR) -> List[Dict]:
+    """Load processed log JSON files and return a unified, sorted list.
+
+    If *student_id* is given, only entries whose ``student_id`` field matches
+    are returned (single-student filter for multi-student deployments).
+    Pass ``None`` to load all students (e.g. for dashboard-wide views).
+    """
     all_logs = []
     if not os.path.isdir(logs_dir):
         logging.warning(f"Logs dir not found: {logs_dir}")
@@ -37,6 +81,8 @@ def get_processed_logs(logs_dir: str = PROCESSED_LOGS_DIR) -> List[Dict]:
             with open(fpath, "r", encoding="utf-8") as f:
                 logs = json.load(f)
             if isinstance(logs, list):
+                if student_id is not None:
+                    logs = [l for l in logs if l.get("student_id") == student_id]
                 all_logs.extend(logs)
         except Exception as e:
             logging.error(f"Error reading {fpath}: {e}")
@@ -109,7 +155,7 @@ def build_canvas(student_id: str, pad_id: str = "test_pad",
     Build the Student Activity Canvas: a structured summary of what the student
     has done across Jupyter, Etherpad, and Chat.
     """
-    logs = get_processed_logs(logs_dir)
+    logs = get_processed_logs(student_id, logs_dir)
     chat = get_chat_history(student_id, db_path)
     pad_text = get_etherpad_text(pad_id)
 
@@ -119,7 +165,7 @@ def build_canvas(student_id: str, pad_id: str = "test_pad",
     errors = [l for l in executions if l.get("event") == "Executed cells with error"]
     successes = [l for l in executions if l.get("event") == "Executed cells"]
 
-    # Extract concepts used from successful code
+    # Extract concepts used from successful code (patterns loaded from agent_config)
     concepts = set()
     last_output = ""
     for ex in successes:
@@ -127,27 +173,9 @@ def build_canvas(student_id: str, pad_id: str = "test_pad",
         output = ex.get("output", "")
         if output:
             last_output = output[:300]
-        # Simple pattern matching for common pandas/python concepts
-        if "import pandas" in code or "import pd" in code:
-            concepts.add("pandas import")
-        if ".read_csv" in code:
-            concepts.add("pd.read_csv")
-        if ".head()" in code:
-            concepts.add("df.head()")
-        if ".describe()" in code:
-            concepts.add("df.describe()")
-        if ".groupby(" in code:
-            concepts.add("df.groupby()")
-        if ".plot" in code or "plt." in code:
-            concepts.add("matplotlib/plotting")
-        if ".mean()" in code:
-            concepts.add("df.mean()")
-        if ".value_counts()" in code:
-            concepts.add("df.value_counts()")
-        if "for " in code:
-            concepts.add("loops")
-        if "def " in code:
-            concepts.add("functions")
+        for concept_def in CONCEPT_PATTERNS:
+            if any(p in code for p in concept_def["patterns"]):
+                concepts.add(concept_def["label"])
 
     # --- Etherpad analysis ---
     pad_word_count = len(pad_text.split()) if pad_text else 0
@@ -291,7 +319,7 @@ def build_timeline(student_id: str, pad_id: str = "test_pad",
     events = []
 
     # --- Jupyter + Etherpad events from processed logs ---
-    logs = get_processed_logs(logs_dir)
+    logs = get_processed_logs(student_id, logs_dir)
     for log in logs:
         event_type = log.get("event", "")
         timestamp = log.get("time", "")

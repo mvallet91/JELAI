@@ -43,3 +43,31 @@ models:
   classification: "gemma3:27b"
   response: "gemma3:27b"
   proactivity: "gemma3:27b"
+
+# ---------------------------------------------------------------------------
+# Concept patterns — customize per course/assignment.
+# Each entry maps a human-readable label to one or more code substrings.
+# learning_story.py loads these at startup and falls back to its own defaults
+# if this section is absent.
+# ---------------------------------------------------------------------------
+concept_patterns:
+  - label: "pandas import"
+    patterns: ["import pandas", "import pandas as pd"]
+  - label: "pd.read_csv"
+    patterns: [".read_csv"]
+  - label: "df.head()"
+    patterns: [".head()"]
+  - label: "df.describe()"
+    patterns: [".describe()"]
+  - label: "df.groupby()"
+    patterns: [".groupby("]
+  - label: "matplotlib/plotting"
+    patterns: [".plot", "plt."]
+  - label: "df.mean()"
+    patterns: [".mean()"]
+  - label: "df.value_counts()"
+    patterns: [".value_counts()"]
+  - label: "loops"
+    patterns: ["for "]
+  - label: "functions"
+    patterns: ["def "]

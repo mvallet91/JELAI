@@ -3,6 +3,7 @@ import json
 import logging
 import os
 import time
+import copy
 from typing import Dict, Any
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - LEARNER_MODEL - %(message)s')
@@ -18,7 +19,7 @@ DEFAULT_LEARNER_MODEL = {
     },
     "metacognition": {
         "state": "Unknown",
-        "consecutive_errors": 0,
+        "total_errors": 0,
         "time_since_last_help": 0,
         "code_to_writing_ratio": 0.0
     },
@@ -39,7 +40,7 @@ def get_learner_model(student_id: str, db_path: str = DATABASE_FILE) -> Dict[str
                 return json.loads(row[0])
     except Exception as e:
         logging.error(f"Error fetching learner model for {student_id}: {e}")
-    return DEFAULT_LEARNER_MODEL.copy()
+    return copy.deepcopy(DEFAULT_LEARNER_MODEL)
 
 def save_learner_model(student_id: str, profile_data: Dict[str, Any], last_llm_eval: float = 0.0, db_path: str = DATABASE_FILE):
     """Save the learner model state to the database."""
@@ -79,11 +80,12 @@ def update_rule_based_state(student_id: str, canvas: Dict[str, Any], db_path: st
         model["knowledge"]["visualization"]["score"] = min(1.0, model["knowledge"]["visualization"]["score"] + 0.2)
         
     # 2. Update Metacognition (SRL)
-    model["metacognition"]["consecutive_errors"] = errors # Simple proxy for now
-    if errors > 3 and canvas.get("chat", {}).get("questions_asked", 0) == 0:
-        model["metacognition"]["state"] = "Help Avoidant"
-    elif errors >= 5:
+    model["metacognition"]["total_errors"] = errors
+    # Check most severe states first to avoid masking by weaker conditions
+    if errors >= 5:
         model["metacognition"]["state"] = "Trial and Error"
+    elif errors > 3 and canvas.get("chat", {}).get("questions_asked", 0) == 0:
+        model["metacognition"]["state"] = "Help Avoidant"
     elif successes > 0 and canvas.get("etherpad", {}).get("word_count", 0) > 20:
         model["metacognition"]["state"] = "Reflective"
     else:
