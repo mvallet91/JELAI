@@ -45,7 +45,10 @@ The system consists of a JupyterHub server, individual user Jupyter servers, a m
 - The **Ollama** server can run locally in the host machine or on a separate one. Cloud or third-party services can also be used, but the system is designed to work with a self-hosted server. 
 
 ## References
-> Valle Torre, M., van der Velden, T., Specht, M., Oertel, C. (2025). JELAI: Integrating AI and Learning Analytics in Jupyter Notebooks. In: Cristea, A.I., Walker, E., Lu, Y., Santos, O.C., Isotani, S. (eds) Artificial Intelligence in Education. AIED 2025. Lecture Notes in Computer Science(), vol 15882. Springer, Cham. https://doi.org/10.1007/978-3-031-98465-5_9
+> Valle Torre, M., van der Velden, T., Specht, M., Oertel, C. (2025). JELAI: Integrating AI and Learning Analytics in Jupyter Notebooks. In: Cristea, A.I., Walker, E., Lu, Y., Santos, O.C., Isotani, S. (eds) Artificial Intelligence in Education. AIED 2025. https://doi.org/10.1007/978-3-031-98465-5_9
+
+> Valle Torre, M., Specht, M., Oertel, C. (2026). LLM Chatbots in High School Programming: Exploring Behaviors and Interventions. In: Proceedings of the 41st ACM/SIGAPP Symposium on Applied Computing (SAC '26). Association for Computing Machinery, New York, NY, USA. https://arxiv.org/abs/2511.18985
+
 
 
 ## Setup and Configuration
