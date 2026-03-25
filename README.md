@@ -11,6 +11,17 @@ JELAI is intended to help students learn and explore, get feedback on their work
 For instructors, the system can provide insights into student interactions with the notebooks, allowing them to monitor progress, identify areas where students may need help, and provide targeted support.
 For researchers, the system can be used to collect data on student interactions and explore the use of LLMs in educational settings.
 
+## Experimental Branches
+
+JELAI is actively being extended with new pedagogical features. The following branches contain significant experimental work:
+
+- **[`etherpad-integration`](https://github.com/mvallet91/JELAI/tree/etherpad-integration)**: 
+  - **Status**: Stable experimental phase.
+  - **Key Features**: Multi-modal tracking (Jupyter + Etherpad), Teacher Dashboard with Learning Story timeline, automated rule-based Learner Modeling, and configurable pedagogical interventions.
+  - **Setup**: Requires `docker-compose-dev.yml` for the full multi-service stack.
+
+---
+
 Table of Contents:
 - [Description](#description)
 - [Setup and Configuration](#setup-and-configuration)
