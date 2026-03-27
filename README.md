@@ -45,9 +45,11 @@ The system consists of a JupyterHub server, individual user Jupyter servers, a m
 - The **Teacher Chat** stack (optional, separate compose file) provides an instructor-facing analytics chat powered by LibreChat, LiteLLM, ClickHouse, and Langfuse (see [Teacher Chat](#teacher-chat-instructor-analytics) below).
 
 ## References
-> Valle Torre, M., van der Velden, T., Specht, M., Oertel, C. (2025). JELAI: Integrating AI and Learning Analytics in Jupyter Notebooks. In: Cristea, A.I., Walker, E., Lu, Y., Santos, O.C., Isotani, S. (eds) Artificial Intelligence in Education. AIED 2025. Lecture Notes in Computer Science(), vol 15882. Springer, Cham. https://doi.org/10.1007/978-3-031-98465-5_9
+> Valle Torre, M., van der Velden, T., Specht, M., Oertel, C. (2025). JELAI: Integrating AI and Learning Analytics in Jupyter Notebooks. In Artificial Intelligence in Education: 26th International Conference, AIED 2025, Palermo, Italy, July 22–26, 2025, Proceedings, Part VI. Springer-Verlag, Berlin, Heidelberg, 68–75. https://doi.org/10.1007/978-3-031-98465-5_9
 
 > Valle Torre, M., Specht, M., Oertel, C. (2026). LLM Chatbots in High School Programming: Exploring Behaviors and Interventions. In: Proceedings of the 41st ACM/SIGAPP Symposium on Applied Computing (SAC '26). Association for Computing Machinery, New York, NY, USA. https://arxiv.org/abs/2511.18985
+
+> Valle Torre, M., Weijers, R., Specht, M., Oertel, C. (2026). Process Collapse or Compensatory Strategy? Profiling and Scaffolding Help-Seeking with an AI Tutor. Preprint. Available at SSRN: https://ssrn.com/abstract=6297817 or http://dx.doi.org/10.2139/ssrn.6297817
 
 
 ## Setup and Configuration
