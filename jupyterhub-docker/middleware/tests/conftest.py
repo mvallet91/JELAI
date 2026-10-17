@@ -1,6 +1,6 @@
 """Test setup: import the middleware modules without the heavy dependencies.
 
-The tests replace sentence_transformers and torch with small stubs, and
+The tests replace fastembed with a small stub, and
 use a temporary inputs directory and database.
 """
 
@@ -16,20 +16,16 @@ sys.path.insert(0, str(MIDDLEWARE_DIR))
 
 
 def _install_stubs():
-    if "sentence_transformers" not in sys.modules:
-        st = types.ModuleType("sentence_transformers")
+    # No model download in tests: the matcher uses fuzzy matching.
+    if "fastembed" not in sys.modules:
+        fastembed = types.ModuleType("fastembed")
 
-        class SentenceTransformer:  # noqa: D401 - stub
+        class TextEmbedding:  # stub
             def __init__(self, *args, **kwargs):
                 raise RuntimeError("no embedding model in tests")
 
-        st.SentenceTransformer = SentenceTransformer
-        st.util = types.SimpleNamespace(cos_sim=None)
-        sys.modules["sentence_transformers"] = st
-    if "torch" not in sys.modules:
-        torch = types.ModuleType("torch")
-        torch.cuda = types.SimpleNamespace(is_available=lambda: False)
-        sys.modules["torch"] = torch
+        fastembed.TextEmbedding = TextEmbedding
+        sys.modules["fastembed"] = fastembed
 
 
 _install_stubs()

@@ -35,6 +35,7 @@ This directory contains the middleware services for the JELAI (Jupyter Environme
 *   **LLM connection**: environment variables from `jupyterhub-docker/.env` (`LLM_PROVIDER`, `LLM_BASE_URL`, `LLM_API_KEY`, `LLM_MODEL`, `LLM_MODEL_<ROLE>`). `llm_client.py` sends all LLM requests to the OpenAI-compatible `/chat/completions` API. See `docs/llm-providers.md` in the repository root.
 *   **Tutor behavior**: `inputs/agent_config.yaml` (identification, classification, interventions, proactivity, commands). `config_loader.py` merges it over the copy in the image (`/app/defaults/agent_config.yaml`) and reads it again when it changes. `pedagogy.py` applies the classification and the reactive intervention rules. See `docs/teacher-configuration.md`.
 *   **Teacher pages**: `TEACHER_PASSWORD` (and optionally `TEACHER_USERNAME`) enable the dashboard (`/teacher-view`) and the settings page (`/teacher-settings`) with HTTP Basic authentication.
+*   **Learning objective matching**: `lo_matcher.py` uses a small ONNX embedding model (fastembed, no PyTorch), downloaded at image build time (`EMBEDDING_MODEL`, `EMBEDDING_CACHE_DIR`). Without the model, it uses fuzzy text matching.
 *   **Other**: `EA_URL` (the internal URL of the EA), `DATABASE_FILE`, `ETHERPAD_URL`, `ETHERPAD_API_KEY_FILE`, `ETHERPAD_PAD_ID` (one pad for all students, development only), `TA_WORKERS`, `EA_WORKERS`.
 
 ## Activity logs

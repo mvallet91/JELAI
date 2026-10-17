@@ -107,3 +107,14 @@ def test_custom_categories():
     hint = pedagogy.select_reactive_hint(rules, "planning", None, 1, {"question": "my plan"})
     assert hint["hint"] == "Support my plan"
     assert "{last_planning_example}" not in str(pedagogy.example_values({}, ["planning"]))
+
+
+def test_learning_objective_fuzzy_fallback():
+    from lo_matcher import LearningObjectiveMatcher
+    matcher = LearningObjectiveMatcher()
+    matcher.load()
+    objectives = ["Make a bar plot", "Load data with pd.read_csv()", "Group data with groupby"]
+    best, score = matcher.best_match("how do I read the csv data", objectives)
+    assert best == "Load data with pd.read_csv()"
+    assert 0 <= score <= 1
+    assert matcher.best_match("x", []) == (None, 0.0)

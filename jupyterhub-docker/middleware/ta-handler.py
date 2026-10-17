@@ -12,14 +12,13 @@ from pathlib import Path
 from dotenv import load_dotenv
 import uvicorn
 from typing import Optional, List, Dict, Any
-from sentence_transformers import SentenceTransformer, util
-import torch # May be needed depending on sentence-transformers version/setup
 import asyncio
 
 load_dotenv()
 
 import llm_client
 import pedagogy
+from lo_matcher import LearningObjectiveMatcher
 from config_loader import (
     get_config, section, agent_name, model_override, fill_placeholders,
     read_input, load_text_dir, INPUTS_DIR,
@@ -318,49 +317,24 @@ def get_or_assign_experiment_group(student_id: str) -> Optional[dict]:
         return groups[0] if groups else None
 
 
-# --- Learning objective matching with sentence embeddings ---
-embedding_model = None
-_LO_EMBEDDING_CACHE: Dict[tuple, Any] = {}
-
-
-def load_embedding_model():
-    global embedding_model
-    try:
-        device = 'cuda' if torch.cuda.is_available() else 'cpu'
-        embedding_model = SentenceTransformer(os.getenv("EMBEDDING_MODEL", 'all-MiniLM-L6-v2'), device=device)
-        logging.info(f"Sentence Transformer model loaded successfully on {device}.")
-    except Exception as e:
-        logging.error(f"Failed to load Sentence Transformer model: {e}")
-        embedding_model = None
+# --- Learning objective matching ---
+lo_matcher = LearningObjectiveMatcher()
 
 
 def select_learning_objective_embeddings(question_text: str, learning_objectives: list) -> str:
-    """Selects the most relevant LO using sentence embeddings."""
+    """Selects the most relevant LO with sentence embeddings (or fuzzy matching)."""
     if not learning_objectives:
         return "No specific LO"
-    if not embedding_model:
-        logging.warning("Sentence Transformer model not available. Using the first LO.")
-        return learning_objectives[0]
-
     try:
-        key = tuple(learning_objectives)
-        if key not in _LO_EMBEDDING_CACHE:
-            _LO_EMBEDDING_CACHE[key] = embedding_model.encode(list(key), convert_to_tensor=True)
-        lo_embeddings = _LO_EMBEDDING_CACHE[key]
-        question_embedding = embedding_model.encode(question_text, convert_to_tensor=True)
-        cosine_scores = util.cos_sim(question_embedding, lo_embeddings)[0]
-        best_match_idx = torch.argmax(cosine_scores).item()
-        best_score = cosine_scores[best_match_idx].item()
-
+        selected_lo, best_score = lo_matcher.best_match(question_text, learning_objectives)
         threshold = float(section("identification").get("learning_objective_min_similarity", 0.4))
-        selected_lo = learning_objectives[best_match_idx]
         if best_score >= threshold:
-            logging.info(f"Matched LO (Embeddings) '{selected_lo}' with score {best_score:.4f}")
+            logging.info(f"Matched LO '{selected_lo}' with score {best_score:.4f}")
         else:
-            logging.info(f"No strong embedding match found (best score: {best_score:.4f}). Using the best match.")
+            logging.info(f"No strong LO match found (best score: {best_score:.4f}). Using the best match.")
         return selected_lo
     except Exception as e:
-        logging.error(f"Error during embedding similarity calculation: {e}")
+        logging.error(f"Error during learning objective matching: {e}")
         return "No specific LO"
 
 
@@ -794,7 +768,7 @@ Respond with the JSON object only. No other text."""}
 
 
 # Load the embedding model once at startup, outside the request handler.
-load_embedding_model()
+lo_matcher.load()
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8004)

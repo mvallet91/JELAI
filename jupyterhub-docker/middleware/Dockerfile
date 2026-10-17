@@ -24,11 +24,13 @@ RUN apt-get update && \
 RUN gem install fluentd --no-document && \
     fluentd --setup /fluent 
 
-# Download the sentence embedding model at build time, so the middleware
-# does not need internet access for it at run time.
-ARG EMBEDDING_MODEL=all-MiniLM-L6-v2
-ENV EMBEDDING_MODEL=${EMBEDDING_MODEL}
-RUN python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('${EMBEDDING_MODEL}')"
+# Download the sentence embedding model (ONNX, no PyTorch) at build time,
+# so the middleware does not need internet access for it at run time.
+ARG EMBEDDING_MODEL=sentence-transformers/all-MiniLM-L6-v2
+ENV EMBEDDING_MODEL=${EMBEDDING_MODEL} \
+    EMBEDDING_CACHE_DIR=/app/models
+COPY lo_matcher.py /app/
+RUN python /app/lo_matcher.py
 
 # Copy application code. Secrets come from the environment (see .env.example),
 # they are not part of the image.
