@@ -6,7 +6,7 @@ This directory contains the middleware services for the JELAI (Jupyter Environme
 
 1.  **Tutor Agent (`ta_handler.py`)**:
     *   Receives student messages from the JupyterLab extension (`chat_interact.py`).
-    *   Classifies the student's help-seeking type (instrumental, executive, other) using an LLM.
+    *   Classifies the student message with the categories of `inputs/agent_config.yaml` (by default instrumental, executive, other) using an LLM.
     *   Selects a relevant Learning Objective (LO).
     *   Stores the interaction in the chat history database.
     *   Retrieves the student's profile (interaction history, flags) from the database.
@@ -32,13 +32,14 @@ This directory contains the middleware services for the JELAI (Jupyter Environme
 
 ## Configuration
 
-Configuration is primarily handled via environment variables, mainly loaded from a `.env` file using `python-dotenv`. Key variables include:
+*   **LLM connection**: environment variables from `jupyterhub-docker/.env` (`LLM_PROVIDER`, `LLM_BASE_URL`, `LLM_API_KEY`, `LLM_MODEL`, `LLM_MODEL_<ROLE>`). `llm_client.py` sends all LLM requests to the OpenAI-compatible `/chat/completions` API. See `docs/llm-providers.md` in the repository root.
+*   **Tutor behavior**: `inputs/agent_config.yaml` (identification, classification, interventions, proactivity, commands). `config_loader.py` merges it over the copy in the image (`/app/defaults/agent_config.yaml`) and reads it again when it changes. `pedagogy.py` applies the classification and the reactive intervention rules. See `docs/teacher-configuration.md`.
+*   **Teacher pages**: `TEACHER_PASSWORD` (and optionally `TEACHER_USERNAME`) enable the dashboard (`/teacher-view`) and the settings page (`/teacher-settings`) with HTTP Basic authentication.
+*   **Other**: `EA_URL` (the internal URL of the EA), `DATABASE_FILE`, `ETHERPAD_URL`, `ETHERPAD_API_KEY_FILE`, `ETHERPAD_PAD_ID` (one pad for all students, development only), `TA_WORKERS`, `EA_WORKERS`.
 
-*   `OLLAMA_BASE_URL`: URL for the Ollama API endpoint (e.g., `http://host.docker.internal:11434`).
-*   `WEBUI_API_BASE`: URL for a WebUI API endpoint (optional alternative).
-*   `WEBUI_API_KEY`: API key if using WebUI.
-*   `OLLAMA_MODEL`/`OLLAMA_CLASSIFICATION_MODEL`/`OLLAMA_RESPONSE_MODEL`/`OLLAMA_EA_MODEL`: Names of the specific Ollama models to use for different tasks.
-*   `EA_URL`: The internal URL the TA uses to reach the EA (e.g., `http://localhost:8003` when running in the same container).
+## Activity logs
+
+The notebooks send their processed activity logs with each request (`structured_logs`). The middleware keeps them in `/app/chat_histories/student_logs/<student>.json`, because it cannot read the volumes of the student containers. The learning story and the learner model use these files.
 
 ## Database
 
@@ -52,10 +53,9 @@ A SQLite database (`chat_history.db` by default, stored in the `/app/chat_histor
 This middleware is designed to be run as a Docker container, typically orchestrated using `docker-compose`. See `docker-compose-dev.yml` for the development setup.
 
 The `start.sh` script is the entry point for the container, responsible for:
-1.  Activating the Python virtual environment (`/app/.venv`).
-2.  Starting Fluentd.
-3.  Starting the EA handler using Uvicorn.
-4.  Starting the TA handler using Uvicorn.
+1.  Starting Fluentd.
+2.  Starting the EA handler using Uvicorn.
+3.  Starting the TA handler using Uvicorn.
 
 ## API Endpoints
 
@@ -63,3 +63,7 @@ The `start.sh` script is the entry point for the container, responsible for:
 *   `POST /expert_query` (EA): Endpoint for the TA to get technical information.
 *   `GET /verify_ta` (TA): Health check endpoint.
 *   `GET /verify_ea` (EA): Health check endpoint.
+*   `GET /health` (TA): Health check with the LLM settings (without the key).
+*   `POST /evaluate_proactivity` (TA): Decides about a proactive message.
+*   `GET /agent_config` (TA): The student-facing part of the configuration, for the notebooks.
+*   `/teacher/...`, `/teacher-view`, `/teacher-settings` (TA): Teacher dashboard and settings (password necessary).

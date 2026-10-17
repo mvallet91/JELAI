@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JELAI Tutor Settings</title>
+    <style>
+        :root {
+            --bg-primary: #0f1117;
+            --bg-secondary: #1a1d27;
+            --bg-card: #222536;
+            --bg-hover: #2a2e42;
+            --text-primary: #e8eaed;
+            --text-secondary: #9aa0b0;
+            --text-muted: #6b7280;
+            --accent-blue: #5b8def;
+            --accent-green: #4ade80;
+            --accent-orange: #f59e0b;
+            --accent-red: #ef4444;
+            --border: #2d3148;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+        }
+
+        .header {
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border);
+            padding: 16px 32px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .header h1 { font-size: 20px; font-weight: 600; }
+
+        .btn {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            color: var(--text-primary);
+            padding: 8px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font: inherit;
+            font-size: 13px;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .btn:hover { background: var(--bg-hover); }
+        .btn.primary { background: var(--accent-blue); border-color: var(--accent-blue); color: #fff; }
+        .btn:disabled { opacity: 0.5; cursor: default; }
+
+        .layout {
+            display: grid;
+            grid-template-columns: 280px 1fr;
+            gap: 16px;
+            padding: 16px 32px;
+        }
+
+        @media (max-width: 800px) {
+            .layout { grid-template-columns: 1fr; padding: 16px; }
+            .header { padding: 16px; }
+        }
+
+        .panel {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 16px;
+        }
+
+        .panel h2 {
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-secondary);
+            margin: 12px 0 6px;
+        }
+
+        .panel h2:first-child { margin-top: 0; }
+
+        .file {
+            display: block;
+            width: 100%;
+            text-align: left;
+            background: none;
+            border: none;
+            color: var(--text-primary);
+            padding: 6px 8px;
+            border-radius: 6px;
+            cursor: pointer;
+            font: inherit;
+            font-size: 14px;
+            overflow-wrap: anywhere;
+        }
+
+        .file:hover { background: var(--bg-hover); }
+        .file.active { background: var(--bg-card); color: var(--accent-blue); }
+        .file .tag { font-size: 11px; color: var(--text-muted); margin-left: 4px; }
+
+        .new-file { display: flex; gap: 6px; margin-top: 6px; }
+        .new-file input {
+            flex: 1;
+            min-width: 0;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            color: var(--text-primary);
+            border-radius: 6px;
+            padding: 4px 8px;
+            font: inherit;
+            font-size: 13px;
+        }
+
+        .editor-head {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 8px;
+            flex-wrap: wrap;
+        }
+
+        .editor-head .name { font-weight: 600; overflow-wrap: anywhere; }
+
+        textarea {
+            width: 100%;
+            min-height: 60vh;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 12px;
+            font-family: ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+            font-size: 13px;
+            line-height: 1.5;
+            resize: vertical;
+            tab-size: 2;
+        }
+
+        .messages { margin-top: 10px; font-size: 13px; }
+        .msg { padding: 8px 12px; border-radius: 8px; margin-bottom: 6px; white-space: pre-wrap; }
+        .msg.error { background: rgba(239, 68, 68, 0.15); color: #fca5a5; }
+        .msg.warning { background: rgba(245, 158, 11, 0.15); color: #fcd34d; }
+        .msg.ok { background: rgba(74, 222, 128, 0.12); color: #86efac; }
+        .msg.info { background: var(--bg-card); color: var(--text-secondary); }
+
+        .llm { font-size: 13px; color: var(--text-secondary); line-height: 1.6; }
+        .llm b { color: var(--text-primary); font-weight: 500; }
+        .llm table { width: 100%; border-collapse: collapse; margin-top: 6px; }
+        .llm td { padding: 2px 4px; vertical-align: top; overflow-wrap: anywhere; }
+    </style>
+</head>
+
+<body>
+    <div class="header">
+        <h1>⚙️ Tutor Settings</h1>
+        <a class="btn" href="/teacher-view">📊 Dashboard</a>
+    </div>
+
+    <div class="layout">
+        <div>
+            <div class="panel" id="files">Loading…</div>
+            <div class="panel" style="margin-top:16px">
+                <h2>LLM connection</h2>
+                <div class="llm" id="llm">Loading…</div>
+                <button class="btn" id="test-btn" style="margin-top:10px" onclick="testLlm()">Test connection</button>
+                <div class="messages" id="llm-result"></div>
+            </div>
+        </div>
+
+        <div class="panel">
+            <div id="banner"></div>
+            <div class="editor-head">
+                <span class="name" id="file-name">Select a file</span>
+                <span>
+                    <button class="btn" id="validate-btn" onclick="validateFile()" disabled>Check</button>
+                    <button class="btn primary" id="save-btn" onclick="saveFile()" disabled>Save</button>
+                </span>
+            </div>
+            <textarea id="editor" spellcheck="false" disabled
+                placeholder="Select a file on the left. Start with agent_config.yaml: it controls identification, classification and interventions."></textarea>
+            <div class="messages" id="messages"></div>
+        </div>
+    </div>
+
+    <script>
+        const GROUP_TITLES = {
+            configuration: 'Configuration',
+            prompts: 'Prompts',
+            assignment_descriptions: 'Assignment descriptions',
+            learning_objectives: 'Learning objectives',
+            next_steps: 'Next steps',
+        };
+        const NEW_FILE_GROUPS = ['assignment_descriptions', 'learning_objectives', 'next_steps'];
+        let currentPath = null;
+        let dirty = false;
+
+        function el(tag, attrs = {}, text = '') {
+            const node = document.createElement(tag);
+            Object.entries(attrs).forEach(([k, v]) => node.setAttribute(k, v));
+            if (text) node.textContent = text;
+            return node;
+        }
+
+        function showMessages(target, result, okText) {
+            const box = document.getElementById(target);
+            box.innerHTML = '';
+            (result.errors || []).forEach(e => box.appendChild(el('div', { class: 'msg error' }, e)));
+            (result.warnings || []).forEach(w => box.appendChild(el('div', { class: 'msg warning' }, w)));
+            if (okText && !(result.errors || []).length) box.appendChild(el('div', { class: 'msg ok' }, okText));
+        }
+
+        async function api(url, options = {}) {
+            const resp = await fetch(url, { headers: { 'Content-Type': 'application/json' }, ...options });
+            let body = null;
+            try { body = await resp.json(); } catch (e) { body = null; }
+            if (!resp.ok) {
+                const detail = body && body.detail;
+                const result = typeof detail === 'object' && detail ? detail : { errors: [detail || `HTTP ${resp.status}`] };
+                throw result;
+            }
+            return body;
+        }
+
+        async function loadFiles() {
+            const data = await api('/teacher/settings/files');
+            const box = document.getElementById('files');
+            box.innerHTML = '';
+            Object.entries(data.groups).forEach(([group, files]) => {
+                box.appendChild(el('h2', {}, GROUP_TITLES[group] || group));
+                files.forEach(f => {
+                    const btn = el('button', { class: 'file' + (f.path === currentPath ? ' active' : '') });
+                    btn.textContent = f.path.split('/').pop();
+                    if (!f.exists && f.has_sample) btn.appendChild(el('span', { class: 'tag' }, '(sample)'));
+                    btn.onclick = () => openFile(f.path);
+                    box.appendChild(btn);
+                });
+                if (NEW_FILE_GROUPS.includes(group)) {
+                    const row = el('div', { class: 'new-file' });
+                    const input = el('input', { placeholder: 'notebook name' });
+                    const add = el('button', { class: 'btn' }, 'Add');
+                    add.onclick = () => {
+                        const name = input.value.trim().replace(/\.(ipynb|chat|txt)$/, '');
+                        if (name) openFile(`${group}/${name}.txt`);
+                    };
+                    row.append(input, add);
+                    box.appendChild(row);
+                }
+            });
+            if (!data.writable) {
+                document.getElementById('banner').appendChild(el('div', { class: 'msg warning' },
+                    'The inputs directory is read-only. You can view the files, but you cannot save them.'));
+            }
+        }
+
+        async function openFile(path) {
+            if (dirty && !confirm('Discard the changes that you did not save?')) return;
+            const data = await api('/teacher/settings/file?path=' + encodeURIComponent(path));
+            currentPath = data.path || path;
+            dirty = false;
+            const editor = document.getElementById('editor');
+            editor.value = data.content;
+            editor.disabled = false;
+            document.getElementById('file-name').textContent = currentPath;
+            document.getElementById('save-btn').disabled = false;
+            document.getElementById('validate-btn').disabled = false;
+            const info = [];
+            if (data.from_sample) info.push('This is the sample file. When you save, a new file is made from it, and the tutor uses the new file.');
+            if (!data.exists && !data.from_sample) info.push('This is a new file. The tutor uses it for the chat or notebook with the same name.');
+            const box = document.getElementById('messages');
+            box.innerHTML = '';
+            info.forEach(t => box.appendChild(el('div', { class: 'msg info' }, t)));
+            loadFiles();
+        }
+
+        async function validateFile() {
+            try {
+                const result = await api('/teacher/settings/validate', {
+                    method: 'POST', body: JSON.stringify({ path: currentPath, content: document.getElementById('editor').value })
+                });
+                showMessages('messages', result, 'No problems found.');
+            } catch (result) { showMessages('messages', result); }
+        }
+
+        async function saveFile() {
+            try {
+                const result = await api('/teacher/settings/file', {
+                    method: 'PUT', body: JSON.stringify({ path: currentPath, content: document.getElementById('editor').value })
+                });
+                dirty = false;
+                showMessages('messages', result, 'Saved. The tutor uses the new settings for the next message.');
+                loadFiles();
+                loadStatus();
+            } catch (result) { showMessages('messages', result); }
+        }
+
+        async function loadStatus() {
+            const data = await api('/teacher/settings/status');
+            const llm = data.llm;
+            const box = document.getElementById('llm');
+            box.innerHTML = '';
+            const rows = [['Provider', llm.provider_label], ['URL', llm.base_url], ['API key', llm.api_key_set ? 'set' : 'not set']];
+            Object.entries(llm.models).forEach(([role, model]) => rows.push([role, model]));
+            const table = el('table');
+            rows.forEach(([k, v]) => {
+                const tr = el('tr');
+                tr.append(el('td', {}, k), el('td'));
+                tr.lastChild.appendChild(el('b', {}, v));
+                table.appendChild(tr);
+            });
+            box.appendChild(table);
+            box.appendChild(el('div', { style: 'margin-top:6px' }, 'The provider, URL and key are set in the .env file on the server.'));
+            const banner = document.getElementById('banner');
+            banner.querySelectorAll('.config-error').forEach(n => n.remove());
+            if (data.config_error) {
+                banner.appendChild(el('div', { class: 'msg error config-error' },
+                    'The tutor uses the default settings because of this error: ' + data.config_error));
+            }
+        }
+
+        async function testLlm() {
+            const btn = document.getElementById('test-btn');
+            btn.disabled = true;
+            btn.textContent = 'Testing…';
+            const box = document.getElementById('llm-result');
+            box.innerHTML = '';
+            try {
+                const data = await api('/teacher/settings/llm-test', { method: 'POST' });
+                data.results.forEach(r => box.appendChild(el('div', { class: 'msg ' + (r.ok ? 'ok' : 'error') },
+                    r.ok ? `${r.model}: OK (${r.seconds} s)` : `${r.model}: ${r.error}`)));
+            } catch (result) { showMessages('llm-result', result); }
+            btn.disabled = false;
+            btn.textContent = 'Test connection';
+        }
+
+        document.getElementById('editor').addEventListener('input', () => { dirty = true; });
+        document.getElementById('editor').addEventListener('keydown', e => {
+            if (e.key === 'Tab') {
+                e.preventDefault();
+                const t = e.target, s = t.selectionStart;
+                t.value = t.value.slice(0, s) + '  ' + t.value.slice(t.selectionEnd);
+                t.selectionStart = t.selectionEnd = s + 2;
+            }
+            if ((e.ctrlKey || e.metaKey) && e.key === 's') { e.preventDefault(); saveFile(); }
+        });
+        window.addEventListener('beforeunload', e => { if (dirty) e.preventDefault(); });
+
+        loadFiles().then(() => openFile('agent_config.yaml')).catch(r => showMessages('messages', r));
+        loadStatus().catch(r => showMessages('llm-result', r));
+    </script>
+</body>
+
+</html>

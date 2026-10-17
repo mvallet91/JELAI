@@ -24,6 +24,10 @@ AGENT_CONFIG_URL = f"{PROACTIVITY_URL_BASE}/agent_config"
 TA_URL_BASE = os.getenv("TA_MIDDLEWARE_URL", "http://localhost:8004")
 TA_URL = f"{TA_URL_BASE}/receive_student_message"
 LOG_ENTRY_LIMIT = 10
+# Number of structured log entries sent to the middleware with each request.
+STRUCTURED_LOG_LIMIT = 200
+# Seconds between two reloads of the agent config from the middleware.
+CONFIG_REFRESH_SECONDS = 300
 
 # --- Message Gateway ---
 class MessageGateway:
@@ -108,9 +112,22 @@ class ChatHandler(FileSystemEventHandler):
         # --- Gateway and config ---
         self.agent_config = self._fetch_agent_config()
         self.gateway = MessageGateway(self.agent_config)
+        self.config_loaded_at = time.time()
         
         logging.info(f"Monitoring directory: {self.chat_directory}")
         logging.info(f"Looking for processed logs in: {self.processed_logs_dir}")
+
+    @property
+    def agent_name(self) -> str:
+        return (self.agent_config.get("agent") or {}).get("name") or "Juno"
+
+    def refresh_agent_config(self):
+        """Reload the agent config, so that changes of the teacher apply."""
+        config = self._fetch_agent_config()
+        if config:
+            self.agent_config = config
+            self.gateway = MessageGateway(config)
+        self.config_loaded_at = time.time()
 
     def _fetch_agent_config(self) -> dict:
         """Fetch central agent config from the middleware at startup."""
@@ -154,13 +171,14 @@ class ChatHandler(FileSystemEventHandler):
                     logging.error(f"Invalid chat file structure in {file_path}. Skipping.")
                     return
 
-                if 'Juno' not in content['users']:
-                    content['users']['Juno'] = {
-                        "display_name": "Juno", "username": "Juno", "avatar_url": None,
-                        "initials": "J", "name": "Juno", "color": "var(--jp-collaborator-color7)"
+                name = self.agent_name
+                if name not in content['users']:
+                    content['users'][name] = {
+                        "display_name": name, "username": name, "avatar_url": None,
+                        "initials": name[:1].upper(), "name": name, "color": "var(--jp-collaborator-color7)"
                     }
                     file.seek(0); json.dump(content, file, indent=4); file.truncate()
-                    logging.info(f"Added Juno user to {file_path}")
+                    logging.info(f"Added {name} user to {file_path}")
 
                 if not content["messages"]: return
 
@@ -212,6 +230,7 @@ class ChatHandler(FileSystemEventHandler):
                         "student_id": student_id,
                         "message_text": message_text,
                         "processed_logs": processed_log_data,
+                        "structured_logs": self.get_structured_logs(),
                         "file_name": file_name
                     },
                     timeout=120.0 # Increased timeout since TA does all work now
@@ -225,7 +244,7 @@ class ChatHandler(FileSystemEventHandler):
 
                 # Prepare the chat message structure
                 final_response_message = {
-                    "body": final_text, "sender": "Juno", "type": "msg",
+                    "body": final_text, "sender": self.agent_name, "type": "msg",
                     "id": str(uuid.uuid4()), "time": time.time(),
                     "raw_time": False, "automated": True
                 }
@@ -233,7 +252,7 @@ class ChatHandler(FileSystemEventHandler):
         except httpx.RequestError as e:
             logging.error(f"Error sending message to TA: {e}")
             final_response_message = {
-                "body": "Sorry, I couldn't reach the tutoring service.", "sender": "Juno",
+                "body": "Sorry, I couldn't reach the tutoring service.", "sender": self.agent_name,
                 "type": "msg", "id": str(uuid.uuid4()), "time": time.time(),
                 "raw_time": False, "automated": True
             }
@@ -245,7 +264,7 @@ class ChatHandler(FileSystemEventHandler):
             except json.JSONDecodeError:
                  ta_error_detail = e.response.text[:100] # Use raw text if not JSON
             final_response_message = {
-                "body": f"Sorry, error processing request: {ta_error_detail}", "sender": "Juno",
+                "body": f"Sorry, error processing request: {ta_error_detail}", "sender": self.agent_name,
                 "type": "msg", "id": str(uuid.uuid4()), "time": time.time(),
                 "raw_time": False, "automated": True
             }
@@ -253,7 +272,7 @@ class ChatHandler(FileSystemEventHandler):
         except Exception as e:
             logging.error(f"Unexpected error during TA interaction: {e}", exc_info=True)
             final_response_message = {
-                "body": "Sorry, an unexpected error occurred.", "sender": "Juno",
+                "body": "Sorry, an unexpected error occurred.", "sender": self.agent_name,
                 "type": "msg", "id": str(uuid.uuid4()), "time": time.time(),
                 "raw_time": False, "automated": True
             }
@@ -357,15 +376,48 @@ class ChatHandler(FileSystemEventHandler):
             logging.error(f"Error processing logs: {e}", exc_info=True)
             return None
 
+    def get_structured_logs(self, limit: int = STRUCTURED_LOG_LIMIT) -> list:
+        """Return the last processed log entries as short dicts for the middleware.
+
+        The middleware cannot read the volume of this container, so the
+        notebook sends the entries. Long fields are cut.
+        """
+        entries = []
+        try:
+            for fname in os.listdir(self.processed_logs_dir):
+                if not fname.endswith('.json'):
+                    continue
+                try:
+                    with open(os.path.join(self.processed_logs_dir, fname), 'r') as f:
+                        logs = json.load(f)
+                except (OSError, json.JSONDecodeError):
+                    continue
+                if isinstance(logs, list):
+                    entries.extend(log for log in logs if isinstance(log, dict))
+        except FileNotFoundError:
+            return []
+        entries = [e for e in entries if e.get('event') not in ["Notebook became visible", "Closed notebook"]]
+        entries.sort(key=lambda x: str(x.get('time', '')))
+        keys = ('event', 'time', 'notebook', 'cell_index', 'source', 'input', 'output', 'content', 'error')
+        result = []
+        for entry in entries[-limit:]:
+            item = {}
+            for key in keys:
+                if key in entry and entry[key] is not None:
+                    value = entry[key]
+                    item[key] = value[:1000] if isinstance(value, str) else value
+            result.append(item)
+        return result
+
     async def send_working_messages(self, content: Dict[str, Any], file_path: str):
-        working_phrases = [ "Juno is working on it...", "Just a moment, processing...", "Thinking...", "Checking notes...", ]
+        working_phrases = [ f"{self.agent_name} is working on it...", "Just a moment, processing...", "Thinking...", "Checking notes...", ]
         idx = 0; message_id = str(uuid.uuid4())
         self.working_message_ids[file_path] = message_id
         logging.info(f"Started working messages for {file_path} with ID {message_id}")
         try:
             while True:
                 working_message = {
-                    "body": working_phrases[idx % len(working_phrases)], "sender": "Juno", "type": "msg",
+                    "body": working_phrases[idx % len(working_phrases)], "sender": self.agent_name, "type": "msg",
                     "id": message_id, "time": time.time(), "raw_time": False, "automated": True
                 }
                 self.update_working_message(working_message, content, file_path)
@@ -423,7 +475,20 @@ class ChatHandler(FileSystemEventHandler):
             since_activity = time.time() - self.last_activity_time
             poll_interval = poll_active if since_activity < idle_threshold else poll_idle
             await asyncio.sleep(poll_interval)
-            
+
+            if time.time() - self.config_loaded_at > CONFIG_REFRESH_SECONDS:
+                self.refresh_agent_config()
+                proactivity_cfg = self.agent_config.get("proactivity", {})
+                min_cooldown = proactivity_cfg.get("min_cooldown_seconds", min_cooldown)
+                max_unanswered = proactivity_cfg.get("max_unanswered_interventions", max_unanswered)
+                wait_for_response = proactivity_cfg.get("wait_for_student_response", wait_for_response)
+                poll_active = proactivity_cfg.get("poll_interval_active", poll_active)
+                poll_idle = proactivity_cfg.get("poll_interval_idle", poll_idle)
+                idle_threshold = proactivity_cfg.get("idle_threshold_seconds", idle_threshold)
+
+            if not self.agent_config.get("proactivity", {}).get("enabled", True):
+                continue
+
             try:
                 chat_files = [
                     os.path.join(self.chat_directory, f)
@@ -470,7 +535,7 @@ class ChatHandler(FileSystemEventHandler):
         # --- Check 3: Wait for student response ---
         if wait_for_response and messages:
             last_msg = messages[-1]
-            if last_msg.get("automated", False) and last_msg.get("sender") == "Juno":
+            if last_msg.get("automated", False) and last_msg.get("sender") == self.agent_name:
                 logging.debug(f"Waiting for student response in {file_path}, skipping")
                 return
         
@@ -504,7 +569,8 @@ class ChatHandler(FileSystemEventHandler):
                 json={
                     "student_id": student_id,
                     "file_name": file_name,
-                    "processed_logs": processed_log_data
+                    "processed_logs": processed_log_data,
+                    "structured_logs": self.get_structured_logs()
                 },
                 timeout=60.0
             )
@@ -533,7 +599,7 @@ class ChatHandler(FileSystemEventHandler):
         
         intervention_message = {
             "body": cleaned_text,
-            "sender": "Juno",
+            "sender": self.agent_name,
             "type": "msg",
             "id": str(uuid.uuid4()),
             "time": time.time(),

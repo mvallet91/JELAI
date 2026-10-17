@@ -6,6 +6,8 @@ import time
 import copy
 from typing import Dict, Any
 
+from config_loader import section
+
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - LEARNER_MODEL - %(message)s')
 DATABASE_FILE = os.getenv("DATABASE_FILE", "/app/chat_histories/chat_history.db")
 
@@ -56,54 +58,55 @@ def save_learner_model(student_id: str, profile_data: Dict[str, Any], last_llm_e
         logging.error(f"Error saving learner model for {student_id}: {e}")
 
 def update_rule_based_state(student_id: str, canvas: Dict[str, Any], db_path: str = DATABASE_FILE) -> Dict[str, Any]:
-    """Update learner model based on raw activity canvas (rule-based). runs instantly."""
+    """Update learner model based on raw activity canvas (rule-based). runs instantly.
+
+    The knowledge components and the thresholds come from the section
+    ``identification`` of agent_config.yaml.
+    """
     model = get_learner_model(student_id, db_path)
-    
+    identification = section("identification")
+    thresholds = identification.get("learner_states") or {}
+
     # 1. Update Knowledge (Rule-based)
     jupyter = canvas.get("jupyter", {})
-    concepts = jupyter.get("concepts_used", [])
+    concepts = set(jupyter.get("concepts_used", []))
     errors = jupyter.get("errors", 0)
     successes = jupyter.get("successful_executions", 0)
-    
-    # Map concepts to KCs
-    if "pandas import" in concepts or "pd.read_csv" in concepts:
-        model["knowledge"]["data_loading"]["score"] = min(1.0, model["knowledge"]["data_loading"]["score"] + 0.2)
-        model["knowledge"]["data_loading"]["confidence"] = min(1.0, model["knowledge"]["data_loading"]["confidence"] + 0.1)
-    
-    if "df.head()" in concepts or "df.describe()" in concepts or "df.value_counts()" in concepts:
-        model["knowledge"]["data_exploration"]["score"] = min(1.0, model["knowledge"]["data_exploration"]["score"] + 0.1)
-        
-    if "df.groupby()" in concepts or "df.mean()" in concepts:
-        model["knowledge"]["data_manipulation"]["score"] = min(1.0, model["knowledge"]["data_manipulation"]["score"] + 0.2)
-        
-    if "matplotlib/plotting" in concepts:
-        model["knowledge"]["visualization"]["score"] = min(1.0, model["knowledge"]["visualization"]["score"] + 0.2)
-        
+
+    for kc_name, kc in (identification.get("knowledge_components") or {}).items():
+        if not isinstance(kc, dict) or not concepts.intersection(kc.get("concepts") or []):
+            continue
+        entry = model["knowledge"].setdefault(kc_name, {"score": 0.0, "confidence": 0.0})
+        step = float(kc.get("step", 0.1))
+        entry["score"] = min(1.0, entry.get("score", 0.0) + step)
+        entry["confidence"] = min(1.0, entry.get("confidence", 0.0) + step / 2)
+
     # 2. Update Metacognition (SRL)
     model["metacognition"]["total_errors"] = errors
     # Check most severe states first to avoid masking by weaker conditions
-    if errors >= 5:
+    if errors >= thresholds.get("trial_and_error_min_errors", 5):
         model["metacognition"]["state"] = "Trial and Error"
-    elif errors > 3 and canvas.get("chat", {}).get("questions_asked", 0) == 0:
+    elif errors >= thresholds.get("help_avoidant_min_errors", 4) and canvas.get("chat", {}).get("questions_asked", 0) == 0:
         model["metacognition"]["state"] = "Help Avoidant"
-    elif successes > 0 and canvas.get("etherpad", {}).get("word_count", 0) > 20:
+    elif successes > 0 and canvas.get("etherpad", {}).get("word_count", 0) >= thresholds.get("reflective_min_pad_words", 21):
         model["metacognition"]["state"] = "Reflective"
     else:
         model["metacognition"]["state"] = "Exploring"
-        
+
     # 3. Update Affect
-    if errors > 4:
+    flow_min = thresholds.get("flow_min_successes", 3)
+    if errors >= thresholds.get("frustrated_min_errors", 5):
         model["affect"]["frustration_score"] = min(1.0, model["affect"]["frustration_score"] + 0.2)
         model["affect"]["state"] = "Frustrated"
-    elif successes > 3 and model["affect"]["frustration_score"] > 0:
+    elif successes > flow_min and model["affect"]["frustration_score"] > 0:
         model["affect"]["frustration_score"] = max(0.0, model["affect"]["frustration_score"] - 0.2)
         model["affect"]["state"] = "Recovered / Flow"
-    elif successes > 2:
+    elif successes >= flow_min:
         model["affect"]["state"] = "Flow"
-    
+
     save_learner_model(student_id, model, db_path=db_path)
     return model
-    
+
 def get_last_llm_eval_time(student_id: str, db_path: str = DATABASE_FILE) -> float:
     try:
         with sqlite3.connect(db_path) as conn:

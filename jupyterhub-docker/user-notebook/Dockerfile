@@ -91,5 +91,5 @@ CMD ["/bin/bash", "-c", "\
     . /home/jovyan/venv/bin/activate && \
     python /home/jovyan/process_logs.py /home/jovyan/logs/log /home/jovyan/logs/processed >> /home/jovyan/logs/processed/process_logs.log 2>&1 & \
     . /home/jovyan/venv/bin/activate && \
-    python /home/jovyan/etherpad_logger.py jovyan /home/jovyan/logs/log >> /home/jovyan/logs/processed/etherpad_logger.log 2>&1 & \
+    python /home/jovyan/etherpad_logger.py ${ETHERPAD_PAD_ID:-${JUPYTERHUB_USER:-test_pad}} /home/jovyan/logs/log >> /home/jovyan/logs/processed/etherpad_logger.log 2>&1 & \
     start-notebook.py"]

@@ -25,6 +25,7 @@ __pycache__
 *.Rproj.user
 
 # Middleware
+.env.bak
 /jupyterhub-docker/middleware/venv/
 /jupyterhub-docker/middleware/llm-handler/
 *group_assignments.json
@@ -45,6 +46,9 @@ wiki/
 
 # Logs
 *.log
+
+# Etherpad API key (made by setup.sh)
+/jupyterhub-docker/etherpad/APIKEY.txt
 
 # Teacher Chat Secrets
 teacher-chat/.env

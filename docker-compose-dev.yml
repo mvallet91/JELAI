@@ -17,10 +17,12 @@ services:
       - "./jupyterhub-docker/user-notebook/process_logs.py:/home/jovyan/process_logs.py"
       - "./jupyterhub-docker/user-notebook/utils.py:/home/jovyan/utils.py"
       - "./jupyterhub-docker/user-notebook/etherpad_logger.py:/home/jovyan/etherpad_logger.py"
+      - "./jupyterhub-docker/etherpad:/etc/jelai/etherpad:ro"
     environment:
       - JUPYTER_TOKEN=dev # Simple token for development access
       - TA_MIDDLEWARE_URL=http://middleware-dev:8004
       - ETHERPAD_URL=http://etherpad-dev:9001
+      - ETHERPAD_API_KEY_FILE=/etc/jelai/etherpad/APIKEY.txt
     image: user-notebook-dev
     container_name: notebook-dev
     ports:
@@ -41,7 +43,7 @@ services:
       - REQUIRE_AUTHENTICATION=false
       - AUTHENTICATION_METHOD=apikey
     volumes:
-      - ./jupyterhub-docker/etherpad/APIKEY.txt:/opt/etherpad-lite/APIKEY.txt
+      - ./jupyterhub-docker/etherpad/APIKEY.txt:/opt/etherpad-lite/APIKEY.txt:ro
 
   middleware-dev:
     build:
@@ -51,6 +53,21 @@ services:
     container_name: middleware-dev
     networks:
       - jelai-dev-network
+    env_file:
+      - path: ./jupyterhub-docker/.env
+        required: false
+      # Location of the .env file in earlier versions
+      - path: ./jupyterhub-docker/middleware/.env
+        required: false
+    environment:
+      - ETHERPAD_URL=http://etherpad-dev:9001
+      - ETHERPAD_API_KEY_FILE=/etc/jelai/etherpad/APIKEY.txt
+      # All students share one pad in the development setup
+      - ETHERPAD_PAD_ID=test_pad
+      # Default password for the teacher pages in development (user name: teacher)
+      - TEACHER_PASSWORD=${TEACHER_PASSWORD:-dev}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     volumes:
       # Mount middleware code for development
       - "middleware-dev-data:/var/log/jelai"
@@ -60,16 +77,19 @@ services:
       - "./jupyterhub-docker/middleware/ea-handler.py:/app/ea-handler.py"
       - "./jupyterhub-docker/middleware/ta-handler.py:/app/ta-handler.py"
       - "./jupyterhub-docker/middleware/utils.py:/app/utils.py"
+      - "./jupyterhub-docker/middleware/llm_client.py:/app/llm_client.py"
+      - "./jupyterhub-docker/middleware/config_loader.py:/app/config_loader.py"
+      - "./jupyterhub-docker/middleware/pedagogy.py:/app/pedagogy.py"
       - "./jupyterhub-docker/middleware/learning_story.py:/app/learning_story.py"
       - "./jupyterhub-docker/middleware/learner_model.py:/app/learner_model.py"
       - "./jupyterhub-docker/middleware/teacher_view.py:/app/teacher_view.py"
       - "./jupyterhub-docker/middleware/templates:/app/templates"
       - "./jupyterhub-docker/middleware/inputs:/app/inputs"
-      - "./jupyterhub-docker/middleware/.env:/app/.env"
+      - "./jupyterhub-docker/etherpad:/etc/jelai/etherpad:ro"
     ports:
       - "24224:24224"
       - "8003:8003" # EA handler server
-      - "8004:8004" # TA handler server
+      - "8004:8004" # TA handler server, teacher dashboard and settings
 
 volumes:
   chat-histories:

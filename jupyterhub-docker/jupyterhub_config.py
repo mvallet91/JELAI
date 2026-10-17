@@ -11,17 +11,39 @@ c = get_config()  # noqa: F821
 # avoid having to rebuild the JupyterHub container every time we change a
 # configuration parameter.
 
+
+def _env_flag(name, default=False):
+    value = os.environ.get(name)
+    if value is None or value == "":
+        return default
+    return value.strip().lower() in ("1", "true", "yes", "on")
+
+
+def _read_secret(env_name, file_env_name):
+    """Return a secret from an environment variable or from a file."""
+    value = os.environ.get(env_name, "").strip()
+    path = os.environ.get(file_env_name, "")
+    if not value and path and os.path.isfile(path):
+        with open(path, encoding="utf-8") as f:
+            value = f.read().strip()
+    return value
+
+
 # --- Core Hub and Spawner Configuration ---
-c.JupyterHub.port = 9000
+c.JupyterHub.port = 8000
 c.JupyterHub.spawner_class = "dockerspawner.DockerSpawner"
 
 c.DockerSpawner.image = os.environ["DOCKER_NOTEBOOK_IMAGE"]
 network_name = os.environ["DOCKER_NETWORK_NAME"]
 c.DockerSpawner.network_name = network_name
 
+etherpad_enabled = _env_flag("ETHERPAD_ENABLED", True)
 c.DockerSpawner.environment = {
     "JUPYTERHUB_SINGLEUSER_APP": "jupyter-server",
-    "TA_MIDDLEWARE_URL": "http://middleware:8004"
+    "TA_MIDDLEWARE_URL": os.environ.get("TA_MIDDLEWARE_URL", "http://middleware:8004"),
+    "ETHERPAD_ENABLED": "true" if etherpad_enabled else "false",
+    "ETHERPAD_URL": os.environ.get("ETHERPAD_INTERNAL_URL", "http://etherpad:9001"),
+    "ETHERPAD_API_KEY": _read_secret("ETHERPAD_API_KEY", "ETHERPAD_API_KEY_FILE") if etherpad_enabled else "",
 }
 
 c.DockerSpawner.use_internal_ip = True
@@ -36,12 +58,13 @@ c.JupyterHub.services = [
             "python3",
             "-m",
             "jupyterhub_idle_culler",
-            "--timeout=1800",  # Shuts down servers after 1800 seconds (30 minutes) of inactivity
+            # Shuts down servers after this many seconds of inactivity
+            f"--timeout={os.environ.get('NOTEBOOK_IDLE_TIMEOUT', '1800')}",
         ],
     }
 ]
-c.DockerSpawner.mem_limit = "400M" # Limit memory to 400MB
-c.DockerSpawner.cpu_limit = 0.5 # Limit CPU to 0.5 cores
+c.DockerSpawner.mem_limit = os.environ.get("NOTEBOOK_MEM_LIMIT", "400M")
+c.DockerSpawner.cpu_limit = float(os.environ.get("NOTEBOOK_CPU_LIMIT", "0.5"))
 
 c.DockerSpawner.stop_timeout = 30 
 
@@ -64,7 +87,8 @@ c.JupyterHub.hub_port = 8080
 
 # --- Authentication and Users ---
 c.JupyterHub.authenticator_class = "nativeauthenticator.NativeAuthenticator"
-c.NativeAuthenticator.open_signup = False
+# With open signup, new users can log in without approval by the admin.
+c.NativeAuthenticator.open_signup = _env_flag("JUPYTERHUB_OPEN_SIGNUP", False)
 admin = os.environ.get("JUPYTERHUB_ADMIN")
 if admin:
     c.Authenticator.admin_users = [admin]

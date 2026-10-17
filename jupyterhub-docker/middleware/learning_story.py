@@ -9,15 +9,32 @@ import logging
 from datetime import datetime
 from typing import Optional, Dict, Any, List
 from learner_model import get_learner_model
+from config_loader import section
 import httpx
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - LEARNING_STORY - %(message)s')
 
 DATABASE_FILE = os.getenv("DATABASE_FILE", "/app/chat_histories/chat_history.db")
-ETHERPAD_URL = os.getenv("ETHERPAD_URL", "http://etherpad-dev:9001")
-ETHERPAD_API_KEY = os.getenv("ETHERPAD_API_KEY", "jelai_secret_api_key_123")
+ETHERPAD_URL = os.getenv("ETHERPAD_URL", "http://etherpad:9001")
+ETHERPAD_ENABLED = os.getenv("ETHERPAD_ENABLED", "true").lower() not in ("0", "false", "no")
+
+
+def _etherpad_api_key() -> str:
+    """Return the Etherpad API key from ETHERPAD_API_KEY or ETHERPAD_API_KEY_FILE."""
+    value = os.getenv("ETHERPAD_API_KEY", "").strip()
+    path = os.getenv("ETHERPAD_API_KEY_FILE", "")
+    if not value and path and os.path.isfile(path):
+        with open(path, encoding="utf-8") as f:
+            value = f.read().strip()
+    return value
+
+
+ETHERPAD_API_KEY = _etherpad_api_key()
+# Optional directory with processed logs of one notebook (development setup).
 PROCESSED_LOGS_DIR = os.getenv("PROCESSED_LOGS_DIR", "/app/student-logs/processed")
-AGENT_CONFIG_URL = os.getenv("AGENT_CONFIG_URL", "http://localhost:8004/agent_config")
+# Activity logs that the notebooks send with each request, one file per student.
+INGESTED_LOGS_DIR = os.getenv("INGESTED_LOGS_DIR", "/app/chat_histories/student_logs")
+MAX_STORED_LOG_ENTRIES = int(os.getenv("MAX_STORED_LOG_ENTRIES", "2000"))
 
 # ---------------------------------------------------------------------------
 # Concept pattern defaults — used if agent_config has no concept_patterns key.
@@ -38,23 +55,57 @@ DEFAULT_CONCEPT_PATTERNS = [
 ]
 
 
-def _load_concept_patterns() -> List[Dict]:
-    """Load concept patterns from agent_config endpoint, falling back to defaults."""
-    try:
-        resp = httpx.get(AGENT_CONFIG_URL, timeout=3.0)
-        if resp.status_code == 200:
-            cfg = resp.json()
-            patterns = cfg.get("concept_patterns")
-            if patterns and isinstance(patterns, list):
-                logging.info(f"Loaded {len(patterns)} concept patterns from agent_config.")
-                return patterns
-    except Exception as e:
-        logging.warning(f"Could not load concept_patterns from agent_config: {e}")
-    logging.info("Using default concept patterns.")
+def concept_patterns() -> List[Dict]:
+    """Return the concept patterns of agent_config.yaml, or the defaults."""
+    patterns = section("identification").get("concept_patterns")
+    if patterns and isinstance(patterns, list):
+        return patterns
     return DEFAULT_CONCEPT_PATTERNS
 
 
-CONCEPT_PATTERNS: List[Dict] = _load_concept_patterns()
+def pad_id_for(student_id: str) -> str:
+    """Return the Etherpad pad of a student.
+
+    ETHERPAD_PAD_ID gives one pad for all students (development setup).
+    Else the pad has the name of the student, the same as the notebooks use.
+    """
+    return os.getenv("ETHERPAD_PAD_ID") or student_id
+
+
+def _safe_name(student_id: str) -> str:
+    return re.sub(r"[^a-zA-Z0-9_.-]", "_", student_id)[:100] or "unknown"
+
+
+def store_student_logs(student_id: str, entries: List[Dict], logs_dir: str = INGESTED_LOGS_DIR):
+    """Merge activity log entries of a student into the store of the middleware.
+
+    The notebooks send the entries with each request, because the
+    middleware cannot read the volumes of the student containers.
+    """
+    os.makedirs(logs_dir, exist_ok=True)
+    path = os.path.join(logs_dir, f"{_safe_name(student_id)}.json")
+    existing: List[Dict] = []
+    if os.path.exists(path):
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                existing = json.load(f)
+        except (OSError, json.JSONDecodeError):
+            existing = []
+    seen = {(e.get("time"), e.get("event"), e.get("notebook"), e.get("cell_index")) for e in existing}
+    for entry in entries:
+        if not isinstance(entry, dict):
+            continue
+        key = (entry.get("time"), entry.get("event"), entry.get("notebook"), entry.get("cell_index"))
+        if key in seen:
+            continue
+        seen.add(key)
+        existing.append(dict(entry, student_id=student_id))
+    existing.sort(key=lambda x: str(x.get("time", "")))
+    existing = existing[-MAX_STORED_LOG_ENTRIES:]
+    tmp_path = path + ".tmp"
+    with open(tmp_path, "w", encoding="utf-8") as f:
+        json.dump(existing, f, default=str)
+    os.replace(tmp_path, path)
 
 
 # ---------------------------------------------------------------------------
@@ -65,28 +116,40 @@ def get_processed_logs(student_id: Optional[str] = None,
                        logs_dir: str = PROCESSED_LOGS_DIR) -> List[Dict]:
     """Load processed log JSON files and return a unified, sorted list.
 
+    The files come from ``logs_dir`` and from the store of logs that the
+    notebooks send (``INGESTED_LOGS_DIR``).
     If *student_id* is given, only entries whose ``student_id`` field matches
     are returned (single-student filter for multi-student deployments).
     Pass ``None`` to load all students (e.g. for dashboard-wide views).
     """
     all_logs = []
-    if not os.path.isdir(logs_dir):
-        logging.warning(f"Logs dir not found: {logs_dir}")
-        return all_logs
-    for fname in os.listdir(logs_dir):
-        if not fname.endswith(".json"):
+    seen = set()
+    for directory in (INGESTED_LOGS_DIR, logs_dir):
+        if not directory or not os.path.isdir(directory):
             continue
-        fpath = os.path.join(logs_dir, fname)
-        try:
-            with open(fpath, "r", encoding="utf-8") as f:
-                logs = json.load(f)
-            if isinstance(logs, list):
-                if student_id is not None:
-                    logs = [l for l in logs if l.get("student_id") == student_id]
-                all_logs.extend(logs)
-        except Exception as e:
-            logging.error(f"Error reading {fpath}: {e}")
-    all_logs.sort(key=lambda x: x.get("time", ""))
+        for fname in os.listdir(directory):
+            if not fname.endswith(".json"):
+                continue
+            fpath = os.path.join(directory, fname)
+            try:
+                with open(fpath, "r", encoding="utf-8") as f:
+                    logs = json.load(f)
+            except Exception as e:
+                logging.error(f"Error reading {fpath}: {e}")
+                continue
+            if not isinstance(logs, list):
+                continue
+            for entry in logs:
+                if not isinstance(entry, dict):
+                    continue
+                if student_id is not None and entry.get("student_id") != student_id:
+                    continue
+                key = (entry.get("student_id"), entry.get("time"), entry.get("event"), entry.get("cell_index"))
+                if key in seen:
+                    continue
+                seen.add(key)
+                all_logs.append(entry)
+    all_logs.sort(key=lambda x: str(x.get("time", "")))
     return all_logs
 
 
@@ -114,6 +177,8 @@ def get_chat_history(student_id: Optional[str] = None, db_path: str = DATABASE_F
 
 def get_etherpad_text(pad_id: str) -> Optional[str]:
     """Fetch current pad text from the Etherpad HTTP API (sync)."""
+    if not ETHERPAD_ENABLED or not ETHERPAD_API_KEY:
+        return None
     url = f"{ETHERPAD_URL}/api/1/getText"
     try:
         resp = httpx.get(url, params={"apikey": ETHERPAD_API_KEY, "padID": pad_id}, timeout=5.0)
@@ -148,13 +213,14 @@ def get_all_students(db_path: str = DATABASE_FILE) -> List[Dict]:
 # 2. Student Activity Canvas — structured summary for the LLM
 # ---------------------------------------------------------------------------
 
-def build_canvas(student_id: str, pad_id: str = "test_pad",
+def build_canvas(student_id: str, pad_id: Optional[str] = None,
                  logs_dir: str = PROCESSED_LOGS_DIR,
                  db_path: str = DATABASE_FILE) -> Dict[str, Any]:
     """
     Build the Student Activity Canvas: a structured summary of what the student
     has done across Jupyter, Etherpad, and Chat.
     """
+    pad_id = pad_id or pad_id_for(student_id)
     logs = get_processed_logs(student_id, logs_dir)
     chat = get_chat_history(student_id, db_path)
     pad_text = get_etherpad_text(pad_id)
@@ -173,7 +239,7 @@ def build_canvas(student_id: str, pad_id: str = "test_pad",
         output = ex.get("output", "")
         if output:
             last_output = output[:300]
-        for concept_def in CONCEPT_PATTERNS:
+        for concept_def in concept_patterns():
             if any(p in code for p in concept_def["patterns"]):
                 concepts.add(concept_def["label"])
 
@@ -309,13 +375,14 @@ def canvas_to_prompt(canvas: Dict[str, Any]) -> str:
 # 3. Learning Story — narrative timeline for the teacher
 # ---------------------------------------------------------------------------
 
-def build_timeline(student_id: str, pad_id: str = "test_pad",
+def build_timeline(student_id: str, pad_id: Optional[str] = None,
                    logs_dir: str = PROCESSED_LOGS_DIR,
                    db_path: str = DATABASE_FILE) -> List[Dict]:
     """
     Build a unified timeline of all student activity across tools,
     sorted chronologically.
     """
+    pad_id = pad_id or pad_id_for(student_id)
     events = []
 
     # --- Jupyter + Etherpad events from processed logs ---
@@ -401,12 +468,13 @@ def build_timeline(student_id: str, pad_id: str = "test_pad",
     return deduped
 
 
-def build_learning_story(student_id: str, pad_id: str = "test_pad",
+def build_learning_story(student_id: str, pad_id: Optional[str] = None,
                          logs_dir: str = PROCESSED_LOGS_DIR,
                          db_path: str = DATABASE_FILE) -> Dict[str, Any]:
     """
     Build the complete Learning Story for a student — the teacher's view.
     """
+    pad_id = pad_id or pad_id_for(student_id)
     canvas = build_canvas(student_id, pad_id, logs_dir, db_path)
     timeline = build_timeline(student_id, pad_id, logs_dir, db_path)
     chat = get_chat_history(student_id, db_path)

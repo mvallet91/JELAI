@@ -1,4 +1,14 @@
-# JupyterHub docker compose configuration file
+# JELAI production stack: JupyterHub, student notebooks, middleware (AI tutor)
+# and Etherpad.
+#
+# Quick start (see README.md):
+#   ./setup.sh                      # in the repository root, makes .env
+#   docker compose build            # in this directory
+#   docker compose up -d
+#
+# All settings come from the .env file in this directory.
+
+name: jelai
 
 services:
   hub:
@@ -7,7 +17,7 @@ services:
       dockerfile: Dockerfile.jupyterhub
       args:
         JUPYTERHUB_VERSION: latest
-    restart: always
+    restart: unless-stopped
     image: jupyterhub
     container_name: jupyterhub
     networks:
@@ -20,23 +30,34 @@ services:
       - "/var/run/docker.sock:/var/run/docker.sock:rw"
       # Bind Docker volume on host for JupyterHub database and cookie secrets
       - "jupyterhub-data:/data"
+      # Etherpad API key, passed to the student notebooks
+      - "./etherpad:/etc/jelai/etherpad:ro"
     ports:
-      - "8001:8000"
-      - "9000:9000"
+      - "${JUPYTERHUB_PORT:-8000}:8000"
     environment:
       # This username will be a JupyterHub admin
-      JUPYTERHUB_ADMIN: admin
+      JUPYTERHUB_ADMIN: ${JUPYTERHUB_ADMIN:-admin}
+      JUPYTERHUB_OPEN_SIGNUP: ${JUPYTERHUB_OPEN_SIGNUP:-false}
       # All containers will join this network
       DOCKER_NETWORK_NAME: jupyterhub-network
       # JupyterHub will spawn this Notebook image for users
-      # DOCKER_NOTEBOOK_IMAGE: quay.io/jupyter/base-notebook:latest
       DOCKER_NOTEBOOK_IMAGE: user-notebook
       # Notebook directory inside user image
       DOCKER_NOTEBOOK_DIR: /home/jovyan/work
       # Default startup notebook, must start with /lab/tree
       # The notebook should be in the user's home directory, see the Dockerfile in user-notebook
       DEFAULT_NOTEBOOK: /lab/tree/Welcome.ipynb
+      # Resources of each student notebook
+      NOTEBOOK_MEM_LIMIT: ${NOTEBOOK_MEM_LIMIT:-1G}
+      NOTEBOOK_CPU_LIMIT: ${NOTEBOOK_CPU_LIMIT:-0.5}
+      NOTEBOOK_IDLE_TIMEOUT: ${NOTEBOOK_IDLE_TIMEOUT:-1800}
+      ETHERPAD_ENABLED: ${ETHERPAD_ENABLED:-true}
+      ETHERPAD_API_KEY_FILE: /etc/jelai/etherpad/APIKEY.txt
+    depends_on:
+      - middleware
 
+  # This service only builds the student notebook image. JupyterHub starts
+  # one container of this image for each student.
   user-notebook:
     build:
       context: ./user-notebook
@@ -46,21 +67,26 @@ services:
     environment:
       - CHAT_DIR=chats
     image: user-notebook
+    scale: 0
     networks:
       - jupyterhub-network
 
   etherpad:
     image: etherpad/etherpad:latest
     container_name: etherpad
+    restart: unless-stopped
+    profiles: ["etherpad"]
     networks:
       - jupyterhub-network
     ports:
-      - "9001:9001"
+      - "${ETHERPAD_PORT:-9001}:9001"
     environment:
       - REQUIRE_AUTHENTICATION=false
       - AUTHENTICATION_METHOD=apikey
     volumes:
-      - ./etherpad/APIKEY.txt:/opt/etherpad-lite/APIKEY.txt
+      - ./etherpad/APIKEY.txt:/opt/etherpad-lite/APIKEY.txt:ro
+      # Keep the pads when the container is recreated
+      - etherpad-data:/opt/etherpad-lite/var
 
   middleware:
     build:
@@ -68,23 +94,36 @@ services:
       dockerfile: Dockerfile
     image: middleware
     container_name: middleware
+    restart: unless-stopped
     networks:
       - jupyterhub-network
+    env_file:
+      - path: ./.env
+        required: false
+      # Location of the .env file in earlier versions
+      - path: ./middleware/.env
+        required: false
+    environment:
+      ETHERPAD_URL: http://etherpad:9001
+      ETHERPAD_API_KEY_FILE: /etc/jelai/etherpad/APIKEY.txt
+    extra_hosts:
+      # Lets the middleware reach an Ollama server on the host machine
+      - "host.docker.internal:host-gateway"
     volumes:
       - "middleware-data:/var/log/jelai"
       - "chat-histories:/app/chat_histories"
-      - "./middleware/inputs:/app/inputs:ro"
+      # Teacher configuration, editable on the teacher settings page
+      - "./middleware/inputs:/app/inputs"
+      - "./etherpad:/etc/jelai/etherpad:ro"
     ports:
-      - "24224:24224"
-      - "8004:8004"
-      - "8003:8003"
-    depends_on:
-      - hub
+      # Teacher dashboard and settings: http://<server>:8004/teacher-view
+      - "${TEACHER_DASHBOARD_PORT:-8004}:8004"
 
 volumes:
   jupyterhub-data:
   middleware-data:
   chat-histories:
+  etherpad-data:
 
 
 networks:
