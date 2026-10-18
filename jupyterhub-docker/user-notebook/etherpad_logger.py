@@ -7,6 +7,9 @@ import asyncio
 from datetime import datetime
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - ETHERPAD_LOGGER - %(message)s')
+# httpx logs each request URL at INFO level, and the URL contains the Etherpad
+# API key. The student can read this log, so keep httpx quiet.
+logging.getLogger("httpx").setLevel(logging.WARNING)
 
 ETHERPAD_URL = os.getenv("ETHERPAD_URL", "http://etherpad:9001")
 ETHERPAD_API_KEY = os.getenv("ETHERPAD_API_KEY", "").strip()
