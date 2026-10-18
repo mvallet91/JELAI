@@ -73,6 +73,13 @@ notebook_dir = os.environ.get("DOCKER_NOTEBOOK_DIR", "/home/jovyan/work")
 c.DockerSpawner.notebook_dir = notebook_dir
 c.DockerSpawner.volumes = {"jupyterhub-user-{username}": notebook_dir,
                            "jupyterhub-logs-{username}": "/home/jovyan/logs/processed"}
+# The folder of the teacher with the course materials (host path). Each
+# student container gets a read-only copy at /srv/course_materials, and the
+# files are copied to the work directory when the notebook starts.
+course_materials_host_dir = os.environ.get("COURSE_MATERIALS_DIR", "").strip()
+if course_materials_host_dir:
+    c.DockerSpawner.volumes[course_materials_host_dir] = {
+        "bind": "/srv/course_materials", "mode": "ro"}
 c.JupyterHub.cookie_secret_file = "/data/jupyterhub_cookie_secret"
 c.JupyterHub.db_url = "sqlite:////data/jupyterhub.sqlite"
 
@@ -80,6 +87,35 @@ c.JupyterHub.db_url = "sqlite:////data/jupyterhub.sqlite"
 default_notebook = os.environ.get("DEFAULT_NOTEBOOK")
 if default_notebook:
     c.DockerSpawner.default_url = default_notebook
+
+# The teacher can set the start notebook in course.yaml in the course
+# materials folder (key: start_notebook). The hub reads the file each time a
+# notebook server starts, so a restart of the hub is not necessary.
+COURSE_CONFIG_FILE = "/srv/course_materials/course.yaml"
+
+
+def _start_notebook_url(path):
+    """Return the JupyterLab URL of a notebook path in the work directory."""
+    from urllib.parse import quote
+    return "/lab/tree/" + quote(path.strip().lstrip("/"))
+
+
+async def _set_start_notebook(spawner):
+    if not os.path.isfile(COURSE_CONFIG_FILE):
+        return
+    try:
+        import yaml
+        with open(COURSE_CONFIG_FILE, encoding="utf-8") as f:
+            data = yaml.safe_load(f) or {}
+        start_notebook = str(data.get("start_notebook") or "").strip()
+    except Exception as e:
+        spawner.log.warning("Cannot read %s: %s", COURSE_CONFIG_FILE, e)
+        return
+    if start_notebook:
+        spawner.default_url = _start_notebook_url(start_notebook)
+
+
+c.Spawner.pre_spawn_hook = _set_start_notebook
 
 # User containers will access hub by container name on the Docker network
 c.JupyterHub.hub_ip = "jupyterhub"

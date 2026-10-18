@@ -51,6 +51,11 @@ wiki/
 # Logs
 *.log
 
+# Course materials of the teacher (only the instructions are tracked)
+/jupyterhub-docker/course_materials/*
+!/jupyterhub-docker/course_materials/README.md
+!/jupyterhub-docker/course_materials/course.yaml.example
+
 # Etherpad API key (made by setup.sh)
 /jupyterhub-docker/etherpad/APIKEY.txt
 

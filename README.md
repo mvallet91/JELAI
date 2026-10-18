@@ -112,14 +112,14 @@ The individual user servers are automatically created (or *spawned*) when a user
 ### User/Student Working Environment
 
 In the Dockerfile in the user-notebook directory, the working directory for the chatbot interaction is set to the **working-directory** environment variable. This is the local directory where students see their notebooks and chat files. 
-To add course or experiment materials, the files can be added to the **working-directory** in the user-notebook image.
+To add course materials, put the files in the folder `jupyterhub-docker/course_materials/`.
 
-#### Learning Materials Directory
-A special directory, `learning_materials`, is provided in `jupyterhub-docker/user-notebook/` for sharing datasets, notebooks, and other resources with all users. 
-- Any files or folders placed in `learning_materials` will be copied into the Docker image and made available to all users at `/home/jovyan/learning_materials/` in their JupyterLab environment.
-- This is useful for distributing course datasets, starter notebooks, or reference materials.
-- By default, only `.gitkeep` and `README.md` are tracked by git in this directory; all other contents are ignored to prevent accidental commits of large or user-specific files. You can add or remove files as needed for your course or project.
-- To update the materials for all users, add or update files in `learning_materials` and rebuild the user-notebook image.
+#### Course Materials and Start Notebook
+- The files in `course_materials` (notebooks, datasets, documents, folders) are copied to the work directory of each student when the notebook server of the student starts. No rebuild is necessary.
+- A file that the student already has is never replaced. To give a changed version to all students, use a new file name.
+- To open a notebook after login, copy `course_materials/course.yaml.example` to `course.yaml` and set `start_notebook`. The change is active for the next notebook server that starts.
+- `COURSE_MATERIALS_DIR` in `.env` must be the absolute path of the folder. `setup.sh` sets it.
+- The folder `user-notebook/learning_materials` is a fixed part of the student image. It makes the `chats` directory. Put course files in `course_materials`, not there.
 
 Additionally, the default directory for chat files can be set via the `CHAT_DIR` environment variable, which is configured in `jupyterhub-docker/docker-compose.yml` under the `user-notebook` service.  
 For example:
@@ -232,7 +232,7 @@ JELAI integrates [Etherpad](https://etherpad.org/) as a collaborative real-time 
 - How do I change the classification categories or the interventions?
     - Edit `agent_config.yaml` on the teacher settings page. See [docs/teacher-configuration.md](docs/teacher-configuration.md).
 - Can I add notebooks or materials so they are available to all users?
-    - Yes, you can add course materials to the **working-directory** in the user-notebook image, using the Dockerfile.
+    - Yes. Put the files in `jupyterhub-docker/course_materials/`. Each student gets them at the next start of the notebook server.
 - What if I can't run Ollama locally?
     - Use an Open WebUI server, OpenAI, or a hosted provider with a free tier. See [docs/llm-providers.md](docs/llm-providers.md).
 - The tutor answers "I'm sorry, I encountered an issue". What do I do?

@@ -1,0 +1,5 @@
+# Copy this file to course.yaml to use it.
+
+# The notebook that opens after a student logs in. The path is relative to the
+# work directory of the student.
+start_notebook: Task1.ipynb

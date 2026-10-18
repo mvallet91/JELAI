@@ -81,6 +81,7 @@ COPY chat_interact.py /home/jovyan/
 COPY process_logs.py /home/jovyan/
 COPY utils.py /home/jovyan/
 COPY etherpad_logger.py /home/jovyan/
+COPY --chmod=755 sync_course_materials.sh /home/jovyan/
 
 # Get container ID and export it as an environment variable
 RUN echo 'export CONTAINER_ID=$(cat /proc/self/cgroup | grep "docker" | sed "s/^.*\///" | tail -n1)' >> /home/jovyan/.bashrc
@@ -88,6 +89,7 @@ RUN echo 'export CONTAINER_ID=$(cat /proc/self/cgroup | grep "docker" | sed "s/^
 # Start Fluent Bit, chat_interact.py, and Jupyter Notebook
 CMD ["/bin/bash", "-c", "\
     source /home/jovyan/.bashrc && \
+    /home/jovyan/sync_course_materials.sh /home/jovyan/work && \
     /opt/td-agent-bit/bin/td-agent-bit -c /etc/td-agent-bit/td-agent-bit.conf  & \
     . /home/jovyan/venv/bin/activate && \
     python /home/jovyan/chat_interact.py /home/jovyan/work/${CHAT_DIR} /home/jovyan/logs/processed >> /home/jovyan/logs/processed/chat_interact.log 2>&1 & \

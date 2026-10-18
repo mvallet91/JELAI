@@ -34,6 +34,8 @@ services:
       - "jupyterhub-data:/data"
       # Etherpad API key, passed to the student notebooks
       - "./etherpad:/etc/jelai/etherpad:ro"
+      # Course materials of the teacher (the hub reads course.yaml)
+      - "./course_materials:/srv/course_materials:ro"
     ports:
       - "${JUPYTERHUB_PORT:-8000}:8000"
     environment:
@@ -48,6 +50,8 @@ services:
       DOCKER_NOTEBOOK_DIR: /home/jovyan/work
       # Page that students see after log in (/lab, or /lab/tree/<notebook>).
       DEFAULT_NOTEBOOK: ${DEFAULT_NOTEBOOK:-/lab}
+      # Absolute host path of the course_materials folder (setup.sh sets it)
+      COURSE_MATERIALS_DIR: ${COURSE_MATERIALS_DIR:-}
       # Resources of each student notebook
       NOTEBOOK_MEM_LIMIT: ${NOTEBOOK_MEM_LIMIT:-1G}
       NOTEBOOK_CPU_LIMIT: ${NOTEBOOK_CPU_LIMIT:-0.5}
