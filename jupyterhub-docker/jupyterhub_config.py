@@ -73,12 +73,13 @@ notebook_dir = os.environ.get("DOCKER_NOTEBOOK_DIR", "/home/jovyan/work")
 c.DockerSpawner.notebook_dir = notebook_dir
 c.DockerSpawner.volumes = {"jupyterhub-user-{username}": notebook_dir,
                            "jupyterhub-logs-{username}": "/home/jovyan/logs/processed"}
-# The folder of the teacher with the course materials (host path). Each
-# student container gets a read-only copy at /srv/course_materials, and the
-# files are copied to the work directory when the notebook starts.
-course_materials_host_dir = os.environ.get("COURSE_MATERIALS_DIR", "").strip()
-if course_materials_host_dir:
-    c.DockerSpawner.volumes[course_materials_host_dir] = {
+# The Docker volume with the course materials of the teacher. The teacher
+# uploads the files on the settings page. Each student container gets the
+# volume read-only at /srv/course_materials and copies the files to the work
+# directory.
+course_materials_volume = os.environ.get("COURSE_MATERIALS_VOLUME", "").strip()
+if course_materials_volume:
+    c.DockerSpawner.volumes[course_materials_volume] = {
         "bind": "/srv/course_materials", "mode": "ro"}
 c.JupyterHub.cookie_secret_file = "/data/jupyterhub_cookie_secret"
 c.JupyterHub.db_url = "sqlite:////data/jupyterhub.sqlite"
@@ -88,9 +89,10 @@ default_notebook = os.environ.get("DEFAULT_NOTEBOOK")
 if default_notebook:
     c.DockerSpawner.default_url = default_notebook
 
-# The teacher can set the start notebook in course.yaml in the course
-# materials folder (key: start_notebook). The hub reads the file each time a
-# notebook server starts, so a restart of the hub is not necessary.
+# The teacher chooses the start notebook on the settings page. The choice is
+# saved in course.yaml in the course materials (key: start_notebook). The hub
+# reads the file each time a notebook server starts, so a restart of the hub
+# is not necessary.
 COURSE_CONFIG_FILE = "/srv/course_materials/course.yaml"
 
 

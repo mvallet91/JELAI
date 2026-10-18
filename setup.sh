@@ -147,14 +147,7 @@ if ! $ASSUME_YES; then
 fi
 set_var TEACHER_PASSWORD "$teacher_password"
 
-mkdir -p "$STACK/etherpad" "$STACK/course_materials"
-
-# The hub gives this folder to the student notebooks. Docker needs the
-# absolute path on the host. In Git Bash on Windows, "pwd -W" gives C:/...
-if materials_dir="$(cd "$STACK/course_materials" && pwd -W 2>/dev/null)"; then :; else
-    materials_dir="$(cd "$STACK/course_materials" && pwd)"
-fi
-set_var COURSE_MATERIALS_DIR "$materials_dir"
+mkdir -p "$STACK/etherpad"
 if [[ -d "$APIKEY_FILE" ]]; then
     # Docker makes a directory when it mounts a file that does not exist.
     rmdir "$APIKEY_FILE" 2>/dev/null || true

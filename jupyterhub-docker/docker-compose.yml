@@ -35,7 +35,7 @@ services:
       # Etherpad API key, passed to the student notebooks
       - "./etherpad:/etc/jelai/etherpad:ro"
       # Course materials of the teacher (the hub reads course.yaml)
-      - "./course_materials:/srv/course_materials:ro"
+      - "course-materials:/srv/course_materials:ro"
     ports:
       - "${JUPYTERHUB_PORT:-8000}:8000"
     environment:
@@ -50,8 +50,8 @@ services:
       DOCKER_NOTEBOOK_DIR: /home/jovyan/work
       # Page that students see after log in (/lab, or /lab/tree/<notebook>).
       DEFAULT_NOTEBOOK: ${DEFAULT_NOTEBOOK:-/lab}
-      # Absolute host path of the course_materials folder (setup.sh sets it)
-      COURSE_MATERIALS_DIR: ${COURSE_MATERIALS_DIR:-}
+      # Docker volume with the course materials of the teacher
+      COURSE_MATERIALS_VOLUME: jelai-course-materials
       # Resources of each student notebook
       NOTEBOOK_MEM_LIMIT: ${NOTEBOOK_MEM_LIMIT:-1G}
       NOTEBOOK_CPU_LIMIT: ${NOTEBOOK_CPU_LIMIT:-0.5}
@@ -120,6 +120,8 @@ services:
       # Teacher configuration, editable on the teacher settings page
       - "./middleware/inputs:/app/inputs"
       - "./etherpad:/etc/jelai/etherpad:ro"
+      # Course materials, uploaded on the teacher settings page
+      - "course-materials:/app/course_materials"
     ports:
       # Teacher dashboard and settings: http://<server>:8004/teacher-view
       - "${TEACHER_DASHBOARD_PORT:-8004}:8004"
@@ -129,6 +131,8 @@ volumes:
   middleware-data:
   chat-histories:
   etherpad-data:
+  course-materials:
+    name: jelai-course-materials
 
 
 networks:

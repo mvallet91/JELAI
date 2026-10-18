@@ -88,8 +88,9 @@ RUN echo 'export CONTAINER_ID=$(cat /proc/self/cgroup | grep "docker" | sed "s/^
 
 # Start Fluent Bit, chat_interact.py, and Jupyter Notebook
 CMD ["/bin/bash", "-c", "\
+    /home/jovyan/sync_course_materials.sh /home/jovyan/work; \
+    (while true; do sleep 60; /home/jovyan/sync_course_materials.sh /home/jovyan/work; done) & \
     source /home/jovyan/.bashrc && \
-    /home/jovyan/sync_course_materials.sh /home/jovyan/work && \
     /opt/td-agent-bit/bin/td-agent-bit -c /etc/td-agent-bit/td-agent-bit.conf  & \
     . /home/jovyan/venv/bin/activate && \
     python /home/jovyan/chat_interact.py /home/jovyan/work/${CHAT_DIR} /home/jovyan/logs/processed >> /home/jovyan/logs/processed/chat_interact.log 2>&1 & \

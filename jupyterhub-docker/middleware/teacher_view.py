@@ -10,11 +10,12 @@ import secrets
 from pathlib import Path
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import HTMLResponse
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from pydantic import BaseModel
 
+import course_materials
 import llm_client
 from config_loader import INPUTS_DIR, config_error, model_override, validate_teacher_yaml
 from learning_story import (
@@ -254,3 +255,69 @@ def settings_status():
 async def test_llm():
     """Send a short request to each configured model and return the results."""
     return await llm_client.test_connection(_effective_settings())
+
+
+# ---------------------------------------------------------------------------
+# Course materials API
+# ---------------------------------------------------------------------------
+
+class StartNotebook(BaseModel):
+    path: str = ""
+
+
+def _materials_error(error: course_materials.MaterialsError) -> HTTPException:
+    return HTTPException(status_code=400, detail={"errors": [str(error)]})
+
+
+@router.get("/materials")
+def get_materials():
+    """List the course materials and the start notebook."""
+    directory = course_materials.materials_dir()
+    return {
+        "files": course_materials.list_files(),
+        "start_notebook": course_materials.get_start_notebook(),
+        "writable": directory.is_dir() and os.access(directory, os.W_OK),
+        "max_mb": course_materials.max_upload_bytes() // (1024 * 1024),
+    }
+
+
+@router.put("/materials/file")
+async def upload_material(request: Request, path: str, extract: bool = False):
+    """Save the body of the request as a file. A ZIP file is extracted if ``extract`` is true."""
+    limit = course_materials.max_upload_bytes()
+    if int(request.headers.get("content-length") or 0) > limit:
+        raise HTTPException(status_code=413, detail={"errors": [f"The file is larger than {limit // (1024 * 1024)} MB."]})
+    data = await request.body()
+    try:
+        if extract:
+            saved = course_materials.extract_zip(data)
+        else:
+            saved = [course_materials.save_file(path, data)]
+    except course_materials.MaterialsError as e:
+        raise _materials_error(e)
+    except OSError as e:
+        raise HTTPException(status_code=500, detail={"errors": [f"The files cannot be saved: {e}"]})
+    return {"saved": saved}
+
+
+@router.delete("/materials/file")
+def delete_material(path: str):
+    """Delete a file or directory of the course materials."""
+    try:
+        course_materials.delete_path(path)
+        if course_materials.get_start_notebook() and not (
+            course_materials.materials_dir() / course_materials.get_start_notebook()
+        ).is_file():
+            course_materials.set_start_notebook("")
+    except course_materials.MaterialsError as e:
+        raise _materials_error(e)
+    return {"deleted": path}
+
+
+@router.put("/materials/start")
+def set_start_notebook(body: StartNotebook):
+    """Set the notebook that students see after login. An empty path removes it."""
+    try:
+        return {"start_notebook": course_materials.set_start_notebook(body.path)}
+    except course_materials.MaterialsError as e:
+        raise _materials_error(e)

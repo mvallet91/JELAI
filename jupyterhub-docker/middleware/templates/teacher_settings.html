@@ -154,6 +154,15 @@
         .msg.ok { background: rgba(74, 222, 128, 0.12); color: #86efac; }
         .msg.info { background: var(--bg-card); color: var(--text-secondary); }
 
+        .materials { font-size: 13px; color: var(--text-secondary); line-height: 1.5; }
+        .materials .row { display: flex; align-items: center; gap: 6px; padding: 3px 0; }
+        .materials .row .name { flex: 1; overflow-wrap: anywhere; color: var(--text-primary); }
+        .materials .row .size { color: var(--text-muted); font-size: 11px; white-space: nowrap; }
+        .materials .del { background: none; border: none; color: var(--accent-red); cursor: pointer; font-size: 14px; }
+        .materials select { width: 100%; margin: 6px 0; background: var(--bg-card); color: var(--text-primary);
+            border: 1px solid var(--border); border-radius: 6px; padding: 6px; font: inherit; }
+        .materials input[type=file] { width: 100%; margin: 6px 0; color: var(--text-secondary); font-size: 12px; }
+
         .llm { font-size: 13px; color: var(--text-secondary); line-height: 1.6; }
         .llm b { color: var(--text-primary); font-weight: 500; }
         .llm table { width: 100%; border-collapse: collapse; margin-top: 6px; }
@@ -170,6 +179,19 @@
     <div class="layout">
         <div>
             <div class="panel" id="files">Loading…</div>
+            <div class="panel" style="margin-top:16px">
+                <h2>Course materials</h2>
+                <div class="materials">
+                    <div>Students get these files in their work folder. New files reach running notebooks within a minute. A file that a student has already is not replaced: use a new name for a new version.</div>
+                    <input type="file" id="upload" multiple>
+                    <button class="btn" id="upload-btn" onclick="uploadFiles()">Upload</button>
+                    <div style="font-size:11px;color:var(--text-muted);margin-top:4px">A ZIP file is extracted. Maximum <span id="max-mb">100</span> MB for each upload.</div>
+                    <div class="messages" id="materials-result"></div>
+                    <label for="start-notebook" style="display:block;margin-top:10px">Notebook that opens after login</label>
+                    <select id="start-notebook" onchange="setStartNotebook(this.value)"></select>
+                    <div id="materials-list"></div>
+                </div>
+            </div>
             <div class="panel" style="margin-top:16px">
                 <h2>LLM connection</h2>
                 <div class="llm" id="llm">Loading…</div>
@@ -328,6 +350,78 @@
             }
         }
 
+        function formatSize(bytes) {
+            if (bytes < 1024) return bytes + ' B';
+            if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(0) + ' KB';
+            return (bytes / 1024 / 1024).toFixed(1) + ' MB';
+        }
+
+        async function loadMaterials() {
+            const data = await api('/teacher/materials');
+            document.getElementById('max-mb').textContent = data.max_mb;
+            const list = document.getElementById('materials-list');
+            list.innerHTML = '';
+            if (!data.writable) {
+                list.appendChild(el('div', { class: 'msg warning' }, 'The materials directory is read-only. You cannot upload files.'));
+            }
+            if (!data.files.length) list.appendChild(el('div', {}, 'No files yet.'));
+            data.files.forEach(f => {
+                const row = el('div', { class: 'row' });
+                const del = el('button', { class: 'del', title: 'Delete' }, '✕');
+                del.onclick = () => deleteMaterial(f.path);
+                row.append(el('span', { class: 'name' }, f.path), el('span', { class: 'size' }, formatSize(f.size)), del);
+                list.appendChild(row);
+            });
+            const select = document.getElementById('start-notebook');
+            select.innerHTML = '';
+            select.appendChild(el('option', { value: '' }, 'None (JupyterLab launcher)'));
+            data.files.filter(f => f.path.endsWith('.ipynb')).forEach(f => {
+                const option = el('option', { value: f.path }, f.path);
+                if (f.path === data.start_notebook) option.selected = true;
+                select.appendChild(option);
+            });
+        }
+
+        async function uploadFiles() {
+            const input = document.getElementById('upload');
+            const button = document.getElementById('upload-btn');
+            const box = document.getElementById('materials-result');
+            box.innerHTML = '';
+            if (!input.files.length) return;
+            button.disabled = true;
+            let count = 0;
+            for (const file of input.files) {
+                const isZip = file.name.toLowerCase().endsWith('.zip');
+                const url = '/teacher/materials/file?path=' + encodeURIComponent(file.name) + (isZip ? '&extract=true' : '');
+                try {
+                    const result = await api(url, { method: 'PUT', body: file, headers: { 'Content-Type': 'application/octet-stream' } });
+                    count += result.saved.length;
+                } catch (result) { showMessages('materials-result', result); }
+            }
+            input.value = '';
+            button.disabled = false;
+            if (count) box.appendChild(el('div', { class: 'msg ok' }, `${count} file(s) saved.`));
+            loadMaterials();
+        }
+
+        async function deleteMaterial(path) {
+            if (!confirm(`Delete ${path}? Students keep the copies that they already have.`)) return;
+            try {
+                await api('/teacher/materials/file?path=' + encodeURIComponent(path), { method: 'DELETE' });
+            } catch (result) { showMessages('materials-result', result); }
+            loadMaterials();
+        }
+
+        async function setStartNotebook(path) {
+            const box = document.getElementById('materials-result');
+            box.innerHTML = '';
+            try {
+                await api('/teacher/materials/start', { method: 'PUT', body: JSON.stringify({ path }) });
+                box.appendChild(el('div', { class: 'msg ok' }, 'Saved. It is active for the next start of a student notebook server.'));
+            } catch (result) { showMessages('materials-result', result); }
+            loadMaterials();
+        }
+
         async function testLlm() {
             const btn = document.getElementById('test-btn');
             btn.disabled = true;
@@ -357,6 +451,7 @@
 
         loadFiles().then(() => openFile('agent_config.yaml')).catch(r => showMessages('messages', r));
         loadStatus().catch(r => showMessages('llm-result', r));
+        loadMaterials().catch(r => showMessages('materials-result', r));
     </script>
 </body>
 
