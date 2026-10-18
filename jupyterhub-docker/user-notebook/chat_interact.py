@@ -151,7 +151,9 @@ class ChatHandler(FileSystemEventHandler):
         if event.is_directory:
             return
         file_path = os.path.abspath(event.src_path)
-        if file_path.endswith('.chat') and os.path.exists(file_path):
+        # Skip hidden files such as .~name.chat, which the chat writes while saving.
+        if (file_path.endswith('.chat') and not os.path.basename(file_path).startswith('.')
+                and os.path.exists(file_path)):
             logging.info(f"Detected modification in: {file_path}")
             self.loop.call_soon_threadsafe(self.handle_new_message, file_path)
 
@@ -493,7 +495,7 @@ class ChatHandler(FileSystemEventHandler):
                 chat_files = [
                     os.path.join(self.chat_directory, f)
                     for f in os.listdir(self.chat_directory)
-                    if f.endswith('.chat')
+                    if f.endswith('.chat') and not f.startswith('.')
                 ]
                 
                 for file_path in chat_files:
