@@ -15,7 +15,10 @@ COPY jupyter_jupyterlab_pioneer_config.py /etc/jupyter/
 # COPY jupyter_server_config.py /etc/jupyter/
 
 # Install additional packages
-RUN pip install --no-cache-dir jupyterlab-chat jupyterlab_pioneer folium
+# jupyterlab-chat needs jupyter-collaboration (real-time collaboration) to show
+# messages that chat_interact.py writes to the .chat file. Without it, the chat
+# never reloads the file, does not show the tutor's replies and overwrites them.
+RUN pip install --no-cache-dir jupyterlab-chat jupyter-collaboration jupyterlab_pioneer folium
 
 # Install Fluent Bit
 # Install td-agent-bit
