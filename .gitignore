@@ -26,6 +26,10 @@ __pycache__
 
 # Middleware
 .env.bak
+# Other copies of .env (they contain secrets), but not the example
+.env.*
+!.env.example
+!.env.*.example
 /jupyterhub-docker/middleware/venv/
 /jupyterhub-docker/middleware/llm-handler/
 *group_assignments.json
