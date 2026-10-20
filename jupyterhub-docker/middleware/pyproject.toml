@@ -1,6 +1,6 @@
 [project]
 name = "middleware"
-version = "0.1.1"
+version = "0.2.0"
 description = "middleware uv project"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -10,16 +10,9 @@ dependencies = [
     "pydantic",
     "python-dotenv",
     "rapidfuzz",
-    "thefuzz",
     "fluent-logger",
     "httpx",
-    "sentence-transformers",
-    "asyncio"
+    "fastembed",
+    "numpy",
+    "pyyaml"
 ]
-
-[[tool.uv.index]]
-url = "https://download.pytorch.org/whl/cpu"
-name = "pytorch-cpu" 
-
-[tool.uv.sources]
-torch = { index = "pytorch-cpu" }

@@ -1,0 +1,11 @@
+[project]
+name = "mcp-middleware"
+version = "0.1.0"
+description = "MCP middleware bridge between LibreChat and ClickHouse"
+requires-python = ">=3.11"
+dependencies = [
+    "clickhouse-connect",
+    "httpx",
+    "pydantic",
+    "mcp[cli]",
+]

@@ -34,10 +34,10 @@ class LogFileListener:
             if not log_data:
                 return
 
-            # Check if the last event is a CellExecuteEvent
+            # Check if the last event is a CellExecuteEvent or PadEditEvent
             last_event = log_data[-1].get('eventDetail', {}).get('eventName', '')
-            if last_event == 'CellExecuteEvent':
-                logging.info("CellExecuteEvent detected. Processing the entire log file...")
+            if last_event in ['CellExecuteEvent', 'PadEditEvent']:
+                logging.info(f"{last_event} detected. Processing the entire log file...")
                 events, event_dict = reconstruct_cell_contents(log_data)
 
                 # Save the processed log data

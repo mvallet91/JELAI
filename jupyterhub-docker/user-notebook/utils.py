@@ -1,4 +1,5 @@
 import json
+import logging
 from datetime import datetime
 from collections import OrderedDict, Counter
 
@@ -9,8 +10,10 @@ def load_log_file(log_file_path):
             return log_data
     except:
         with open(log_file_path, 'r', encoding='utf-8') as file:
-            data = file.read()
-            data = '[' + data[:-1] + ']'
+            data = file.read().strip()
+            if data.endswith(','):
+                data = data[:-1]
+            data = '[' + data + ']'
             log_data = json.loads(data)
             return log_data
 
@@ -146,6 +149,19 @@ def reconstruct_cell_contents(log_data):
         if event_name in ['NotebookScrollEvent', 'ActiveCellChangeEvent', 'NotebookHiddenEvent', 'NotebookVisibleEvent', 'NotebookOpenEvent']:
             continue
 
+        # Etherpad edit event
+        if event_name == 'PadEditEvent':
+            pad_content = event_detail.get('content', '')
+            if pad_content:  # Only add if it's not empty, otherwise it could be the init message
+                event_dict.append(OrderedDict({
+                    'event': 'Edited Pad',
+                    'source': 'etherpad',
+                    'notebook': notebook_path,
+                    'time': event_time_str,
+                    'content': pad_content
+                }))
+            continue
+
         # Manual cell addition (without assistant content)
         if event_name == 'CellAddEvent':
             added_cell_index = event_info.get('cells', [{}])[0].get('index')
@@ -275,7 +291,7 @@ def analyze_logs(log_file_path, chat_log_path, start_time, end_time, filter_auto
     log_data = load_log_file(log_file_path)
     log_summary, log_objects = reconstruct_cell_contents(log_data)
     logs = []
-    print(len(log_objects))
+    logging.info(f"Processing {len(log_objects)} log objects")
     # Load the chat logs
     with open(chat_log_path, 'r') as file:
         chat_data = json.load(file)
@@ -285,18 +301,18 @@ def analyze_logs(log_file_path, chat_log_path, start_time, end_time, filter_auto
     end_timestamp = datetime.strptime(end_time, '%Y-%m-%d %H:%M:%S').timestamp()
 
     # Filter and print notebook events
-    print("Notebook Events:")
+    logging.debug("Filtering notebook events...")
     for event in log_objects:
         event_time = datetime.strptime(event['time'], '%Y-%m-%d %H:%M:%S').timestamp()
         if start_timestamp <= event_time <= end_timestamp:
             logs.append(event)
             if event['event'] == 'Executed cells':
-                print(event['event'], event['time'], event['input'])
+                logging.debug(f"Executed: {event['event']} at {event['time']}: {event['input'][:100]}")
             else:
-                print(event)
+                logging.debug(f"Event: {event}")
 
 
-    print("\nChat Messages:")
+    logging.debug("Filtering chat messages...")
     for message in chat_data['messages']:
         message_time = message['time']
         if start_timestamp <= message_time <= end_timestamp:
@@ -304,7 +320,7 @@ def analyze_logs(log_file_path, chat_log_path, start_time, end_time, filter_auto
                 continue
             # Convert timestamp to string
             message['time'] = datetime.fromtimestamp(message_time).strftime('%Y-%m-%d %H:%M:%S')
-            print(message)
+            logging.debug(f"Chat message: {message}")
         else:
             # Remove the message from the list if it is outside the time range
             chat_data['messages'].remove(message)

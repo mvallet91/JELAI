@@ -15,7 +15,10 @@ COPY jupyter_jupyterlab_pioneer_config.py /etc/jupyter/
 # COPY jupyter_server_config.py /etc/jupyter/
 
 # Install additional packages
-RUN pip install --no-cache-dir jupyterlab-chat jupyterlab_pioneer folium
+# jupyterlab-chat needs jupyter-collaboration (real-time collaboration) to show
+# messages that chat_interact.py writes to the .chat file. Without it, the chat
+# never reloads the file, does not show the tutor's replies and overwrites them.
+RUN pip install --no-cache-dir "jupyterlab-chat==0.25.2" "jupyter-collaboration==5.0.4" "jupyterlab_pioneer==1.7.3" folium
 
 # Install Fluent Bit
 # Install td-agent-bit
@@ -64,7 +67,7 @@ ENV CHAT_DIR=${CHAT_DIR}
 
 # Change default chat location 
 RUN mkdir -p /home/jovyan/.jupyter/lab/user-settings/jupyterlab-chat-extension && \
-   echo '{"defaultDirectory": "'"${CHAT_DIR}"'"}' > /home/jovyan/.jupyter/lab/user-settings/jupyterlab-chat-extension/factory.jupyterlab-settings
+    echo '{"defaultDirectory": "'"${CHAT_DIR}"'"}' > /home/jovyan/.jupyter/lab/user-settings/jupyterlab-chat-extension/factory.jupyterlab-settings
 
 # Create a virtual environment
 RUN python -m venv /home/jovyan/venv
@@ -77,16 +80,22 @@ RUN /home/jovyan/venv/bin/pip install --no-cache-dir -r /home/jovyan/chat_intera
 COPY chat_interact.py /home/jovyan/
 COPY process_logs.py /home/jovyan/
 COPY utils.py /home/jovyan/
+COPY etherpad_logger.py /home/jovyan/
+COPY --chmod=755 sync_course_materials.sh /home/jovyan/
 
 # Get container ID and export it as an environment variable
 RUN echo 'export CONTAINER_ID=$(cat /proc/self/cgroup | grep "docker" | sed "s/^.*\///" | tail -n1)' >> /home/jovyan/.bashrc
 
 # Start Fluent Bit, chat_interact.py, and Jupyter Notebook
 CMD ["/bin/bash", "-c", "\
-source /home/jovyan/.bashrc && \
-/opt/td-agent-bit/bin/td-agent-bit -c /etc/td-agent-bit/td-agent-bit.conf  & \
-. /home/jovyan/venv/bin/activate && \
-python /home/jovyan/chat_interact.py /home/jovyan/work/${CHAT_DIR} /home/jovyan/logs/processed >> /home/jovyan/logs/processed/chat_interact.log 2>&1 & \
-. /home/jovyan/venv/bin/activate && \
-python /home/jovyan/process_logs.py /home/jovyan/logs/log /home/jovyan/logs/processed >> /home/jovyan/logs/processed/process_logs.log 2>&1 & \
-start-notebook.py"]
+    /home/jovyan/sync_course_materials.sh /home/jovyan/work; \
+    (while true; do sleep 60; /home/jovyan/sync_course_materials.sh /home/jovyan/work; done) & \
+    source /home/jovyan/.bashrc && \
+    /opt/td-agent-bit/bin/td-agent-bit -c /etc/td-agent-bit/td-agent-bit.conf  & \
+    . /home/jovyan/venv/bin/activate && \
+    python /home/jovyan/chat_interact.py /home/jovyan/work/${CHAT_DIR} /home/jovyan/logs/processed >> /home/jovyan/logs/processed/chat_interact.log 2>&1 & \
+    . /home/jovyan/venv/bin/activate && \
+    python /home/jovyan/process_logs.py /home/jovyan/logs/log /home/jovyan/logs/processed >> /home/jovyan/logs/processed/process_logs.log 2>&1 & \
+    . /home/jovyan/venv/bin/activate && \
+    python /home/jovyan/etherpad_logger.py ${ETHERPAD_PAD_ID:-${JUPYTERHUB_USER:-test_pad}} /home/jovyan/logs/log >> /home/jovyan/logs/processed/etherpad_logger.log 2>&1 & \
+    start-notebook.py"]

@@ -1,0 +1,295 @@
+# JELAI tutor configuration
+# =========================
+# This file controls how the tutor identifies student activity, classifies
+# student messages, and selects interventions. Teachers can edit it here or
+# on the teacher settings page (http://<server>:8004/teacher-view, tab
+# "Settings"). The middleware reads the file again when it changes, so a
+# restart is not necessary. If you remove a key, the middleware uses the
+# value from the original file in the image.
+#
+# Text values can contain these placeholders:
+#   {agent_name}                 the name of the tutor (agent.name)
+#   {question}                   the current student message
+#   {last_<category>_example}    the last student message in that category,
+#                                for example {last_executive_example}
+
+agent:
+  name: "Juno"
+  persona: "An experienced, encouraging tutor embedded in JupyterLab"
+
+# ---------------------------------------------------------------------------
+# LLM models per role. Leave a value empty to use the model from the .env
+# file (LLM_MODEL or LLM_MODEL_<ROLE>). The provider, URL and API key are
+# set only in the .env file.
+# ---------------------------------------------------------------------------
+llm:
+  models:
+    classification: ""
+    response: ""
+    expert: ""
+    proactivity: ""
+    report: ""
+
+# ---------------------------------------------------------------------------
+# Prompt files in the inputs directory. If the file does not exist, the
+# middleware uses the file with the same name and the extension ".sample".
+# ---------------------------------------------------------------------------
+prompts:
+  tutor_system_file: "ta_system_prompt.txt"
+  expert_system_file: "ea_system_prompt.txt"
+
+# The expert agent gives technical facts to the tutor before it answers.
+# Set enabled to false to use one LLM call less per question (useful with
+# free tiers that have a low daily limit).
+expert_agent:
+  enabled: true
+
+# ---------------------------------------------------------------------------
+# 1. IDENTIFICATION: what the student does
+# ---------------------------------------------------------------------------
+identification:
+  # Minimum similarity (0 to 1) to match a question to a learning objective.
+  learning_objective_min_similarity: 0.4
+
+  # Concept patterns. Each entry maps a label to code substrings. When an
+  # executed cell contains one of the substrings, the student used the concept.
+  concept_patterns:
+    - label: "pandas import"
+      patterns: ["import pandas", "import pandas as pd"]
+    - label: "pd.read_csv"
+      patterns: [".read_csv"]
+    - label: "df.head()"
+      patterns: [".head()"]
+    - label: "df.describe()"
+      patterns: [".describe()"]
+    - label: "df.groupby()"
+      patterns: [".groupby("]
+    - label: "matplotlib/plotting"
+      patterns: [".plot", "plt."]
+    - label: "df.mean()"
+      patterns: [".mean()"]
+    - label: "df.value_counts()"
+      patterns: [".value_counts()"]
+    - label: "loops"
+      patterns: ["for "]
+    - label: "functions"
+      patterns: ["def "]
+
+  # Knowledge components of the learner model. When the student uses one of
+  # the concepts, the score of the component increases by "step" (max 1.0).
+  knowledge_components:
+    data_loading:
+      concepts: ["pandas import", "pd.read_csv"]
+      step: 0.2
+    data_exploration:
+      concepts: ["df.head()", "df.describe()", "df.value_counts()"]
+      step: 0.1
+    data_manipulation:
+      concepts: ["df.groupby()", "df.mean()"]
+      step: 0.2
+    visualization:
+      concepts: ["matplotlib/plotting"]
+      step: 0.2
+
+  # Thresholds for the metacognitive and affective state of the learner model.
+  learner_states:
+    trial_and_error_min_errors: 5      # "Trial and Error"
+    help_avoidant_min_errors: 4        # "Help Avoidant" (errors and no questions)
+    reflective_min_pad_words: 21       # "Reflective" (successful code and writing)
+    frustrated_min_errors: 5           # "Frustrated"
+    flow_min_successes: 3              # "Flow"
+
+# ---------------------------------------------------------------------------
+# 2. CLASSIFICATION: the type of each student message
+# ---------------------------------------------------------------------------
+classification:
+  enabled: true
+  # The LLM must reply with one of these names. The descriptions go into the
+  # prompt if the prompt contains {categories}.
+  categories:
+    - name: "instrumental"
+      description: "The student wants to understand: asks why or how something works, asks for an explanation, an example, a hint, or for the next step."
+    - name: "executive"
+      description: "The student wants the result without understanding: asks for the full solution or code, or asks the tutor to do the task."
+    - name: "other"
+      description: "Greetings, thanks, confirmations, and messages that are not about the task."
+  # The category to use when the LLM reply does not match a category.
+  default_category: "other"
+  prompt: |
+    You classify messages that students send to a programming tutor.
+    Use these categories:
+    {categories}
+
+    Reply with one word only: the name of the category.
+  # Optional: a file in the inputs directory that replaces the prompt above.
+  prompt_file: ""
+
+# ---------------------------------------------------------------------------
+# 3. INTERVENTIONS: how the tutor reacts
+# ---------------------------------------------------------------------------
+interventions:
+  # Reactive hints are added to the tutor prompt for the current answer.
+  # The middleware uses the first rule that matches. Conditions:
+  #   category           the category of the current message (necessary)
+  #   previous_category  the category of the previous message
+  #   streak             the exact number of consecutive messages in this category
+  #   min_streak         the minimum number of consecutive messages in this category
+  reactive:
+    enabled: true
+    rules:
+      - name: "Positive reinforcement"
+        category: "instrumental"
+        previous_category: "executive"
+        hint: >-
+          The student has shifted from an executive to an instrumental question.
+          Provide explicit positive reinforcement for this shift (e.g., "That's a very
+          effective way to ask for help to understand the material.") along with
+          standard JIT support.
+      - name: "Standard support"
+        category: "instrumental"
+        hint: >-
+          Continue providing JIT support with a positive and encouraging tone, but
+          without explicit praise. The primary reinforcement is the answer itself.
+      - name: "First executive"
+        category: "executive"
+        streak: 1
+        hint: >-
+          This is the first executive question in sequence. Gently guide the student
+          towards reflection, without requiring direct rephrasing. For example: "That
+          question seems focused on getting the answer directly. For the following
+          questions, can you think about how to rephrase them to better understand
+          the underlying concepts?"
+      - name: "Second executive"
+        category: "executive"
+        streak: 2
+        hint: >-
+          This is the second consecutive executive question. Provide elements of good
+          instrumental questions. For example: "Good questions often explore the 'why'
+          or 'how' of a concept, or compare different approaches. How might you
+          rephrase following questions with that in mind?"
+      - name: "Third executive"
+        category: "executive"
+        streak: 3
+        hint: >-
+          This is the third consecutive executive question. Take the student's question
+          and rephrase it as a model instrumental question. For example: "Instead of
+          asking 'make a bar plot', a better version might be 'what is the first step
+          to make a bar plot?' Could you try rephrasing your next request similarly?"
+          Student's previous question: {last_executive_example}
+      - name: "Fourth or more executive"
+        category: "executive"
+        min_streak: 4
+        hint: >-
+          This is the fourth or subsequent consecutive executive question. Directly
+          refer to the pedagogical rationale. For example: "Research in learning
+          suggests that asking questions focused on understanding is more strongly
+          linked to better learning outcomes than seeking direct solutions."
+          Use their previous good question as motivation: {last_instrumental_example}
+
+  # The profile flag "needs guidance" is set when, after min_questions
+  # classified messages (the default category is not counted), the share of
+  # the category is more than min_ratio. The teacher dashboard shows it.
+  needs_guidance:
+    category: "executive"
+    min_questions: 6
+    min_ratio: 0.6
+
+# ---------------------------------------------------------------------------
+# Proactive interventions: messages that the tutor sends without a question.
+# ---------------------------------------------------------------------------
+proactivity:
+  enabled: true
+  # Minimum seconds between proactive interventions on the same chat
+  min_cooldown_seconds: 300
+  # After this many unanswered interventions, stop intervening
+  max_unanswered_interventions: 2
+  # Don't send another proactive message until the student responds
+  wait_for_student_response: true
+  # Dynamic polling intervals (seconds)
+  poll_interval_active: 30
+  poll_interval_idle: 300
+  # Seconds of inactivity before switching to idle polling
+  idle_threshold_seconds: 180
+  system_prompt: |
+    You are {agent_name}, a proactive pedagogical agent observing a student working across three tools: Jupyter Notebook (code), Etherpad (report writing), and Chat (questions).
+
+    Your task: Analyze the Student Activity Canvas below and decide whether to send a CROSS-TOOL NUDGE.
+
+    TYPES OF NUDGES (pick the most relevant):
+    1. CODE-to-WRITING: Student ran code with interesting output but hasn't written about it. Suggest they document the finding.
+    2. WRITING-to-CODE: Student claims something in writing but hasn't verified it with code. Suggest they test it with specific code.
+    3. STUCK-SCAFFOLD: Student has repeated errors and hasn't asked for help. Offer gentle help with a specific hint.
+    4. PROGRESS-CELEBRATION: Student overcame a struggle or made meaningful progress. Brief acknowledgment.
+    5. IDLE-CHECK-IN: No activity across all tools for a while. Gentle, non-pushy suggestion for next step.
+
+    DO NOT NUDGE if:
+    - The student is making steady progress
+    - You already sent a similar message recently (check conversation history)
+    - The student just asked a question or received a response
+    - The student hasn't responded to your last message
+    - There are no cross-tool gaps to address
+
+    CRITICAL RULES:
+    - Your response must be valid JSON with exactly two fields
+    - The "reasoning" field is INTERNAL ONLY and will NEVER be shown to the student
+    - The "message" field is the ONLY thing the student will see
+    - The message must be natural, friendly, student-facing. No meta-commentary or analysis.
+    - If no nudge is needed, set message to exactly "NO_INTERVENTION"
+    - Reference specific things the student did (their code, their writing, their question)
+
+    Respond with this exact JSON format:
+    {"reasoning": "your internal analysis here", "message": "friendly nudge to student OR NO_INTERVENTION"}
+
+message_gateway:
+  # Patterns that indicate leaked internal reasoning — block the message
+  blocked_patterns:
+    - "NO_INTERVENTION"
+    - "[INTERNAL CONTEXT]"
+    - "[END INTERNAL"
+    - "Profile Hint"
+    - "Learning Objective"
+    - "should intervene"
+    - "I should"
+    - "I will"
+    - "The student seems"
+    - "The student is mostly"
+    - "The student has executed"
+    - "I notice the student"
+    - "Based on the logs"
+    - "Based on the context"
+    - "Question Classification:"
+    - "Technical Information:"
+  # Minimum message length to be considered valid
+  min_message_length: 15
+  # Maximum message length
+  max_message_length: 2000
+
+# ---------------------------------------------------------------------------
+# Chat commands
+# ---------------------------------------------------------------------------
+commands:
+  report:
+    enabled: true
+    trigger: "/report"
+    system_prompt: |
+      You are {agent_name}, an automated coach.
+      Using the student's recent notebook logs, conversation history and the assignment's learning objectives, produce a clear performance report for the student.
+      For each learning objective, note strengths, weaknesses, and concrete next steps.
+      Based on the report, suggest a personalized next step for the student.
+      Use an encouraging tone, and avoid technical jargon.
+  # A completion code for studies (for example a survey). The student gets
+  # the code after min_minutes of work and min_questions questions.
+  completion:
+    enabled: false
+    trigger: "/finish"
+    min_minutes: 15
+    min_questions: 1
+    code: "CHANGE-ME"
+    message: |
+      ### Session Complete!
+
+      Thank you for completing the tasks for this session.
+
+      Please return to the survey tab and enter the following code to finalize your submission:
+
+      **`{code}`**

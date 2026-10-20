@@ -25,6 +25,11 @@ __pycache__
 *.Rproj.user
 
 # Middleware
+.env.bak
+# Other copies of .env (they contain secrets), but not the example
+.env.*
+!.env.example
+!.env.*.example
 /jupyterhub-docker/middleware/venv/
 /jupyterhub-docker/middleware/llm-handler/
 *group_assignments.json
@@ -42,3 +47,16 @@ wiki/
 
 # User Notebook
 /jupyterhub-docker/user-notebook/user-venv/
+
+# Logs
+*.log
+
+# Etherpad API key (made by setup.sh)
+/jupyterhub-docker/etherpad/APIKEY.txt
+
+# Teacher Chat Secrets
+teacher-chat/.env
+teacher-chat/.env.teacher
+
+# Agents
+.agents/

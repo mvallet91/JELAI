@@ -3,36 +3,23 @@ from fastapi import FastAPI, Request, HTTPException
 from pydantic import BaseModel
 import logging
 import uvicorn
-import httpx
-import os
-import json
 from dotenv import load_dotenv
-from typing import Optional # Added Optional
 
 # --- Configuration ---
 load_dotenv() # Load environment variables from .env file
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - EA - %(message)s')
 
-# LLM Configuration (similar to TA)
-WEBUI_API_BASE = os.getenv("webui_url", "http://localhost:3000") # Your WebUI URL
-WEBUI_API_KEY = os.getenv("webui_api_key", "")
-OLLAMA_API_BASE = os.getenv("ollama_url", "http://localhost:11434") # Ollama API URL
-# Use a specific model for EA if defined, otherwise fallback to a default
-EA_MODEL_NAME = os.getenv("ollama_ea_model", "gemma3:4b") # Model for EA tasks
-# Define path for EA system prompt (relative to where ea-handler.py is run)
-EA_SYSTEM_PROMPT_FILE = "./inputs/ea_system_prompt.txt"
+import llm_client
+from config_loader import section, model_override, read_input
 
-# --- Updated EA System Prompt ---
 EA_SYSTEM_PROMPT_DEFAULT = """You are an Expert Agent (EA). Your primary role is to provide concise, factual, technical information ONLY in direct response to the specific 'Student Question' provided, using the Assignment, LO, History, and Logs as context.
 """
 
-logging.info(f"EA Using WebUI Base URL: {WEBUI_API_BASE}")
-logging.info(f"EA Using Model: {EA_MODEL_NAME}")
+logging.info(f"EA LLM settings: {llm_client.get_settings().describe()}")
 
 app = FastAPI(title="Expert Agent (LLM-Powered)")
 
-# --- Updated Pydantic Model ---
-class ExpertQueryPayload(BaseModel): # Renamed and updated model
+class ExpertQueryPayload(BaseModel):
     student_question: str
     assignment_description: str
     learning_objective: str
@@ -42,48 +29,12 @@ class ExpertQueryPayload(BaseModel): # Renamed and updated model
 
 # --- LLM Calling Helper ---
 async def call_ea_llm(messages: list) -> str:
-    """Calls the configured LLM API (WebUI or Ollama) for the EA."""
-    if WEBUI_API_KEY == "":
-        logging.warning("EA: No WebUI API key provided. Defaulting to Ollama API.")
-        target_url = f"{OLLAMA_API_BASE}/v1/chat/completions"
-        headers={"Content-Type": "application/json", "Accept": "application/json"}
-        logging.debug(f"EA Calling Ollama ({EA_MODEL_NAME}) at {target_url}")
-    else:
-        logging.info(f"EA Using WebUI API for LLM calls.")
-        target_url = f"{WEBUI_API_BASE}/api/chat/completions"
-        headers={"Content-Type": "application/json", "Accept": "application/json", "Authorization": f"Bearer {WEBUI_API_KEY}"}
-        logging.debug(f"EA Calling WebUI ({EA_MODEL_NAME}) at {target_url}")
-
+    """Calls the configured OpenAI-compatible LLM with the model of the expert role."""
     try:
-        async with httpx.AsyncClient() as client:
-            response = await client.post(
-                target_url,
-                headers=headers,
-                json={"model": EA_MODEL_NAME, "messages": messages, "stream": False},
-                timeout=60 # Slightly shorter timeout for EA might be okay
-            )
-            response.raise_for_status()
-            result = response.json()
-            logging.debug(f"EA Raw LLM Response: {result}")
-            if "choices" in result and len(result["choices"]) > 0 and "message" in result["choices"][0] and "content" in result["choices"][0]["message"]:
-                 response_text = result["choices"][0]["message"]["content"].strip()
-                 logging.info(f"EA LLM call successful.")
-                 return response_text
-            else:
-                logging.error(f"EA Unexpected LLM response format: {result}")
-                raise HTTPException(status_code=500, detail="EA: Unexpected response format from LLM.")
-    except httpx.RequestError as e:
-        logging.error(f"EA LLM request failed: {e}")
-        raise HTTPException(status_code=503, detail=f"EA: Could not connect to LLM service: {e}")
-    except httpx.HTTPStatusError as e:
-        status_code = e.response.status_code
-        try: response_detail = e.response.json().get("error", e.response.text[:200])
-        except json.JSONDecodeError: response_detail = e.response.text[:200]
-        logging.error(f"EA LLM returned error status {status_code}: {response_detail}")
-        raise HTTPException(status_code=status_code, detail=f"EA LLM error {status_code}: {response_detail}")
-    except Exception as e:
-        logging.error(f"An unexpected error occurred during EA LLM call: {e}")
-        raise HTTPException(status_code=500, detail=f"EA: An unexpected error occurred during LLM call: {e}")
+        return await llm_client.call_llm(messages, role="expert", model=model_override("expert"), purpose="expert answer")
+    except llm_client.LLMError as e:
+        logging.error(str(e))
+        raise HTTPException(status_code=e.status_code or 500, detail=str(e))
 
 
 @app.post("/expert_query")
@@ -95,18 +46,8 @@ async def expert_query(payload: ExpertQueryPayload): # Use the updated payload m
     logging.info(f"Received query for session {payload.session_id}. Student Question: '{payload.student_question[:150]}...'")
 
     # --- Load EA System Prompt ---
-    try:
-        with open(EA_SYSTEM_PROMPT_FILE, "r") as f:
-            ea_system_prompt = f.read().strip()
-        if not ea_system_prompt:
-            raise FileNotFoundError # Treat empty file as not found
-        logging.info(f"Loaded EA system prompt from {EA_SYSTEM_PROMPT_FILE}")
-    except FileNotFoundError:
-        logging.warning(f"EA System prompt file not found at {EA_SYSTEM_PROMPT_FILE} or empty. Using default prompt.")
-        ea_system_prompt = EA_SYSTEM_PROMPT_DEFAULT
-    except Exception as e:
-        logging.error(f"Error loading EA system prompt from {EA_SYSTEM_PROMPT_FILE}: {e}. Using default.")
-        ea_system_prompt = EA_SYSTEM_PROMPT_DEFAULT
+    prompt_file = section("prompts").get("expert_system_file", "ea_system_prompt.txt")
+    ea_system_prompt = read_input(prompt_file, EA_SYSTEM_PROMPT_DEFAULT)
 
     # --- Construct Prompt for EA's internal LLM using payload fields ---
     prompt_context = f"""[INTERNAL CONTEXT]

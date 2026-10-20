@@ -1,0 +1,4 @@
+# Shell scripts run in Linux containers and in bash: keep LF line endings,
+# also on Windows checkouts with core.autocrlf=true.
+*.sh text eol=lf
+Dockerfile* text eol=lf
