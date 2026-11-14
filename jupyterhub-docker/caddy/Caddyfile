@@ -14,7 +14,7 @@
 		reverse_proxy middleware:8004
 	}
 	handle / {
-		redir /teacher-view
+		redir * /teacher-view
 	}
 	handle {
 		respond 404
