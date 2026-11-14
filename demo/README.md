@@ -61,3 +61,20 @@ first cell after the upload.
 3. The student asks one more question. The answer uses the new hint, without a restart.
 4. Upload one more file in **Course materials**. It is in the folder of the student
    within one minute.
+
+## Reset the demo
+
+Run this on the server before each demonstration:
+
+```bash
+bash /opt/jelai/deploy/demo-reset.sh demo-student
+```
+
+The student starts again from a clean copy of the course: the work folder,
+the chat, the dashboard data and the pad are removed, and
+`agent_config.yaml` is put back to the version in Git. The accounts, the
+course materials and the start notebook stay.
+
+The free tier of Groq allows about 8,000 tokens per minute for each model,
+and one tutor answer uses a large part of it. Wait about 20 seconds between
+chat messages, or the tutor answers that it gets too many questions.
