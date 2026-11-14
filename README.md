@@ -87,7 +87,8 @@ All LLM requests go to one OpenAI-compatible API. Set the provider in `jupyterhu
 | `ollama` | A self-hosted Ollama server | `LLM_BASE_URL` if Ollama is not on the same machine |
 | `openwebui` | An Open WebUI server | `LLM_BASE_URL` (server URL), `LLM_API_KEY` |
 | `openai` | OpenAI | `LLM_API_KEY` |
-| `groq`, `mistral`, `gemini`, `openrouter`, `ollama-cloud` | Hosted providers with a free tier | `LLM_API_KEY` |
+| `groq`, `gemini`, `openrouter`, `ollama-cloud` | Hosted providers with a free tier | `LLM_API_KEY` |
+| `mistral` | Hosted provider in the EU (paid) | `LLM_API_KEY` |
 | `custom` | Any other OpenAI-compatible server | `LLM_BASE_URL`, usually `LLM_API_KEY` |
 
 Set `LLM_MODEL` for the model, or `LLM_MODEL_CLASSIFICATION`, `LLM_MODEL_RESPONSE`, etc. for a different model for each task. After a change, run `docker compose up -d middleware`.

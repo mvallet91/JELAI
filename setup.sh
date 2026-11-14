@@ -95,7 +95,7 @@ Which LLM provider do you want to use?
   openwebui     Open WebUI server of your school or university (URL + API key)
   groq          Groq: free tier, no credit card
   gemini        Google Gemini: free tier (outside the EU/UK only, see README)
-  mistral       Mistral AI: free monthly credits, servers in the EU
+  mistral       Mistral AI: paid, servers in the EU
   openrouter    OpenRouter: free models (set the model name)
   ollama-cloud  Ollama Cloud: free tier
   custom        Another OpenAI-compatible server

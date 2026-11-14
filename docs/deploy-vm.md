@@ -26,7 +26,7 @@ more, or set a lower `NOTEBOOK_MEM_LIMIT`.
 
    ```bash
    curl -fsSL https://raw.githubusercontent.com/mvallet91/JELAI/main/deploy/vm-setup.sh -o vm-setup.sh
-   LLM_PROVIDER=mistral LLM_API_KEY=your-key JUPYTERHUB_OPEN_SIGNUP=true bash vm-setup.sh
+   LLM_PROVIDER=groq LLM_API_KEY=your-key JUPYTERHUB_OPEN_SIGNUP=true bash vm-setup.sh
    ```
 
    To install a branch that is not `main`, add `BRANCH=<branch name>`.

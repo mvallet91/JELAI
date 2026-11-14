@@ -87,7 +87,7 @@ from October 2026. Do a check on the website of the provider before a course.
 | Provider | Free limits (October 2026) | Card necessary | Notes |
 |---|---|---|---|
 | **Groq** (`groq`) | 30 requests/minute, 1,000 requests/day and 200,000 tokens/day, for each model | No | Fast. The limits apply to the organization, not to each key. |
-| **Mistral AI** (`mistral`) | Free monthly API credits (about 10 USD) | No | Servers in the EU. Read the data settings of the free plan (see Privacy). |
+| **Mistral AI** (`mistral`) | No free API key since November 2026 (user reports). A paid plan or prepaid credits are necessary. | Yes | Servers in the EU. A small model costs little: see the example below. |
 | **Google Gemini** (`gemini`) | Free tier; limits are shown in Google AI Studio | No | Not for the EU, UK or Switzerland: there, Google requires the paid service for apps that serve users. Free-tier data can be used to improve Google products. |
 | **OpenRouter** (`openrouter`) | Models that end in `:free`: 20 requests/minute, 50 requests/day; 1,000 requests/day after a one-time purchase of 10 USD credits | No | Set `LLM_MODEL` to a free model. Free models can log prompts. |
 | **Ollama Cloud** (`ollama-cloud`) | Free tier with session and weekly limits (not published) | No | Uses the same models as self-hosted Ollama. |
@@ -95,12 +95,14 @@ from October 2026. Do a check on the website of the provider before a course.
 Sources: [OpenRouter: free LLM APIs compared](https://openrouter.ai/blog/tutorials/free-llm-apis-compared/),
 [Free LLM API tiers in October 2026](https://dev.to/tariqnasser/free-llm-api-tiers-in-october-2026-whats-left-and-how-i-chain-them-227l),
 [Free LLM API tiers, verified daily](https://gravity.fast/data/free-llm-api-tiers/),
-[Ollama Cloud free tier](https://freellm.net/providers/ollama-cloud).
+[Ollama Cloud free tier](https://freellm.net/providers/ollama-cloud),
+[Mistral: the free plan no longer activates API keys](https://github.com/mnfst/awesome-free-llm-apis/issues/213).
 
-**Our recommendation:** for a full class, start with **Mistral**: the
-monthly credits give the most tokens, and the servers are in the EU. Use
-**Groq** to try JELAI or for small groups: its daily token limit is low (see
-below). Both need only an e-mail address.
+**Our recommendation:** use **Groq** to try JELAI or for small groups. It
+needs only an e-mail address, but its daily token limit is low (see below).
+For a full class, no free tier is sufficient at this time. Use a university
+server (see below) or a paid key: **Mistral** has servers in the EU and low
+prices for small models.
 
 ### Another free option: a partner university
 
@@ -124,8 +126,9 @@ Example: 25 students ask 10 questions each. This is 250 questions, or up to
 - Groq (200,000 tokens/day for each model) gives about 70 to 200 requests per
   model each day. This is sufficient for a test or a small group, not for a
   full class.
-- Mistral credits of 10 USD give tens of millions of tokens with a small model
-  (for example `mistral-small-latest`). This is sufficient for a class for a month.
+- Mistral is a paid service. Credits of 10 USD give tens of millions of tokens
+  with a small model (for example `mistral-small-latest`). This is sufficient
+  for a class for a month.
 
 To use less quota, edit `agent_config.yaml` (or the settings page):
 

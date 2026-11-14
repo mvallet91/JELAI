@@ -3,7 +3,7 @@
 #
 # Run as root on the server:
 #   curl -fsSL https://raw.githubusercontent.com/mvallet91/JELAI/main/deploy/vm-setup.sh -o vm-setup.sh
-#   LLM_PROVIDER=mistral LLM_API_KEY=... bash vm-setup.sh
+#   LLM_PROVIDER=groq LLM_API_KEY=... bash vm-setup.sh
 #
 # Settings (environment variables, all optional except the LLM settings):
 #   LLM_PROVIDER, LLM_BASE_URL, LLM_API_KEY, LLM_MODEL   the LLM (see docs/llm-providers.md)

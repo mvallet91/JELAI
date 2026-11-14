@@ -12,7 +12,7 @@ if [ -d "$SOURCE" ]; then
         case "$(basename "$entry")" in
             course.yaml|README.md|.gitkeep) continue ;;
         esac
-        cp -rn "$entry" "$TARGET"/ 2>/dev/null || true
+        cp -r --update=none "$entry" "$TARGET"/ 2>/dev/null || cp -rn "$entry" "$TARGET"/ 2>/dev/null || true
     done
 fi
 exit 0
