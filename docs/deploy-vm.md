@@ -50,12 +50,38 @@ Then open `http://localhost:8004/teacher-settings` and
 `http://localhost:8004/teacher-view`. To open port 8004 to everyone, run the
 script with `TEACHER_PUBLIC=true`.
 
+## HTTPS with a domain name
+
+With a domain name, JELAI can use HTTPS. Caddy gets and renews the
+certificates automatically.
+
+1. Make DNS A records to the IP address of the server: one for the students
+   (for example `jelai.example.org`), and optionally one for the teacher pages
+   (`jelai-teacher.example.org`) and one for Etherpad (`jelai-pad.example.org`).
+2. Open ports 80 and 443 in the firewall of the server.
+3. Run the script with the names:
+
+   ```bash
+   LLM_PROVIDER=groq LLM_API_KEY=your-key \
+   JELAI_DOMAIN=jelai.example.org TEACHER_DOMAIN=jelai-teacher.example.org \
+   bash vm-setup.sh
+   ```
+
+Then the students use `https://jelai.example.org`, and the teacher pages are
+at `https://jelai-teacher.example.org` (with the teacher password). The HTTP
+ports 8000, 8004 and 9001 stay closed to the internet.
+
+On a server that is installed already, set `JELAI_DOMAIN`, `TEACHER_DOMAIN`
+and `COMPOSE_PROFILES=etherpad,https` in `jupyterhub-docker/.env`, put
+`127.0.0.1:` in front of the three port values, and run `docker compose up -d`.
+
 ## Security
 
-- The system uses HTTP without encryption. Passwords go over the network in
-  plain text. Use it for a demo, with passwords that you do not use anywhere
-  else. For a real class, put a reverse proxy with HTTPS (for example Caddy)
-  in front of port 8000.
+- Without a domain name, the system uses HTTP without encryption. Passwords
+  go over the network in plain text. Use that only for a demo, with passwords
+  that you do not use anywhere else. For a real class, use HTTPS (see above).
+- Etherpad has no login. Give it a host name only if the students need the
+  pads in the browser.
 - Docker ignores the `ufw` firewall for the ports that it publishes. Use the
   firewall of the provider to close ports.
 - The hub has access to the Docker socket of the server. Do not run other

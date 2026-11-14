@@ -93,6 +93,27 @@ services:
       # Keep the pads when the container is recreated
       - etherpad-data:/opt/etherpad-lite/var
 
+  # HTTPS reverse proxy. It starts only with the "https" profile
+  # (COMPOSE_PROFILES in the .env file). See docs/deploy-vm.md.
+  caddy:
+    image: caddy:2
+    container_name: caddy
+    restart: unless-stopped
+    profiles: ["https"]
+    networks:
+      - jupyterhub-network
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      JELAI_DOMAIN: ${JELAI_DOMAIN:-jelai.localhost}
+      TEACHER_DOMAIN: ${TEACHER_DOMAIN:-teacher.localhost}
+      ETHERPAD_DOMAIN: ${ETHERPAD_DOMAIN:-pad.localhost}
+    volumes:
+      - "./caddy/Caddyfile:/etc/caddy/Caddyfile:ro"
+      - "caddy-data:/data"
+      - "caddy-config:/config"
+
   middleware:
     build:
       context: ./middleware
@@ -133,6 +154,8 @@ volumes:
   etherpad-data:
   course-materials:
     name: jelai-course-materials
+  caddy-data:
+  caddy-config:
 
 
 networks:

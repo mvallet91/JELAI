@@ -14,6 +14,10 @@
 #   TEACHER_PUBLIC           true: the teacher pages are open on the public port 8004.
 #                            Default false: only the server itself can open them
 #                            (use an SSH tunnel, see docs/deploy-vm.md).
+#   JELAI_DOMAIN             host name for HTTPS, for example jelai.example.org. It needs
+#                            a DNS A record to this server. Without it, JELAI uses HTTP.
+#   TEACHER_DOMAIN           host name of the teacher pages with HTTPS (optional)
+#   ETHERPAD_DOMAIN          host name of Etherpad with HTTPS (optional)
 #   REPO_URL, BRANCH         the source of JELAI (default: the main branch on GitHub)
 #   INSTALL_DIR              the directory on the server (default: /opt/jelai)
 
@@ -80,6 +84,17 @@ set_var NOTEBOOK_MEM_LIMIT "${NOTEBOOK_MEM_LIMIT:-768M}"
 if [[ "${TEACHER_PUBLIC:-false}" != "true" ]]; then
     set_var TEACHER_DASHBOARD_PORT "127.0.0.1:8004"
 fi
+if [[ -n "${JELAI_DOMAIN:-}" ]]; then
+    # With HTTPS, Caddy is the only door: the HTTP ports stay on the server.
+    profiles="$(grep '^COMPOSE_PROFILES=' "$ENV_FILE" | cut -d= -f2-)"
+    [[ ",$profiles," == *",https,"* ]] || set_var COMPOSE_PROFILES "${profiles:+$profiles,}https"
+    set_var JELAI_DOMAIN "$JELAI_DOMAIN"
+    set_var TEACHER_DOMAIN "${TEACHER_DOMAIN:-}"
+    set_var ETHERPAD_DOMAIN "${ETHERPAD_DOMAIN:-}"
+    set_var JUPYTERHUB_PORT "127.0.0.1:8000"
+    set_var TEACHER_DASHBOARD_PORT "127.0.0.1:8004"
+    set_var ETHERPAD_PORT "127.0.0.1:9001"
+fi
 
 cd jupyterhub-docker
 docker compose build
@@ -90,12 +105,22 @@ password="$(grep '^TEACHER_PASSWORD=' "$ENV_FILE" | cut -d= -f2-)"
 admin="$(grep '^JUPYTERHUB_ADMIN=' "$ENV_FILE" | cut -d= -f2-)"
 echo
 echo "JELAI is running."
-echo "  Students:         http://$ip:8000   (sign up as '${admin:-admin}' first)"
-if [[ "${TEACHER_PUBLIC:-false}" == "true" ]]; then
+if [[ -n "${JELAI_DOMAIN:-}" ]]; then
+    echo "  Students:         https://$JELAI_DOMAIN   (sign up as '${admin:-admin}' first)"
+else
+    echo "  Students:         http://$ip:8000   (sign up as '${admin:-admin}' first)"
+fi
+if [[ -n "${JELAI_DOMAIN:-}" && -n "${TEACHER_DOMAIN:-}" ]]; then
+    echo "  Teacher settings: https://$TEACHER_DOMAIN/teacher-settings"
+elif [[ "${TEACHER_PUBLIC:-false}" == "true" ]]; then
     echo "  Teacher settings: http://$ip:8004/teacher-settings"
 else
     echo "  Teacher settings: ssh -L 8004:localhost:8004 root@$ip, then http://localhost:8004/teacher-settings"
 fi
 echo "  Teacher user:     teacher"
 echo "  Teacher password: $password"
-echo "Open port 8000 in the firewall of the server (and 8004 if TEACHER_PUBLIC=true)."
+if [[ -n "${JELAI_DOMAIN:-}" ]]; then
+    echo "Open ports 80 and 443 in the firewall of the server."
+else
+    echo "Open port 8000 in the firewall of the server (and 8004 if TEACHER_PUBLIC=true)."
+fi
