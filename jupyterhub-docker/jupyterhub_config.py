@@ -65,6 +65,12 @@ c.JupyterHub.services = [
 ]
 c.DockerSpawner.mem_limit = os.environ.get("NOTEBOOK_MEM_LIMIT", "400M")
 c.DockerSpawner.cpu_limit = float(os.environ.get("NOTEBOOK_CPU_LIMIT", "0.5"))
+# With the CPU limit, a new notebook server can need more than 30 seconds to
+# start (30 is the default). Then the hub stops it and the student sees an
+# error. Give the server more time.
+notebook_start_timeout = int(os.environ.get("NOTEBOOK_START_TIMEOUT", "120"))
+c.DockerSpawner.http_timeout = notebook_start_timeout
+c.DockerSpawner.start_timeout = notebook_start_timeout
 
 c.DockerSpawner.stop_timeout = 30 
 
