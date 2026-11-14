@@ -173,4 +173,4 @@ def test_enforce_guardrail_removes_inline_solution_when_rewrite_fails():
 
     result = asyncio.run(pedagogy.enforce_guardrail(answer, settings, failing_rewrite))
     assert "nunique" not in result
-    assert result.startswith("Write ")
+    assert result == "Write `...` and run it."

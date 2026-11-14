@@ -273,11 +273,19 @@ def remove_code_blocks(text: str, note: str = CODE_REMOVED_NOTE) -> str:
     return CODE_BLOCK_RE.sub(note, text or "")
 
 
+INLINE_CODE_REMOVED = "`...`"
+
+
 def remove_solution_code(text: str, settings: Dict[str, Any], note: str = CODE_REMOVED_NOTE) -> str:
-    """Remove the code blocks, and the inline code that is longer than the limit."""
+    """Remove the code blocks, and the inline code that is longer than the limit.
+
+    A code block becomes the note. Inline code is in a sentence, thus it
+    becomes a short `...`, so that the sentence stays clear.
+    """
     limit = settings["max_inline_code_chars"]
     text = remove_code_blocks(text, note)
-    return INLINE_CODE_RE.sub(lambda m: m.group(0) if len(m.group(1).strip()) <= limit else note, text)
+    return INLINE_CODE_RE.sub(
+        lambda m: m.group(0) if len(m.group(1).strip()) <= limit else INLINE_CODE_REMOVED, text)
 
 
 def breaks_guardrail(text: str, settings: Dict[str, Any]) -> bool:
