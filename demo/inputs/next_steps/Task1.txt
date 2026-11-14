@@ -1,3 +1,3 @@
-- **Option A** - Practice: Repeat the group comparison with sleep_hours in place of study_hours_per_week.
-- **Option B** - Proceed: Continue to the next task.
-- **Option C** - Extra challenge: Examine if the relationship between study hours and exam score is different for each class group.
+- **Option A** - Practice: Review and practice specific Pandas skills like grouping (groupby) or counting unique values (nunique, value_counts) through targeted exercises.
+- **Option B** - Proceed: Continue to the next ORI task: analyzing patterns in shark size and weight, including data cleaning.
+- **Option C** - Extra Challenge: Explore species counts further, by filtering the data by the earliest year in the dataset and the last year in the dataset.

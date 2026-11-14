@@ -1,24 +1,31 @@
 # Demo course
 
-A small course with synthetic data for a demonstration of JELAI with one
-student and one teacher.
+A small course for a demonstration of JELAI with one student and one
+teacher. It uses Task 1 (Shark Inventory) of the
+[4CID tasks](https://github.com/mvallet91/4CID_Tasks): a student analyzes a
+dataset of tagged sharks for the fictional Oceanic Research Institute.
 
 ## Content
 
 | Path | Purpose |
 |---|---|
-| `materials/Task1.ipynb` | The notebook of the student. |
-| `materials/data/study_hours.csv` | Synthetic data of 60 students. Three values are missing on purpose. |
+| `materials/Task1.ipynb` | The notebook of the student (Task 1 without the solutions). |
 | `inputs/assignment_descriptions/Task1.txt` | The description of the assignment for the tutor. |
 | `inputs/learning_objectives/Task1.txt` | The learning objectives. |
 | `inputs/next_steps/Task1.txt` | The options of the `/report` command. |
 
+The dataset `sharks.csv` (about 9 MB) is not in this repository. Download it
+from the 4CID tasks repository:
+
+```bash
+curl -fsSLO https://raw.githubusercontent.com/mvallet91/4CID_Tasks/main/sharks.csv
+```
+
 ## Install the demo course
 
-1. Open the teacher settings page and upload `materials/Task1.ipynb` and
-   `materials/data/study_hours.csv` in **Course materials**. To keep the
-   `data` folder, make a ZIP file of the content of `materials` and upload
-   the ZIP file.
+1. Open the teacher settings page. In **Course materials**, upload
+   `materials/Task1.ipynb` and `sharks.csv`. The two files must be in the
+   same folder.
 2. Select `Task1.ipynb` as the notebook that opens after login.
 3. Copy the three files in `inputs/` to the same folders in
    `jupyterhub-docker/middleware/inputs/`, or paste their text on the settings
@@ -29,14 +36,16 @@ student and one teacher.
 **Student**
 
 1. Sign up and log in. `Task1.ipynb` opens.
-2. Run the first cell with a typing error, for example `import panas as pd`. The cell fails.
-3. Open the chat panel, make the chat `chats/Task1.chat`, and ask: "Why does my import fail?"
+2. In step 1, run the cell with a typing error, for example
+   `sharks_df = pd.read_csv('shark.csv')`. The cell fails.
+3. Open the chat panel, make the chat `chats/Task1.chat`, and ask: "Why can't it find my file?"
    The tutor gives a hint and does not give the full solution.
-4. Ask for a direct answer two or three times, for example "Just give me the code for step 3."
-   The tutor classifies these messages as `executive`, and the reactive rule for
-   repeated executive requests changes the answer.
-5. Ask a question about a concept, for example "What does groupby do?" This is an `instrumental` message.
-6. Type `/report` to get a summary and the next-step options.
+4. Ask a question about a concept, for example "What is the difference between
+   value_counts and nunique?" This is an `instrumental` message.
+5. Ask for a direct answer two or three times, for example "Just give me the code for step 6."
+   The tutor classifies these messages as `executive`, and the reactive rules for
+   repeated executive requests change the answer.
+6. Complete step 6 and type `/report` to get a summary and the next-step options.
 
 **Teacher**
 
