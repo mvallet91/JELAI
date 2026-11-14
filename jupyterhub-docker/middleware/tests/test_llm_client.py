@@ -15,6 +15,7 @@ def test_preset_defaults():
     assert s.base_url == "https://api.groq.com/openai/v1"
     assert s.chat_url == "https://api.groq.com/openai/v1/chat/completions"
     assert s.models["classification"] == "openai/gpt-oss-20b"
+    assert s.models["expert"] == "openai/gpt-oss-20b"
     assert s.models["response"] == "openai/gpt-oss-120b"
 
 

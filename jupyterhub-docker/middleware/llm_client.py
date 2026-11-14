@@ -20,8 +20,10 @@ Configuration comes from environment variables:
     The default model for all roles.
 ``LLM_MODEL_CLASSIFICATION``, ``LLM_MODEL_RESPONSE``, ``LLM_MODEL_EXPERT``,
 ``LLM_MODEL_PROACTIVITY``, ``LLM_MODEL_REPORT``
-    Optional models for each role. Use a small model for classification
-    to make it fast and to save quota on free tiers.
+    Optional models for each role. The presets use a large model for the
+    response (the tutor that talks to the student) and a small or medium
+    model for classification and the expert agent. This makes these steps
+    fast and saves quota on free tiers.
 ``LLM_TIMEOUT_SECONDS``, ``LLM_MAX_RETRIES``
     The request timeout and the number of retries after a rate limit
     (HTTP 429) or a server error (HTTP 5xx).
@@ -58,7 +60,7 @@ PROVIDER_PRESETS: Dict[str, Dict] = {
         "label": "OpenAI",
         "base_url": "https://api.openai.com/v1",
         "requires_key": True,
-        "models": {"default": "gpt-5-mini", "classification": "gpt-5-nano"},
+        "models": {"default": "gpt-5-mini", "classification": "gpt-5-nano", "expert": "gpt-5-nano"},
     },
     "openwebui": {
         "label": "Open WebUI",
@@ -71,7 +73,7 @@ PROVIDER_PRESETS: Dict[str, Dict] = {
         "label": "Groq (free tier available)",
         "base_url": "https://api.groq.com/openai/v1",
         "requires_key": True,
-        "models": {"default": "openai/gpt-oss-120b", "classification": "openai/gpt-oss-20b"},
+        "models": {"default": "openai/gpt-oss-120b", "classification": "openai/gpt-oss-20b", "expert": "openai/gpt-oss-20b"},
     },
     "openrouter": {
         "label": "OpenRouter (free models available)",
@@ -83,7 +85,7 @@ PROVIDER_PRESETS: Dict[str, Dict] = {
         "label": "Google Gemini (free tier available)",
         "base_url": "https://generativelanguage.googleapis.com/v1beta/openai",
         "requires_key": True,
-        "models": {"default": "gemini-2.5-flash", "classification": "gemini-2.5-flash-lite"},
+        "models": {"default": "gemini-2.5-flash", "classification": "gemini-2.5-flash-lite", "expert": "gemini-2.5-flash-lite"},
     },
     "mistral": {
         "label": "Mistral AI (free monthly credits)",
@@ -95,7 +97,7 @@ PROVIDER_PRESETS: Dict[str, Dict] = {
         "label": "Ollama Cloud (free tier available)",
         "base_url": "https://ollama.com/v1",
         "requires_key": True,
-        "models": {"default": "gpt-oss:120b", "classification": "gpt-oss:20b"},
+        "models": {"default": "gpt-oss:120b", "classification": "gpt-oss:20b", "expert": "gpt-oss:20b"},
     },
     "custom": {
         "label": "Other OpenAI-compatible server",

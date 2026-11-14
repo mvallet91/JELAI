@@ -34,13 +34,13 @@ To check the connection, open the teacher settings page
 | Preset | Default base URL | Default models | Key |
 |---|---|---|---|
 | `ollama` | `http://host.docker.internal:11434/v1` | `gemma3:4b` | No |
-| `openai` | `https://api.openai.com/v1` | `gpt-5-mini`, classification `gpt-5-nano` | Yes |
+| `openai` | `https://api.openai.com/v1` | `gpt-5-mini`, classification and expert `gpt-5-nano` | Yes |
 | `openwebui` | Your server URL; JELAI adds `/api` | `gemma3:4b` | Yes |
-| `groq` | `https://api.groq.com/openai/v1` | `openai/gpt-oss-120b`, classification `openai/gpt-oss-20b` | Yes |
-| `gemini` | `https://generativelanguage.googleapis.com/v1beta/openai` | `gemini-2.5-flash`, classification `gemini-2.5-flash-lite` | Yes |
+| `groq` | `https://api.groq.com/openai/v1` | `openai/gpt-oss-120b`, classification and expert `openai/gpt-oss-20b` | Yes |
+| `gemini` | `https://generativelanguage.googleapis.com/v1beta/openai` | `gemini-2.5-flash`, classification and expert `gemini-2.5-flash-lite` | Yes |
 | `mistral` | `https://api.mistral.ai/v1` | `mistral-small-latest` | Yes |
 | `openrouter` | `https://openrouter.ai/api/v1` | None: set `LLM_MODEL` | Yes |
-| `ollama-cloud` | `https://ollama.com/v1` | `gpt-oss:120b`, classification `gpt-oss:20b` | Yes |
+| `ollama-cloud` | `https://ollama.com/v1` | `gpt-oss:120b`, classification and expert `gpt-oss:20b` | Yes |
 | `custom` | None: set `LLM_BASE_URL` | `gemma3:4b` | Optional |
 
 Hosted providers change their model names often. If a request fails with
