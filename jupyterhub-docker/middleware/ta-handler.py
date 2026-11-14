@@ -594,7 +594,7 @@ async def receive_student_message(message: StudentMessage, background_tasks: Bac
         guardrail_rule = ""
         if no_solution:
             # The tutor cannot copy code that it does not get.
-            ea_response = pedagogy.remove_code_blocks(ea_response)
+            ea_response = pedagogy.remove_solution_code(ea_response, guardrail)
             guardrail_rule = fill_placeholders(guardrail["rule"], dict(values, max_code_lines=guardrail["max_code_lines"]))
             logging.info(f"Solution guardrail applies to the '{classification_result}' message of {message.student_id}")
         try:

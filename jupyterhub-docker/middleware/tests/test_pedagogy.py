@@ -146,3 +146,31 @@ def test_enforce_guardrail_rewrites_then_falls_back():
     assert asyncio.run(pedagogy.enforce_guardrail("No code here.", settings, bad_rewrite)) == "No code here."
     assert asyncio.run(pedagogy.enforce_guardrail(long, settings, good_rewrite)) == "What does groupby do?"
     assert "a = 1" not in asyncio.run(pedagogy.enforce_guardrail(long, settings, bad_rewrite))
+
+
+def test_guardrail_defaults_catch_a_one_line_solution():
+    settings = pedagogy.guardrail_settings({})
+    assert settings["max_code_lines"] == 0
+    assert settings["max_inline_code_chars"] == 20
+    block = "The key idea:\n```python\nsharks_df.groupby('species')['id'].nunique()\n```"
+    inline = "Use `sharks_df.groupby('species')['id'].nunique()` for this."
+    hint = "Look at `groupby` and `.nunique()` in the pandas documentation."
+    assert pedagogy.breaks_guardrail(block, settings)
+    assert pedagogy.breaks_guardrail(inline, settings)
+    assert not pedagogy.breaks_guardrail(hint, settings)
+    cleaned = pedagogy.remove_solution_code(inline + "\n" + block, settings)
+    assert "nunique()" not in cleaned
+    assert pedagogy.remove_solution_code(hint, settings) == hint
+
+
+def test_enforce_guardrail_removes_inline_solution_when_rewrite_fails():
+    import asyncio
+    settings = pedagogy.guardrail_settings({})
+    answer = "Write `df.groupby('species')['name'].nunique()` and run it."
+
+    async def failing_rewrite(messages):
+        raise RuntimeError("no LLM")
+
+    result = asyncio.run(pedagogy.enforce_guardrail(answer, settings, failing_rewrite))
+    assert "nunique" not in result
+    assert result.startswith("Write ")

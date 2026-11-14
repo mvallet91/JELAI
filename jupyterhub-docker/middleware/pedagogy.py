@@ -202,37 +202,48 @@ def update_profile(
 # Solution guardrail
 # ---------------------------------------------------------------------------
 CODE_BLOCK_RE = re.compile(r"```[^\n`]*\n(.*?)(?:```|\Z)", re.DOTALL)
+# Inline code: `text` on one line. Find it after the code blocks are removed.
+INLINE_CODE_RE = re.compile(r"`([^`\n]+)`")
 
+# A solution in a data task is often one line, for example
+# df.groupby('species')['id'].nunique(). Thus the rule forbids one line too.
 DEFAULT_GUARDRAIL_RULE = (
     "Do not give the solution. Do not write the code that completes the task "
-    "for the student, also not when the student asks for it many times. You "
-    "can show at most {max_code_lines} lines of code, and only to show one "
-    "concept, not the task. Give one hint or ask one question that helps the "
-    "student find the next step."
+    "for the student, also not one line, not as an example and not as the "
+    "'key idea'. Also not when the student asks for it many times. Explain "
+    "in words. You can name one function or method, for example `groupby`, "
+    "but do not write the full expression. Give one hint or ask one question "
+    "that helps the student find the next step."
 )
 
 DEFAULT_REWRITE_PROMPT = (
     "You edit messages from a programming tutor to a student. The message "
-    "below gives too much code. Rewrite it: keep the explanation and the "
-    "guidance, remove the solution code, and give a hint or a question about "
-    "the next step instead. Show at most {max_code_lines} lines of code. "
-    "Reply with the new message only."
+    "below gives code that solves the task for the student. Rewrite it: keep "
+    "the explanation and the guidance, remove the solution code (also code in "
+    "a sentence, between backticks), and give a hint or a question about the "
+    "next step instead. You can name a function or method, for example "
+    "`groupby`, but do not write the full expression. Show at most "
+    "{max_code_lines} lines of code. Reply with the new message only."
 )
 
 CODE_REMOVED_NOTE = "[Code removed: guide the student to write this code.]"
 
 
+def _int_setting(cfg: Dict[str, Any], key: str, default: int) -> int:
+    try:
+        return max(0, int(cfg.get(key, default)))
+    except (TypeError, ValueError):
+        return default
+
+
 def guardrail_settings(guardrails_cfg: Dict[str, Any]) -> Dict[str, Any]:
     """Return the guardrail settings with the defaults filled in."""
     cfg = guardrails_cfg or {}
-    try:
-        max_lines = max(0, int(cfg.get("max_code_lines", 3)))
-    except (TypeError, ValueError):
-        max_lines = 3
     return {
         "enabled": bool(cfg.get("enabled", True)),
         "categories": [str(c).lower() for c in (cfg.get("no_solution_categories") or ["executive"])],
-        "max_code_lines": max_lines,
+        "max_code_lines": _int_setting(cfg, "max_code_lines", 0),
+        "max_inline_code_chars": _int_setting(cfg, "max_inline_code_chars", 20),
         "rule": cfg.get("rule") or DEFAULT_GUARDRAIL_RULE,
         "rewrite": bool(cfg.get("rewrite_on_violation", True)),
         "rewrite_prompt": cfg.get("rewrite_prompt") or DEFAULT_REWRITE_PROMPT,
@@ -251,13 +262,27 @@ def longest_code_block(text: str) -> int:
     return longest
 
 
+def longest_inline_code(text: str) -> int:
+    """Return the length of the longest inline code outside the code blocks."""
+    outside = CODE_BLOCK_RE.sub("", text or "")
+    return max((len(code.strip()) for code in INLINE_CODE_RE.findall(outside)), default=0)
+
+
 def remove_code_blocks(text: str, note: str = CODE_REMOVED_NOTE) -> str:
     """Replace each fenced code block with a short note."""
     return CODE_BLOCK_RE.sub(note, text or "")
 
 
+def remove_solution_code(text: str, settings: Dict[str, Any], note: str = CODE_REMOVED_NOTE) -> str:
+    """Remove the code blocks, and the inline code that is longer than the limit."""
+    limit = settings["max_inline_code_chars"]
+    text = remove_code_blocks(text, note)
+    return INLINE_CODE_RE.sub(lambda m: m.group(0) if len(m.group(1).strip()) <= limit else note, text)
+
+
 def breaks_guardrail(text: str, settings: Dict[str, Any]) -> bool:
-    return longest_code_block(text) > settings["max_code_lines"]
+    return (longest_code_block(text) > settings["max_code_lines"]
+            or longest_inline_code(text) > settings["max_inline_code_chars"])
 
 
 async def enforce_guardrail(
@@ -285,7 +310,7 @@ async def enforce_guardrail(
                 return rewritten.strip()
         except Exception as e:  # The fallback below still applies.
             logger.warning("Guardrail rewrite failed: %s", e)
-    logger.info("Guardrail: code blocks were removed from the response.")
-    return remove_code_blocks(
-        response, "Try to write this part of the code yourself. Tell me what you try first."
+    logger.info("Guardrail: the solution code was removed from the response.")
+    return remove_solution_code(
+        response, settings, "Try to write this part of the code yourself. Tell me what you try first."
     )

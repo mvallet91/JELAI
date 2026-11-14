@@ -198,20 +198,26 @@ interventions:
   #   1. The tutor does not get the code of the expert agent.
   #   2. The rule below is added to the tutor prompt.
   #   3. When the answer has a code block with more than max_code_lines
-  #      lines, the classification model rewrites it one time. When the
-  #      rewrite is not possible, the code blocks are removed.
+  #      lines, or inline code (`...`) with more than max_inline_code_chars
+  #      characters, the classification model rewrites it one time. When the
+  #      rewrite is not possible, this code is removed.
+  # A solution is often one line, for example
+  # df.groupby('species')['id'].nunique(). Thus the default allows no code
+  # block, and only short inline code such as `groupby` or `.nunique()`.
   # Set enabled to false to let the tutor give solutions.
   guardrails:
     enabled: true
     no_solution_categories: ["executive"]
-    max_code_lines: 3
+    max_code_lines: 0
+    max_inline_code_chars: 20
     rewrite_on_violation: true
     rule: >-
       Do not give the solution. Do not write the code that completes the task
-      for the student, also not when the student asks for it many times. You
-      can show at most {max_code_lines} lines of code, and only to show one
-      concept, not the task. Give one hint or ask one question that helps the
-      student find the next step.
+      for the student, also not one line, not as an example and not as the
+      'key idea'. Also not when the student asks for it many times. Explain in
+      words. You can name one function or method, for example `groupby`, but
+      do not write the full expression. Give one hint or ask one question that
+      helps the student find the next step.
 
 # ---------------------------------------------------------------------------
 # Proactive interventions: messages that the tutor sends without a question.
