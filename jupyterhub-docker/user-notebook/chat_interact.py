@@ -535,9 +535,11 @@ class ChatHandler(FileSystemEventHandler):
         messages = content.get("messages", [])
         
         # --- Check 3: Wait for student response ---
+        # Only after a proactive message. The answers to questions are also
+        # automated, and after an answer the tutor can send a proactive message.
         if wait_for_response and messages:
             last_msg = messages[-1]
-            if last_msg.get("automated", False) and last_msg.get("sender") == self.agent_name:
+            if last_msg.get("proactive", False) and last_msg.get("sender") == self.agent_name:
                 logging.debug(f"Waiting for student response in {file_path}, skipping")
                 return
         
@@ -606,9 +608,10 @@ class ChatHandler(FileSystemEventHandler):
             "id": str(uuid.uuid4()),
             "time": time.time(),
             "raw_time": False,
-            "automated": True
+            "automated": True,
+            "proactive": True
         }
-        
+
         # Re-read file to avoid race conditions
         with open(file_path, 'r') as f:
             current_content = json.load(f)
