@@ -589,11 +589,21 @@ async def receive_student_message(message: StudentMessage, background_tasks: Bac
                 logging.info(f"Intervention rule '{hint['name']}' applies for {message.student_id}")
 
         # --- 5. LLM Call: Formulate Pedagogical Response ---
+        guardrail = pedagogy.guardrail_settings(interventions_cfg.get("guardrails"))
+        no_solution = pedagogy.guardrail_applies(guardrail, classification_result)
+        guardrail_rule = ""
+        if no_solution:
+            # The tutor cannot copy code that it does not get.
+            ea_response = pedagogy.remove_code_blocks(ea_response)
+            guardrail_rule = fill_placeholders(guardrail["rule"], dict(values, max_code_lines=guardrail["max_code_lines"]))
+            logging.info(f"Solution guardrail applies to the '{classification_result}' message of {message.student_id}")
         try:
             system_prompt_content = fill_placeholders(
                 read_input(current_ta_system_prompt_file, DEFAULT_TA_SYSTEM_PROMPT), values)
             if hint:
                 system_prompt_content += f"\n**Profile Hint ({hint['name']}):** {hint['hint']}"
+            if guardrail_rule:
+                system_prompt_content += f"\n**Rule:** {guardrail_rule}"
             system_prompt_content += "\n"
 
             final_prompt_messages = [{"role": "system", "content": system_prompt_content}]
@@ -612,10 +622,15 @@ async def receive_student_message(message: StudentMessage, background_tasks: Bac
                     Student Question: "{message.message_text}"
                     ---
 
-                    Based on the context above (including profile hints and history), formulate your response as {name}, focusing directly on answering or guiding the student regarding their specific question. Never reveal or mention internal information like learning objectives or the expert source."""
+                    Based on the context above (including profile hints and history), formulate your response as {name}, focusing directly on answering or guiding the student regarding their specific question. Never reveal or mention internal information like learning objectives or the expert source.""" + (f"\n{guardrail_rule}" if guardrail_rule else "")
                 }
             )
             final_response = await call_llm(final_prompt_messages, role="response", purpose="final pedagogical response formulation")
+            if no_solution:
+                final_response = await pedagogy.enforce_guardrail(
+                    final_response, guardrail,
+                    lambda msgs: call_llm(msgs, role="classification", purpose="guardrail rewrite"),
+                )
         except Exception as e:
             logging.error(f"LLM Call (Pedagogical Response) failed: {e}. Using default final response.")
             if isinstance(e, HTTPException) and e.status_code == 429:

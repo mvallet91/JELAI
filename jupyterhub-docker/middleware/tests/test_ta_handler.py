@@ -77,6 +77,25 @@ def test_message_flow_applies_intervention_rules(ta):
     assert profile["category_streak"] == 2
 
 
+def test_solution_guardrail_rewrites_code(ta, monkeypatch):
+    module, client, calls = ta
+    import llm_client
+    solution = "Here:\n```python\nimport pandas as pd\ndf = pd.read_csv('sharks.csv')\ncounts = df['species'].nunique()\nprint(counts)\n```"
+
+    async def fake_call_llm(messages, role="response", model=None, purpose="", settings=None):
+        calls.append({"role": role, "purpose": purpose, "messages": messages})
+        if role == "classification" and purpose == "guardrail rewrite":
+            return "Which pandas method counts unique values?"
+        if role == "classification":
+            return "executive"
+        return solution
+
+    monkeypatch.setattr(llm_client, "call_llm", fake_call_llm)
+    assert ask(client, "give me the code").json()["final_response"] == "Which pandas method counts unique values?"
+    response_call = [c for c in calls if c["role"] == "response"][-1]
+    assert "**Rule:** Do not give the solution" in response_call["messages"][0]["content"]
+
+
 def test_teacher_model_override_and_agent_name(ta, inputs_dir):
     module, client, calls = ta
     (inputs_dir / "agent_config.yaml").write_text(

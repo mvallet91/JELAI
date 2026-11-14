@@ -196,3 +196,96 @@ def update_profile(
             counted >= int(flag_cfg.get("min_questions", 6)) and share > float(flag_cfg.get("min_ratio", 0.6))
         )
     return profile
+
+
+# ---------------------------------------------------------------------------
+# Solution guardrail
+# ---------------------------------------------------------------------------
+CODE_BLOCK_RE = re.compile(r"```[^\n`]*\n(.*?)(?:```|\Z)", re.DOTALL)
+
+DEFAULT_GUARDRAIL_RULE = (
+    "Do not give the solution. Do not write the code that completes the task "
+    "for the student, also not when the student asks for it many times. You "
+    "can show at most {max_code_lines} lines of code, and only to show one "
+    "concept, not the task. Give one hint or ask one question that helps the "
+    "student find the next step."
+)
+
+DEFAULT_REWRITE_PROMPT = (
+    "You edit messages from a programming tutor to a student. The message "
+    "below gives too much code. Rewrite it: keep the explanation and the "
+    "guidance, remove the solution code, and give a hint or a question about "
+    "the next step instead. Show at most {max_code_lines} lines of code. "
+    "Reply with the new message only."
+)
+
+CODE_REMOVED_NOTE = "[Code removed: guide the student to write this code.]"
+
+
+def guardrail_settings(guardrails_cfg: Dict[str, Any]) -> Dict[str, Any]:
+    """Return the guardrail settings with the defaults filled in."""
+    cfg = guardrails_cfg or {}
+    try:
+        max_lines = max(0, int(cfg.get("max_code_lines", 3)))
+    except (TypeError, ValueError):
+        max_lines = 3
+    return {
+        "enabled": bool(cfg.get("enabled", True)),
+        "categories": [str(c).lower() for c in (cfg.get("no_solution_categories") or ["executive"])],
+        "max_code_lines": max_lines,
+        "rule": cfg.get("rule") or DEFAULT_GUARDRAIL_RULE,
+        "rewrite": bool(cfg.get("rewrite_on_violation", True)),
+        "rewrite_prompt": cfg.get("rewrite_prompt") or DEFAULT_REWRITE_PROMPT,
+    }
+
+
+def guardrail_applies(settings: Dict[str, Any], category: str) -> bool:
+    return settings["enabled"] and (category or "").lower() in settings["categories"]
+
+
+def longest_code_block(text: str) -> int:
+    """Return the number of non-empty lines in the longest fenced code block."""
+    longest = 0
+    for block in CODE_BLOCK_RE.findall(text or ""):
+        longest = max(longest, len([line for line in block.splitlines() if line.strip()]))
+    return longest
+
+
+def remove_code_blocks(text: str, note: str = CODE_REMOVED_NOTE) -> str:
+    """Replace each fenced code block with a short note."""
+    return CODE_BLOCK_RE.sub(note, text or "")
+
+
+def breaks_guardrail(text: str, settings: Dict[str, Any]) -> bool:
+    return longest_code_block(text) > settings["max_code_lines"]
+
+
+async def enforce_guardrail(
+    response: str,
+    settings: Dict[str, Any],
+    rewrite: Callable[[List[Dict[str, str]]], Awaitable[str]],
+) -> str:
+    """Make sure that a tutor response does not give a solution.
+
+    When a code block in the response is longer than the limit, an LLM
+    rewrites the response one time. When the result is still too long, or
+    the rewrite fails, the code blocks are removed.
+    """
+    if not breaks_guardrail(response, settings):
+        return response
+    values = {"max_code_lines": settings["max_code_lines"]}
+    if settings["rewrite"]:
+        try:
+            rewritten = await rewrite([
+                {"role": "system", "content": fill_placeholders(settings["rewrite_prompt"], values)},
+                {"role": "user", "content": response},
+            ])
+            if rewritten and rewritten.strip() and not breaks_guardrail(rewritten, settings):
+                logger.info("Guardrail: the response was rewritten without the solution code.")
+                return rewritten.strip()
+        except Exception as e:  # The fallback below still applies.
+            logger.warning("Guardrail rewrite failed: %s", e)
+    logger.info("Guardrail: code blocks were removed from the response.")
+    return remove_code_blocks(
+        response, "Try to write this part of the code yourself. Tell me what you try first."
+    )

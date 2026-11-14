@@ -118,3 +118,31 @@ def test_learning_objective_fuzzy_fallback():
     assert best == "Load data with pd.read_csv()"
     assert 0 <= score <= 1
     assert matcher.best_match("x", []) == (None, 0.0)
+
+
+def test_guardrail_detects_and_removes_long_code():
+    settings = pedagogy.guardrail_settings({"max_code_lines": 2})
+    short = "Try this:\n```python\ndf.head()\n```"
+    long = "Here:\n```python\nimport pandas as pd\ndf = pd.read_csv('a.csv')\nprint(df.nunique())\n```\nDone."
+    assert not pedagogy.breaks_guardrail(short, settings)
+    assert pedagogy.breaks_guardrail(long, settings)
+    assert "read_csv" not in pedagogy.remove_code_blocks(long)
+    assert pedagogy.guardrail_applies(settings, "Executive")
+    assert not pedagogy.guardrail_applies(settings, "instrumental")
+    assert not pedagogy.guardrail_applies(pedagogy.guardrail_settings({"enabled": False}), "executive")
+
+
+def test_enforce_guardrail_rewrites_then_falls_back():
+    import asyncio
+    settings = pedagogy.guardrail_settings({"max_code_lines": 1})
+    long = "```python\na = 1\nb = 2\n```"
+
+    async def good_rewrite(messages):
+        return "What does groupby do?"
+
+    async def bad_rewrite(messages):
+        return long
+
+    assert asyncio.run(pedagogy.enforce_guardrail("No code here.", settings, bad_rewrite)) == "No code here."
+    assert asyncio.run(pedagogy.enforce_guardrail(long, settings, good_rewrite)) == "What does groupby do?"
+    assert "a = 1" not in asyncio.run(pedagogy.enforce_guardrail(long, settings, bad_rewrite))
