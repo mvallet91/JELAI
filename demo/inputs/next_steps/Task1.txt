@@ -1,0 +1,3 @@
+- **Option A** - Practice: Repeat the group comparison with sleep_hours in place of study_hours_per_week.
+- **Option B** - Proceed: Continue to the next task.
+- **Option C** - Extra challenge: Examine if the relationship between study hours and exam score is different for each class group.

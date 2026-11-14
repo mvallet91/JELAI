@@ -1,0 +1,5 @@
+Load data into a pandas DataFrame: Use pd.read_csv() to import a CSV file.
+Inspect the structure of a dataset: Use .head(), .shape and .info() to examine rows, columns and data types.
+Find missing values: Use .isna().sum() to count missing values and decide how to handle them.
+Compare groups: Use .groupby() and .mean() to compare a variable between groups.
+Describe a relationship between two variables: Use a scatter plot or .corr() and interpret the result.
