@@ -9,7 +9,7 @@ dataset of tagged sharks for the fictional Oceanic Research Institute.
 
 | Path | Purpose |
 |---|---|
-| `materials/Task1.ipynb` | The notebook of the student (Task 1 without the solutions). |
+| `materials/Task1.ipynb` | The notebook of the student: the original student version of Task 1, without solutions. |
 | `inputs/assignment_descriptions/Task1.txt` | The description of the assignment for the tutor. |
 | `inputs/learning_objectives/Task1.txt` | The learning objectives. |
 | `inputs/next_steps/Task1.txt` | The options of the `/report` command. |
@@ -20,6 +20,11 @@ from the 4CID tasks repository:
 ```bash
 curl -fsSLO https://raw.githubusercontent.com/mvallet91/4CID_Tasks/main/sharks.csv
 ```
+
+The notebook is unchanged from the study. Its introduction has the session
+logistics of the study (Task 1 and Task 2 in one hour), and option B links to
+Task2.ipynb, which is not in the demo. Say this to the audience, or edit the
+first cell after the upload.
 
 ## Install the demo course
 
