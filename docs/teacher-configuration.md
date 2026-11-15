@@ -42,7 +42,7 @@ The file `agent_config.yaml` controls all three steps.
 | `classification` | The categories, their descriptions and the prompt for the LLM. |
 | `interventions.reactive` | The rules that add hints to the tutor prompt. |
 | `interventions.needs_guidance` | When the dashboard shows that a student needs guidance. |
-| `interventions.guardrails` | The solution guardrail: for the categories in `no_solution_categories` (default `executive`), the tutor does not give solution code. An answer with a code block longer than `max_code_lines` (default 0), or with inline code longer than `max_inline_code_chars` (default 20), is rewritten one time by the classification model; if that fails, this code is removed. A solution is often one line, so the defaults allow only short inline code such as `groupby`. |
+| `interventions.guardrails` | The solution guardrail: for the categories in `no_solution_categories` (default `executive`), the tutor does not give solution code. An answer with a code block longer than `max_code_lines` (default 0), or with inline code longer than `max_inline_code_chars` (default 20), is rewritten one time by the classification model; if that fails, this code is removed. A solution is often one line, so the defaults allow only short inline code such as `groupby`. With `apply_to_report: true` (the default), the same check applies to the report of `/report`. |
 | `proactivity` | When and how the tutor sends messages without a question. |
 | `message_gateway` | Text patterns that the tutor must never send to a student. |
 | `commands` | The chat commands `/report` and the optional completion code. |

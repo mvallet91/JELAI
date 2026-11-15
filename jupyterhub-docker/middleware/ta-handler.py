@@ -135,7 +135,7 @@ def init_db():
                     timestamp REAL NOT NULL,
                     message_type TEXT NOT NULL, -- 'question' or 'response'
                     message_text TEXT NOT NULL,
-                    message_classification TEXT, -- category for questions; "proactive" or NULL for responses
+                    message_classification TEXT, -- category or "command" for questions; "proactive", "report" or NULL for responses
                     file_name TEXT
                 )
             """)
@@ -383,6 +383,8 @@ def get_history(student_id: str, file_name: str, limit: int = 6) -> List[dict]:
                 SELECT message_type, message_text
                 FROM chat_history
                 WHERE student_id = ? AND file_name = ?
+                  -- The /report command and its long report are not part of the tutor conversation.
+                  AND COALESCE(message_classification, '') NOT IN ('command', 'report')
                 ORDER BY timestamp DESC
                 LIMIT ?
             """, (student_id, file_name, limit))
@@ -394,6 +396,19 @@ def get_history(student_id: str, file_name: str, limit: int = 6) -> List[dict]:
     except sqlite3.Error as e:
         logging.error(f"Failed to retrieve/format history for {student_id} (file: {file_name}): {e}")
     return history_for_llm
+
+def last_chat_time(student_id: str, file_name: str) -> Optional[float]:
+    """Return the time of the last chat message (question or answer) in a chat, or None."""
+    try:
+        with sqlite3.connect(DATABASE_FILE) as conn:
+            row = conn.execute(
+                "SELECT MAX(timestamp) FROM chat_history WHERE student_id = ? AND file_name = ?",
+                (student_id, file_name)).fetchone()
+            return row[0] if row else None
+    except sqlite3.Error as e:
+        logging.error(f"DB error reading the last chat time for {student_id}: {e}")
+        return None
+
 
 def format_history_for_prompt(history_messages: list) -> str:
     """Formats a list of message dicts (from get_history, which are {'role': ..., 'content': ...}) into a simple string."""
@@ -517,7 +532,17 @@ async def receive_student_message(message: StudentMessage, background_tasks: Bac
     report_cfg = commands_cfg.get("report") or {}
     completion_cfg = commands_cfg.get("completion") or {}
     if report_cfg.get("enabled", True) and command == str(report_cfg.get("trigger", "/report")).lower():
-        return TutorApiResponse(final_response=await run_report_command(message, report_cfg))
+        save_logs(message.student_id, message.structured_logs)
+        add_to_history(message.student_id, "question", message.message_text.strip(), "command", message.file_name)
+        report = await run_report_command(message, report_cfg)
+        guardrail = pedagogy.guardrail_settings(interventions_cfg.get("guardrails"))
+        if guardrail["enabled"] and guardrail["apply_to_report"]:
+            report = await pedagogy.enforce_guardrail(
+                report, guardrail,
+                lambda msgs: call_llm(msgs, role="classification", purpose="guardrail rewrite of the report"),
+            )
+        add_to_history(message.student_id, "response", report, "report", message.file_name)
+        return TutorApiResponse(final_response=report)
     if completion_cfg.get("enabled") and command == str(completion_cfg.get("trigger", "/finish")).lower():
         return TutorApiResponse(final_response=run_completion_command(message, completion_cfg))
 
@@ -704,6 +729,12 @@ async def evaluate_proactivity(request: ProactivityRequest):
     save_logs(request.student_id, request.structured_logs)
     if not proactivity_cfg.get("enabled", True):
         return ProactivityResponse(intervention="NO_INTERVENTION", reasoning="Proactivity is disabled")
+
+    quiet_seconds = float(proactivity_cfg.get("min_seconds_after_answer", 120) or 0)
+    last_message = last_chat_time(request.student_id, request.file_name)
+    if quiet_seconds and last_message and time.time() - last_message < quiet_seconds:
+        return ProactivityResponse(intervention="NO_INTERVENTION",
+                                   reasoning=f"Less than {int(quiet_seconds)} s after the last chat message")
 
     logging.info(f"Evaluating proactivity for {request.student_id}...")
     name = agent_name()

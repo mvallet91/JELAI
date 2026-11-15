@@ -261,7 +261,7 @@
             }
             main.innerHTML = `
                 <div class="page-title">Class</div>
-                <div class="page-sub">${classRows.length} students · ${active} active now ·
+                <div class="page-sub">${classRows.length} ${classRows.length === 1 ? 'student' : 'students'} · ${active} active now ·
                     ${flagged ? `<strong>${flagged} may need you</strong>` : 'nobody needs attention now'}</div>
                 <div class="card" style="padding: 8px 12px">
                     <table>
@@ -400,6 +400,7 @@
             if (evt.category) tags.push(`<span class="chip ${esc(evt.category)}">${esc(evt.category)}</span>`);
             if (evt.rule) tags.push(`<span class="chip rule">Rule: ${esc(evt.rule)}</span>`);
             if (evt.proactive) tags.push('<span class="chip proactive">Sent without a question</span>');
+            if (evt.report) tags.push('<span class="chip proactive">Report for the student · select to read</span>');
             return tags.length ? `<div class="tags">${tags.join('')}</div>` : '';
         }
 

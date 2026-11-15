@@ -247,6 +247,7 @@ def guardrail_settings(guardrails_cfg: Dict[str, Any]) -> Dict[str, Any]:
         "rule": cfg.get("rule") or DEFAULT_GUARDRAIL_RULE,
         "rewrite": bool(cfg.get("rewrite_on_violation", True)),
         "rewrite_prompt": cfg.get("rewrite_prompt") or DEFAULT_REWRITE_PROMPT,
+        "apply_to_report": bool(cfg.get("apply_to_report", True)),
     }
 
 

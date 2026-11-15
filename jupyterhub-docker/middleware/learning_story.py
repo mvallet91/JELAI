@@ -266,6 +266,8 @@ def build_canvas(student_id: str, pad_id: Optional[str] = None,
         mentions_data = any(ind in pad_text.lower() for ind in data_indicators)
 
     # --- Chat analysis ---
+    # Commands such as /report are not questions to the tutor.
+    chat = [c for c in chat if c.get("message_classification") not in ("command", "report")]
     questions = [c for c in chat if c.get("message_type") == "question"]
     responses = [c for c in chat if c.get("message_type") == "response"]
     last_question = questions[-1].get("message_text", "")[:100] if questions else ""
@@ -295,7 +297,7 @@ def build_canvas(student_id: str, pad_id: Optional[str] = None,
             "type": "stuck_without_asking",
             "detail": f"Student has {len(errors)} execution errors but hasn't asked for help in chat."
         })
-    if successes and last_output and not any("describe" in s or "statistics" in s for s in key_claims):
+    if successes and last_output and not mentions_data and not any("describe" in s or "statistics" in s for s in key_claims):
         gaps.append({
             "type": "unexplored_output",
             "detail": "Code produced data output but student hasn't explored or written about the patterns."
@@ -374,6 +376,13 @@ def canvas_to_prompt(canvas: Dict[str, Any]) -> str:
 # 3. Learning Story — narrative timeline for the teacher
 # ---------------------------------------------------------------------------
 
+def plain_text(markdown: str) -> str:
+    """Return a one-line preview of Markdown text without the formatting marks."""
+    text = re.sub(r"```.*?(```|$)", " [code] ", markdown or "", flags=re.DOTALL)
+    text = re.sub(r"[*_`#>|]+", "", text)
+    return re.sub(r"\s+", " ", text).strip()
+
+
 def build_timeline(student_id: str, pad_id: Optional[str] = None,
                    logs_dir: str = PROCESSED_LOGS_DIR,
                    db_path: str = DATABASE_FILE) -> List[Dict]:
@@ -437,7 +446,13 @@ def build_timeline(student_id: str, pad_id: Optional[str] = None,
     for msg in chat:
         ts = msg.get("timestamp", 0)
         time_str = datetime.fromtimestamp(ts).strftime("%Y-%m-%d %H:%M:%S") if ts else ""
-        if msg["message_type"] == "question":
+        if msg["message_type"] == "question" and msg.get("message_classification") == "command":
+            events.append({
+                "time": time_str, "source": "chat", "type": "command",
+                "summary": f"Used the command {msg['message_text'][:40]}",
+                "detail": msg["message_text"],
+            })
+        elif msg["message_type"] == "question":
             events.append({
                 "time": time_str, "source": "chat", "type": "question",
                 "summary": f"Asked: \"{msg['message_text'][:100]}\"",
@@ -447,12 +462,15 @@ def build_timeline(student_id: str, pad_id: Optional[str] = None,
             })
         else:
             proactive = msg.get("message_classification") == "proactive"
-            preview = msg["message_text"][:120].replace("\n", " ")
+            report = msg.get("message_classification") == "report"
+            preview = plain_text(msg["message_text"])[:120]
             events.append({
-                "time": time_str, "source": "chat", "type": "proactive" if proactive else "answer",
+                "time": time_str, "source": "chat",
+                "type": "proactive" if proactive else ("report" if report else "answer"),
                 "summary": f"Juno: \"{preview}{'...' if len(msg['message_text']) > 120 else ''}\"",
-                "detail": msg["message_text"][:600],
+                "detail": msg["message_text"][:4000] if report else msg["message_text"][:600],
                 "proactive": proactive,
+                "report": report,
             })
 
     # Sort everything by time
@@ -602,7 +620,7 @@ def _needs_guidance(chat: List[Dict], cfg: Dict[str, Any]) -> bool:
         return False
     default = "other"
     questions = [m for m in chat if m.get("message_type") == "question" and m.get("message_classification")
-                 and m.get("message_classification") != default]
+                 and m.get("message_classification") not in (default, "command")]
     if len(questions) < int(cfg.get("min_questions", 6)):
         return False
     share = sum(1 for m in questions if m["message_classification"] == category) / len(questions)
@@ -625,7 +643,8 @@ def build_class_overview(logs_dir: str = PROCESSED_LOGS_DIR, db_path: str = DATA
         chat = get_chat_history(student_id, db_path)
         categories: Dict[str, int] = {}
         for msg in chat:
-            if msg.get("message_type") == "question" and msg.get("message_classification"):
+            if (msg.get("message_type") == "question" and msg.get("message_classification")
+                    and msg["message_classification"] != "command"):
                 categories[msg["message_classification"]] = categories.get(msg["message_classification"], 0) + 1
 
         jupyter, pad = canvas["jupyter"], canvas["etherpad"]

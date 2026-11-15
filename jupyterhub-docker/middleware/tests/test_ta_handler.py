@@ -139,10 +139,22 @@ def test_proactivity_and_disable(ta, inputs_dir):
     assert client.post("/evaluate_proactivity", json=payload).json()["intervention"] == "NO_INTERVENTION"
 
 
+def test_no_proactive_message_right_after_an_answer(ta):
+    module, client, calls = ta
+    ask(client, "how do I group rows?")
+    payload = {"student_id": "ana", "file_name": "Task.chat", "processed_logs": "x"}
+    assert client.post("/evaluate_proactivity", json=payload).json()["intervention"] == "NO_INTERVENTION"
+    assert not [c for c in calls if c["role"] == "proactivity"]
+
+
 def test_report_and_completion_commands(ta, inputs_dir):
     module, client, calls = ta
     assert ask(client, "/report").json()["final_response"] == "Here is a hint."
     assert [c for c in calls if c["role"] == "report"]
+    story = client.get("/teacher/student/ana/story", headers=auth()).json()
+    assert [e["type"] for e in story["timeline"] if e["source"] == "chat"] == ["command", "report"]
+    assert story["canvas"]["chat"]["questions_asked"] == 0
+    assert module.get_history("ana", "Task.chat") == []
     (inputs_dir / "agent_config.yaml").write_text(
         "commands:\n  completion:\n    enabled: true\n    min_minutes: 0\n    min_questions: 0\n    code: ABC-1\n")
     assert "ABC-1" in ask(client, "/finish").json()["final_response"]

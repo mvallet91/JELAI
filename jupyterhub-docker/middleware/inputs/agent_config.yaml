@@ -172,7 +172,8 @@ interventions:
         streak: 3
         hint: >-
           This is the third consecutive executive question. Take the student's question
-          and rephrase it as a model instrumental question. For example: "Instead of
+          and rephrase it as a better question that asks for understanding. Do not use
+          the words "instrumental" or "executive". For example: "Instead of
           asking 'make a bar plot', a better version might be 'what is the first step
           to make a bar plot?' Could you try rephrasing your next request similarly?"
           Student's previous question: {last_executive_example}
@@ -211,6 +212,8 @@ interventions:
     max_code_lines: 0
     max_inline_code_chars: 20
     rewrite_on_violation: true
+    # Also check the report of the report command (/report) for solution code.
+    apply_to_report: true
     rule: >-
       Do not give the solution. Do not write the code that completes the task
       for the student, also not one line, not as an example and not as the
@@ -226,6 +229,9 @@ proactivity:
   enabled: true
   # Minimum seconds between proactive interventions on the same chat
   min_cooldown_seconds: 300
+  # Minimum seconds after the last chat message (question or answer) before a
+  # proactive message. The student needs time to act on the answer.
+  min_seconds_after_answer: 120
   # After this many unanswered interventions, stop intervening
   max_unanswered_interventions: 2
   # Don't send another proactive message until the student responds
