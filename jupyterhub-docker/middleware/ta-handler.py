@@ -135,7 +135,7 @@ def init_db():
                     timestamp REAL NOT NULL,
                     message_type TEXT NOT NULL, -- 'question' or 'response'
                     message_text TEXT NOT NULL,
-                    message_classification TEXT, -- category from agent_config.yaml, or NULL for responses
+                    message_classification TEXT, -- category for questions; "proactive" or NULL for responses
                     file_name TEXT
                 )
             """)
@@ -166,6 +166,10 @@ def init_db():
                     last_llm_eval REAL NOT NULL
                 )
             """)
+            # Earlier databases do not have the column for the intervention rule.
+            columns = [row[1] for row in cursor.execute("PRAGMA table_info(chat_history)")]
+            if "intervention_rule" not in columns:
+                cursor.execute("ALTER TABLE chat_history ADD COLUMN intervention_rule TEXT")
             conn.commit()
             logging.info("Database initialized (chat_history, student_profiles, student_experiment_assignments, & learner_models tables checked/created).")
     except sqlite3.Error as e:
@@ -251,13 +255,14 @@ def save_student_profile(student_id: str, file_name: str, category: str, streak:
         logging.error(f"Error updating profile for {student_id} (file: {file_name}): {e}", exc_info=True)
 
 
-def update_question_classification(student_id, file_name, message_text, classification):
+def update_question_classification(student_id, file_name, message_text, classification, rule=None):
+    """Store the category and the name of the intervention rule of the last matching question."""
     with sqlite3.connect(DATABASE_FILE) as conn:
         cursor = conn.cursor()
         cursor.execute(
             """
             UPDATE chat_history
-            SET message_classification = ?
+            SET message_classification = ?, intervention_rule = ?
             WHERE id = (
                 SELECT id FROM chat_history
                 WHERE student_id = ? AND file_name = ? AND message_text = ? AND message_type = 'question'
@@ -265,7 +270,7 @@ def update_question_classification(student_id, file_name, message_text, classifi
                 LIMIT 1
             )
             """,
-            (classification, student_id, file_name, message_text)
+            (classification, rule, student_id, file_name, message_text)
         )
         conn.commit()
 
@@ -642,7 +647,8 @@ async def receive_student_message(message: StudentMessage, background_tasks: Bac
             message_text=final_response, message_classification=None,
             file_name=message.file_name
         )
-        update_question_classification(message.student_id, message.file_name, message.message_text, classification_result)
+        update_question_classification(message.student_id, message.file_name, message.message_text, classification_result,
+                                        hint["name"] if hint else None)
 
         # --- 7. Schedule Background Task for Profile Update ---
         background_tasks.add_task(
@@ -772,7 +778,7 @@ Respond with the JSON object only. No other text."""}
             student_id=request.student_id,
             message_type="response",
             message_text=message,
-            message_classification=None,
+            message_classification="proactive",  # Marks the messages that the tutor sent without a question.
             file_name=request.file_name
         )
         return ProactivityResponse(intervention=message, reasoning=reasoning)

@@ -5,655 +5,436 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>JELAI Teacher Dashboard</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <style>
         :root {
-            --bg-primary: #0f1117;
-            --bg-secondary: #1a1d27;
-            --bg-card: #222536;
-            --bg-hover: #2a2e42;
-            --text-primary: #e8eaed;
-            --text-secondary: #9aa0b0;
-            --text-muted: #6b7280;
-            --accent-blue: #5b8def;
-            --accent-green: #4ade80;
-            --accent-orange: #f59e0b;
-            --accent-red: #ef4444;
-            --accent-purple: #a78bfa;
-            --border: #2d3148;
-            --jupyter: #f59e0b;
-            --etherpad: #a78bfa;
-            --chat: #5b8def;
+            --bg: #f7f6f2;
+            --surface: #ffffff;
+            --line: #e4e1d8;
+            --text: #1f2328;
+            --muted: #5f6368;
+            --faint: #8a8f96;
+            --accent: #2f6fb3;
+            --ok: #2e7d4f;
+            --ok-bg: #e6f2ea;
+            --warn: #a15c00;
+            --warn-bg: #fdf0dc;
+            --error: #b3261e;
+            --error-bg: #fbe9e7;
+            --neutral-bg: #eeede8;
+            --notebook: #c27c0e;
+            --chat: #2f6fb3;
+            --report: #7b5ea7;
         }
 
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
 
         body {
-            font-family: 'Inter', sans-serif;
-            background: var(--bg-primary);
-            color: var(--text-primary);
-            min-height: 100vh;
+            font-family: 'Inter', Arial, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            font-size: 15px;
+            line-height: 1.5;
         }
+
+        button { font: inherit; }
 
         .header {
-            background: var(--bg-secondary);
-            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
             padding: 16px 32px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
+            background: var(--surface);
+            border-bottom: 1px solid var(--line);
         }
 
-        .header h1 {
-            font-size: 20px;
-            font-weight: 600;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
+        .header h1 { font-size: 18px; font-weight: 600; }
+        .header h1 .product { color: var(--accent); }
 
-        .header h1 span {
-            font-size: 24px;
-        }
-
-        .refresh-btn {
-            background: var(--bg-card);
-            border: 1px solid var(--border);
-            color: var(--text-primary);
-            padding: 8px 16px;
+        .btn {
+            background: var(--surface);
+            border: 1px solid var(--line);
+            color: var(--text);
+            padding: 7px 14px;
             border-radius: 8px;
             cursor: pointer;
-            font-family: inherit;
-            font-size: 13px;
-            transition: background 0.2s;
-        }
-
-        .refresh-btn:hover {
-            background: var(--bg-hover);
-        }
-
-        .container {
-            display: grid;
-            grid-template-columns: 320px 1fr;
-            gap: 0;
-            height: calc(100vh - 57px);
-        }
-
-        /* --- Student List --- */
-        .student-list {
-            background: var(--bg-secondary);
-            border-right: 1px solid var(--border);
-            overflow-y: auto;
-            padding: 16px;
-        }
-
-        .student-list h2 {
-            font-size: 13px;
-            font-weight: 500;
-            color: var(--text-secondary);
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin-bottom: 12px;
-        }
-
-        .student-card {
-            background: var(--bg-card);
-            border: 1px solid var(--border);
-            border-radius: 10px;
-            padding: 14px;
-            margin-bottom: 8px;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        .student-card:hover,
-        .student-card.active {
-            background: var(--bg-hover);
-            border-color: var(--accent-blue);
-        }
-
-        .student-card .name {
-            font-weight: 500;
+            text-decoration: none;
             font-size: 14px;
-            margin-bottom: 6px;
+            margin-left: 8px;
         }
 
-        .student-card .stats {
-            display: flex;
-            gap: 12px;
-            font-size: 12px;
-            color: var(--text-secondary);
-        }
+        .btn:hover { border-color: var(--accent); color: var(--accent); }
 
-        .student-card .stats .stat {
-            display: flex;
-            align-items: center;
-            gap: 4px;
-        }
+        main { max-width: 1180px; margin: 0 auto; padding: 28px 32px 64px; }
 
-        .student-card .stats .stat .icon {
-            font-size: 14px;
-        }
+        .page-title { font-size: 26px; font-weight: 600; margin-bottom: 4px; }
+        .page-sub { color: var(--muted); margin-bottom: 24px; }
 
-        .status-dot {
-            display: inline-block;
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            margin-right: 6px;
-        }
-
-        .status-dot.active {
-            background: var(--accent-green);
-        }
-
-        .status-dot.idle {
-            background: var(--accent-orange);
-        }
-
-        .status-dot.inactive {
-            background: var(--accent-red);
-        }
-
-        /* --- Main Content --- */
-        .main-content {
-            overflow-y: auto;
-            padding: 24px 32px;
-        }
-
-        .loading {
-            text-align: center;
-            padding: 60px;
-            color: var(--text-muted);
-        }
-
-        .story-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            margin-bottom: 24px;
-        }
-
-        .story-header h2 {
-            font-size: 22px;
-            font-weight: 600;
-        }
-
-        .story-header .duration {
-            background: var(--bg-card);
-            border: 1px solid var(--border);
-            padding: 6px 14px;
-            border-radius: 8px;
-            font-size: 13px;
-            color: var(--text-secondary);
-        }
-
-        .summary-box {
-            background: var(--bg-card);
-            border: 1px solid var(--border);
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--line);
             border-radius: 12px;
-            padding: 20px;
-            margin-bottom: 24px;
-            line-height: 1.6;
-            color: var(--text-secondary);
-            font-size: 14px;
+            padding: 20px 24px;
+            margin-bottom: 20px;
         }
 
-        .summary-box strong {
-            color: var(--text-primary);
-        }
+        .card h2 { font-size: 16px; font-weight: 600; margin-bottom: 12px; }
 
-        /* --- Sections --- */
-        .section {
-            margin-bottom: 28px;
-        }
-
-        .section h3 {
-            font-size: 14px;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            color: var(--text-secondary);
-            margin-bottom: 14px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        /* --- Timeline --- */
-        .timeline {
-            position: relative;
-            padding-left: 30px;
-        }
-
-        .timeline::before {
-            content: '';
-            position: absolute;
-            left: 10px;
-            top: 0;
-            bottom: 0;
-            width: 2px;
-            background: var(--border);
-        }
-
-        .timeline-event {
-            position: relative;
-            padding: 10px 16px;
-            margin-bottom: 4px;
-            border-radius: 8px;
-            font-size: 13px;
-            transition: background 0.2s;
-        }
-
-        .timeline-event:hover {
-            background: var(--bg-card);
-        }
-
-        .timeline-event::before {
-            content: '';
-            position: absolute;
-            left: -24px;
-            top: 14px;
-            width: 10px;
-            height: 10px;
-            border-radius: 50%;
-            border: 2px solid var(--border);
-            background: var(--bg-primary);
-        }
-
-        .timeline-event.source-jupyter::before {
-            border-color: var(--jupyter);
-            background: var(--jupyter);
-        }
-
-        .timeline-event.source-etherpad::before {
-            border-color: var(--etherpad);
-            background: var(--etherpad);
-        }
-
-        .timeline-event.source-chat::before {
-            border-color: var(--chat);
-            background: var(--chat);
-        }
-
-        .timeline-event .time {
-            color: var(--text-muted);
-            font-size: 11px;
-            font-family: monospace;
-            margin-right: 8px;
-        }
-
-        .timeline-event .source-badge {
-            display: inline-block;
-            padding: 1px 6px;
-            border-radius: 4px;
-            font-size: 10px;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin-right: 8px;
-        }
-
-        .source-badge.jupyter {
-            background: rgba(245, 158, 11, 0.15);
-            color: var(--jupyter);
-        }
-
-        .source-badge.etherpad {
-            background: rgba(167, 139, 250, 0.15);
-            color: var(--etherpad);
-        }
-
-        .source-badge.chat {
-            background: rgba(91, 141, 239, 0.15);
-            color: var(--chat);
-        }
-
-        .timeline-event .event-text {
-            color: var(--text-primary);
-        }
-
-        .timeline-event.type-code_error .event-text {
-            color: var(--accent-red);
-        }
-
-        .timeline-event.type-code_success .event-text code {
-            background: rgba(74, 222, 128, 0.1);
-            color: var(--accent-green);
-            padding: 1px 4px;
-            border-radius: 3px;
+        /* --- Class overview --- */
+        table { width: 100%; border-collapse: collapse; }
+        th {
+            text-align: left;
             font-size: 12px;
-        }
-
-        /* --- Insights --- */
-        .insights-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 12px;
-        }
-
-        .insight-card {
-            background: var(--bg-card);
-            border: 1px solid var(--border);
-            border-radius: 10px;
-            padding: 16px;
-        }
-
-        .insight-card .label {
-            font-size: 11px;
             font-weight: 500;
+            color: var(--muted);
             text-transform: uppercase;
-            letter-spacing: 0.5px;
-            color: var(--text-muted);
-            margin-bottom: 6px;
+            letter-spacing: 0.4px;
+            padding: 0 12px 10px;
+            border-bottom: 1px solid var(--line);
         }
+        td { padding: 14px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+        tbody tr { cursor: pointer; }
+        tbody tr:hover { background: #fbfaf7; }
+        tbody tr:last-child td { border-bottom: none; }
+        .student-name { font-weight: 600; }
+        .small { font-size: 13px; color: var(--muted); }
 
-        .insight-card .value {
-            font-size: 14px;
-            color: var(--text-primary);
-        }
+        .status { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); }
+        .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--faint); }
+        .dot.active { background: var(--ok); }
+        .dot.idle { background: var(--warn); }
 
-        .progress-bar {
-            width: 100%;
-            height: 6px;
-            background: var(--bg-primary);
-            border-radius: 3px;
-            margin-top: 6px;
-            overflow: hidden;
-        }
-
-        .progress-fill {
-            height: 100%;
-            background: var(--accent-blue);
-            border-radius: 3px;
-            transition: width 0.3s ease;
-        }
-
-        /* --- Recommendations --- */
-        .recommendation {
-            background: var(--bg-card);
-            border: 1px solid var(--border);
-            border-left: 3px solid var(--accent-blue);
-            border-radius: 0 10px 10px 0;
-            padding: 12px 16px;
-            margin-bottom: 8px;
-            font-size: 13px;
-            color: var(--text-secondary);
-        }
-
-        /* --- Legend --- */
-        .legend {
-            display: flex;
-            gap: 16px;
-            margin-bottom: 12px;
-        }
-
-        .legend-item {
-            display: flex;
-            align-items: center;
-            gap: 6px;
+        .chip {
+            display: inline-block;
+            padding: 2px 9px;
+            border-radius: 999px;
             font-size: 12px;
-            color: var(--text-muted);
+            font-weight: 500;
+            background: var(--neutral-bg);
+            color: var(--muted);
+            margin: 0 4px 4px 0;
+            white-space: nowrap;
+        }
+        .chip.instrumental { background: var(--ok-bg); color: var(--ok); }
+        .chip.executive { background: var(--warn-bg); color: var(--warn); }
+        .chip.flag { background: var(--warn-bg); color: var(--warn); }
+        .chip.proactive { background: #e8eef7; color: var(--accent); }
+        .chip.rule { background: transparent; border: 1px solid var(--line); color: var(--muted); font-weight: 400; }
+
+        .none { color: var(--faint); font-size: 13px; }
+
+        /* --- Student view --- */
+        .back { display: inline-block; margin-bottom: 16px; color: var(--accent); cursor: pointer; background: none; border: none; }
+        .back:hover { text-decoration: underline; }
+
+        .facts { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px; }
+        .fact { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 14px 18px; }
+        .fact .num { font-size: 26px; font-weight: 600; }
+        .fact .num.bad { color: var(--error); }
+        .fact .label { font-size: 13px; color: var(--muted); }
+
+        .story { font-size: 16px; }
+
+        .attention li { margin: 0 0 8px 20px; }
+        .attention { border-left: 4px solid var(--warn); }
+
+        .filters { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 14px; }
+        .filter {
+            border: 1px solid var(--line);
+            background: var(--surface);
+            border-radius: 999px;
+            padding: 4px 12px;
+            font-size: 13px;
+            cursor: pointer;
+            color: var(--muted);
+        }
+        .filter.on { border-color: var(--text); color: var(--text); }
+        .filter .swatch { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }
+        .filters label { font-size: 13px; color: var(--muted); margin-left: 8px; cursor: pointer; }
+
+        .event { display: grid; grid-template-columns: 52px 96px 1fr; gap: 12px; padding: 9px 0; border-top: 1px solid var(--line); }
+        .event:first-child { border-top: none; }
+        .event .time { font-size: 13px; color: var(--faint); font-variant-numeric: tabular-nums; }
+        .event .src { font-size: 13px; font-weight: 500; }
+        .event .src.jupyter { color: var(--notebook); }
+        .event .src.chat { color: var(--chat); }
+        .event .src.etherpad { color: var(--report); }
+        .event .text { min-width: 0; overflow-wrap: anywhere; }
+        .event.code_error .text { color: var(--error); }
+        .event.question .text { font-weight: 500; }
+        .event .tags { margin-top: 4px; }
+        .event details summary { cursor: pointer; list-style: none; }
+        .event details summary::-webkit-details-marker { display: none; }
+        .event details pre {
+            white-space: pre-wrap;
+            font-size: 13px;
+            background: var(--bg);
+            border-radius: 8px;
+            padding: 10px 12px;
+            margin-top: 8px;
+            color: var(--text);
+            font-family: ui-monospace, Consolas, monospace;
         }
 
-        .legend-dot {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-        }
+        .bars div { margin-bottom: 10px; font-size: 13px; color: var(--muted); }
+        .bar { height: 6px; background: var(--neutral-bg); border-radius: 3px; margin-top: 4px; overflow: hidden; }
+        .bar span { display: block; height: 100%; background: var(--accent); }
 
-        .legend-dot.jupyter {
-            background: var(--jupyter);
-        }
+        .empty { text-align: center; padding: 60px 20px; color: var(--muted); }
 
-        .legend-dot.etherpad {
-            background: var(--etherpad);
-        }
-
-        .legend-dot.chat {
-            background: var(--chat);
-        }
-
-        /* --- Empty state --- */
-        .empty-state {
-            text-align: center;
-            padding: 80px 32px;
-            color: var(--text-muted);
-        }
-
-        .empty-state .icon {
-            font-size: 48px;
-            margin-bottom: 16px;
-        }
-
-        .empty-state h3 {
-            font-size: 18px;
-            margin-bottom: 8px;
-            color: var(--text-secondary);
+        @media (max-width: 760px) {
+            .header, main { padding-left: 16px; padding-right: 16px; }
+            .facts { grid-template-columns: repeat(2, 1fr); }
+            .hide-narrow { display: none; }
+            .event { grid-template-columns: 44px 1fr; }
+            .event .src { display: none; }
         }
     </style>
 </head>
 
 <body>
     <div class="header">
-        <h1><span>📊</span> JELAI Teacher Dashboard</h1>
+        <h1><span class="product">JELAI</span> · Teacher dashboard</h1>
         <div>
-            <a class="refresh-btn" href="/teacher-settings" style="text-decoration:none">⚙️ Settings</a>
-            <button class="refresh-btn" onclick="loadStudents()">🔄 Refresh</button>
+            <a class="btn" href="/teacher-settings">Settings</a>
+            <button class="btn" onclick="refresh()">Refresh</button>
         </div>
     </div>
-    <div class="container">
-        <div class="student-list">
-            <h2>Students</h2>
-            <div id="student-list-content">
-                <div class="loading">Loading students...</div>
-            </div>
-        </div>
-        <div class="main-content" id="main-content">
-            <div class="empty-state">
-                <div class="icon">🎓</div>
-                <h3>Select a student</h3>
-                <p>Click on a student to view their learning story</p>
-            </div>
-        </div>
-    </div>
+    <main id="main"><div class="empty">Loading the class...</div></main>
+
     <script>
-        let currentStudentId = null;
+        // Labels in plain words for the sources and event types of the timeline.
+        const SOURCE_LABEL = { jupyter: 'Notebook', chat: 'Chat', etherpad: 'Report' };
+        const SOURCE_COLOR = { jupyter: 'var(--notebook)', chat: 'var(--chat)', etherpad: 'var(--report)' };
 
-        async function loadStudents() {
-            try {
-                const resp = await fetch('/teacher/students');
-                const data = await resp.json();
-                const container = document.getElementById('student-list-content');
+        let classRows = [];
+        let currentStudent = null;
+        let currentStory = null;
+        const filters = { jupyter: true, chat: true, etherpad: true, edits: false };
 
-                if (!data.students || data.students.length === 0) {
-                    container.innerHTML = '<div class="loading">No students found</div>';
-                    return;
-                }
-
-                container.innerHTML = data.students.map(s => {
-                    const lastSeen = s.last_seen ? new Date(s.last_seen * 1000) : null;
-                    const minsAgo = lastSeen ? Math.floor((Date.now() - lastSeen) / 60000) : Infinity;
-                    const statusClass = minsAgo < 5 ? 'active' : minsAgo < 30 ? 'idle' : 'inactive';
-                    const shortId = s.student_id.substring(0, 8) + '...';
-                    return `
-                        <div class="student-card ${s.student_id === currentStudentId ? 'active' : ''}"
-                             onclick="loadStory('${s.student_id}')">
-                            <div class="name">
-                                <span class="status-dot ${statusClass}"></span>
-                                ${shortId}
-                            </div>
-                            <div class="stats">
-                                <span class="stat"><span class="icon">💬</span> ${s.message_count} msgs</span>
-                            </div>
-                        </div>
-                    `;
-                }).join('');
-            } catch (e) {
-                document.getElementById('student-list-content').innerHTML =
-                    '<div class="loading">Error loading students</div>';
-            }
-        }
-
-        async function loadStory(studentId) {
-            currentStudentId = studentId;
-            loadStudents(); // refresh active state
-            const main = document.getElementById('main-content');
-            main.innerHTML = '<div class="loading">Building learning story...</div>';
-
-            try {
-                const resp = await fetch(`/teacher/student/${studentId}/story`);
-                const story = await resp.json();
-                renderStory(story);
-            } catch (e) {
-                main.innerHTML = `<div class="loading">Error: ${e.message}</div>`;
-            }
-        }
-
-        function renderStory(story) {
-            const main = document.getElementById('main-content');
-            const shortId = story.student_id.substring(0, 12) + '...';
-
-            main.innerHTML = `
-                <div class="story-header">
-                    <h2>${shortId}</h2>
-                    <div class="duration">⏱ ${story.session_duration}</div>
-                </div>
-
-                <div class="summary-box">
-                    <strong>📖 Learning Story</strong><br>
-                    ${story.summary}
-                </div>
-
-                <div class="section">
-                    <h3>📅 Activity Timeline</h3>
-                    <div class="legend">
-                        <span class="legend-item"><span class="legend-dot jupyter"></span> Jupyter</span>
-                        <span class="legend-item"><span class="legend-dot etherpad"></span> Etherpad</span>
-                        <span class="legend-item"><span class="legend-dot chat"></span> Chat</span>
-                    </div>
-                    <div class="timeline">
-                        ${renderTimeline(story.timeline)}
-                    </div>
-                </div>
-
-                <div class="section">
-                    <h3>🔍 Insights</h3>
-                    <div class="insights-grid">
-                        ${renderInsights(story.insights)}
-                    </div>
-                </div>
-                
-                <div class="section">
-                    <h3>🧠 Learner State</h3>
-                    <div class="insights-grid">
-                        ${renderLearnerModel(story.learner_model)}
-                    </div>
-                </div>
-
-                ${story.recommendations.length > 0 ? `
-                <div class="section">
-                    <h3>💡 Suggestions</h3>
-                    ${story.recommendations.map(r => `<div class="recommendation">${r}</div>`).join('')}
-                </div>
-                ` : ''}
-
-                ${story.canvas.cross_tool_gaps.length > 0 ? `
-                <div class="section">
-                    <h3>⚠️ Cross-Tool Gaps</h3>
-                    ${story.canvas.cross_tool_gaps.map(g => `
-                        <div class="recommendation" style="border-left-color: var(--accent-orange)">
-                            <strong>${g.type.replace(/_/g, ' ')}</strong>: ${g.detail}
-                        </div>
-                    `).join('')}
-                </div>
-                ` : ''}
-            `;
-        }
-
-        function renderTimeline(timeline) {
-            if (!timeline || timeline.length === 0) {
-                return '<div class="loading">No activity recorded</div>';
-            }
-            // Show last 50 events
-            const events = timeline.slice(-50);
-            return events.map(evt => {
-                const timeStr = evt.time ? evt.time.split(' ')[1] || evt.time : '';
-                const shortTime = timeStr.substring(0, 5);
-                return `
-                    <div class="timeline-event source-${evt.source} type-${evt.type}">
-                        <span class="time">${shortTime}</span>
-                        <span class="source-badge ${evt.source}">${evt.source}</span>
-                        <span class="event-text">${escapeHtml(evt.summary).substring(0, 150)}</span>
-                    </div>
-                `;
-            }).join('');
-        }
-
-        function renderInsights(insights) {
-            const cards = [
-                { label: 'Concepts Explored', value: insights.concepts_explored.join(', ') || 'None yet' },
-                { label: 'Engagement Level', value: insights.engagement_level },
-                { label: 'Writing Quality', value: insights.writing_quality },
-                { label: 'Help Seeking', value: insights.help_seeking },
-                { label: 'Code vs Writing', value: insights.code_vs_writing_gap },
-                { label: 'Struggles', value: insights.struggles.join(', ') || 'None observed' },
-            ];
-            return cards.map(c => `
-                <div class="insight-card">
-                    <div class="label">${c.label}</div>
-                    <div class="value">${c.value}</div>
-                </div>
-            `).join('');
-        }
-
-        function renderLearnerModel(model) {
-            if (!model) return '<div class="insight-card">No model data yet.</div>';
-
-            // Format Knowledge
-            let kHtml = '<div class="insight-card"><div class="label">Knowledge Trace</div><div style="margin-top: 12px;">';
-            const kmap = { 'data_loading': 'Data Loading', 'data_exploration': 'Exploration', 'data_manipulation': 'Manipulation', 'visualization': 'Visualization', 'data_interpretation': 'Interpretation' };
-            for (const [key, val] of Object.entries(model.knowledge || {})) {
-                if (kmap[key]) {
-                    const pct = Math.min(100, Math.round(val.score * 100));
-                    kHtml += `<div style="margin-bottom:10px; font-size:12px; color:var(--text-secondary);">
-                                <div style="display:flex; justify-content:space-between;"><span>${kmap[key]}</span><span>${pct}%</span></div>
-                                <div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>
-                              </div>`;
-                }
-            }
-            kHtml += '</div></div>';
-
-            const mHtml = `
-                <div class="insight-card">
-                    <div style="margin-bottom:20px;">
-                        <div class="label">Behavioral State</div>
-                        <div class="value" style="font-size: 16px; font-weight: 500;">${model.metacognition?.state || 'Unknown'}</div>
-                    </div>
-                    <div>
-                        <div class="label">Affect / Emotion</div>
-                        <div class="value" style="font-size: 16px; font-weight: 500; color: ${model.affect?.state === 'Frustrated' ? 'var(--accent-red)' : (model.affect?.state === 'Flow' ? 'var(--accent-green)' : 'var(--text-primary)')}">
-                            ${model.affect?.state || 'Neutral'}
-                        </div>
-                    </div>
-                </div>
-            `;
-
-            return mHtml + kHtml;
-        }
-
-        function escapeHtml(text) {
+        function esc(text) {
             const div = document.createElement('div');
-            div.textContent = text;
+            div.textContent = text == null ? '' : String(text);
             return div.innerHTML;
         }
 
-        // Load students on page load
-        loadStudents();
+        function ago(seconds) {
+            if (!seconds) return 'no activity yet';
+            const mins = Math.floor((Date.now() / 1000 - seconds) / 60);
+            if (mins < 1) return 'just now';
+            if (mins < 60) return `${mins} min ago`;
+            const hours = Math.floor(mins / 60);
+            if (hours < 24) return `${hours} h ago`;
+            return `${Math.floor(hours / 24)} days ago`;
+        }
+
+        const STATUS_LABEL = { active: 'Active', idle: 'Idle', away: 'Away' };
+
+        function categoryChips(categories) {
+            const entries = Object.entries(categories || {});
+            if (!entries.length) return '<span class="none">No questions</span>';
+            return entries.sort((a, b) => b[1] - a[1])
+                .map(([name, n]) => `<span class="chip ${esc(name)}">${esc(name)} ${n}</span>`).join('');
+        }
+
+        async function loadClass() {
+            const main = document.getElementById('main');
+            try {
+                const resp = await fetch('/teacher/class');
+                const data = await resp.json();
+                classRows = data.students || [];
+            } catch (e) {
+                main.innerHTML = '<div class="empty">The class data could not be loaded. Select Refresh to try again.</div>';
+                return;
+            }
+            if (!currentStudent) renderClass();
+        }
+
+        function renderClass() {
+            const main = document.getElementById('main');
+            const flagged = classRows.filter(r => r.flags.length).length;
+            const active = classRows.filter(r => r.status === 'active').length;
+            if (!classRows.length) {
+                main.innerHTML = `<div class="page-title">Class</div>
+                    <div class="empty">No student has used the tutor yet. Students show here after their first chat message.</div>`;
+                return;
+            }
+            main.innerHTML = `
+                <div class="page-title">Class</div>
+                <div class="page-sub">${classRows.length} students · ${active} active now ·
+                    ${flagged ? `<strong>${flagged} may need you</strong>` : 'nobody needs attention now'}</div>
+                <div class="card" style="padding: 8px 12px">
+                    <table>
+                        <thead><tr>
+                            <th>Student</th>
+                            <th class="hide-narrow">Notebook</th>
+                            <th>Questions to the tutor</th>
+                            <th class="hide-narrow">Report</th>
+                            <th>Needs attention</th>
+                        </tr></thead>
+                        <tbody>
+                            ${classRows.map((r, i) => `
+                                <tr data-index="${i}">
+                                    <td>
+                                        <div class="student-name">${esc(r.student_id)}</div>
+                                        <span class="status"><span class="dot ${r.status}"></span>${STATUS_LABEL[r.status]} · ${ago(r.last_seen)}</span>
+                                    </td>
+                                    <td class="hide-narrow">${r.code_runs} ${r.code_runs === 1 ? 'run' : 'runs'}<br><span class="small">${r.code_errors} with errors</span></td>
+                                    <td>${categoryChips(r.categories)}</td>
+                                    <td class="hide-narrow">${r.report_words ? `${r.report_words} words` : '<span class="none">Not started</span>'}</td>
+                                    <td>${r.flags.length ? r.flags.map(f => `<span class="chip flag">${esc(f)}</span>`).join('') : '<span class="none">None</span>'}</td>
+                                </tr>`).join('')}
+                        </tbody>
+                    </table>
+                </div>
+                <p class="small">Categories come from the classification settings. A student shows here after the first chat message.</p>`;
+            main.querySelectorAll('tbody tr').forEach(tr => {
+                tr.addEventListener('click', () => openStudent(classRows[Number(tr.dataset.index)].student_id));
+            });
+        }
+
+        async function openStudent(studentId) {
+            currentStudent = studentId;
+            const main = document.getElementById('main');
+            main.innerHTML = '<div class="empty">Loading the learning story...</div>';
+            try {
+                const resp = await fetch(`/teacher/student/${encodeURIComponent(studentId)}/story`);
+                currentStory = await resp.json();
+                renderStudent();
+            } catch (e) {
+                main.innerHTML = `<button class="back" onclick="backToClass()">← Class</button>
+                    <div class="empty">The learning story could not be loaded.</div>`;
+            }
+        }
+
+        function backToClass() {
+            currentStudent = null;
+            currentStory = null;
+            renderClass();
+            loadClass();
+        }
+
+        function attentionItems(story, row) {
+            // The gap details already explain these two flags.
+            const coveredByGaps = ['No report yet', 'Errors, but no questions'];
+            const items = [];
+            (row ? row.flags : []).filter(f => !coveredByGaps.includes(f))
+                .forEach(f => items.push(`<strong>${esc(f)}</strong>`));
+            (story.canvas.cross_tool_gaps || []).forEach(g => items.push(esc(g.detail)));
+            return [...new Set(items)];
+        }
+
+        function hasLearnerData(model) {
+            if (!model) return false;
+            const knowledge = Object.values(model.knowledge || {}).some(k => (k.score || 0) > 0);
+            const state = model.metacognition && model.metacognition.state && model.metacognition.state !== 'Unknown';
+            return knowledge || state;
+        }
+
+        function renderLearner(model) {
+            const names = { data_loading: 'Data loading', data_exploration: 'Exploration', data_manipulation: 'Manipulation', visualization: 'Visualization', data_interpretation: 'Interpretation' };
+            const bars = Object.entries(model.knowledge || {}).filter(([k]) => names[k]).map(([k, v]) => {
+                const pct = Math.min(100, Math.round((v.score || 0) * 100));
+                return `<div>${names[k]} · ${pct}%<div class="bar"><span style="width:${pct}%"></span></div></div>`;
+            }).join('');
+            return `<div class="card">
+                <h2>Learner model</h2>
+                <p class="small" style="margin-bottom:12px">An estimate from the notebook activity. It becomes more reliable with more activity.</p>
+                <p style="margin-bottom:12px">Way of working: <strong>${esc(model.metacognition?.state || 'Unknown')}</strong> ·
+                   Mood: <strong>${esc(model.affect?.state || 'Neutral')}</strong></p>
+                <div class="bars">${bars}</div>
+            </div>`;
+        }
+
+        function renderStudent() {
+            const story = currentStory;
+            const row = classRows.find(r => r.student_id === story.student_id);
+            const canvas = story.canvas;
+            const items = attentionItems(story, row);
+            const main = document.getElementById('main');
+            main.innerHTML = `
+                <button class="back" onclick="backToClass()">← Class</button>
+                <div class="page-title">${esc(story.student_id)}</div>
+                <div class="page-sub">${row ? `<span class="status"><span class="dot ${row.status}"></span>${STATUS_LABEL[row.status]} · ${ago(row.last_seen)}</span> · ` : ''}Session ${esc(story.session_duration)}</div>
+
+                <div class="card story"><h2>Learning story</h2>${esc(story.summary)}</div>
+
+                ${items.length ? `<div class="card attention"><h2>Needs attention</h2><ul>${items.map(i => `<li>${i}</li>`).join('')}</ul></div>` : ''}
+
+                <div class="facts">
+                    <div class="fact"><div class="num">${canvas.jupyter.total_executions}</div><div class="label">code runs</div></div>
+                    <div class="fact"><div class="num ${canvas.jupyter.errors ? 'bad' : ''}">${canvas.jupyter.errors}</div><div class="label">runs with errors</div></div>
+                    <div class="fact"><div class="num">${canvas.chat.questions_asked}</div><div class="label">questions to the tutor</div></div>
+                    <div class="fact"><div class="num">${canvas.etherpad.word_count}</div><div class="label">words in the report</div></div>
+                </div>
+
+                <div class="card">
+                    <h2>What happened</h2>
+                    <div class="filters" id="filters"></div>
+                    <div id="timeline"></div>
+                </div>
+
+                ${hasLearnerData(story.learner_model) ? renderLearner(story.learner_model) : ''}`;
+            renderFilters();
+            renderTimeline();
+        }
+
+        function renderFilters() {
+            const box = document.getElementById('filters');
+            box.innerHTML = ['jupyter', 'chat', 'etherpad'].map(src =>
+                `<button class="filter ${filters[src] ? 'on' : ''}" data-src="${src}"><span class="swatch" style="background:${SOURCE_COLOR[src]}"></span>${SOURCE_LABEL[src]}</button>`
+            ).join('') + `<label><input type="checkbox" id="show-edits" ${filters.edits ? 'checked' : ''}> Show cell edits</label>`;
+            box.querySelectorAll('.filter').forEach(b => b.addEventListener('click', () => {
+                filters[b.dataset.src] = !filters[b.dataset.src];
+                renderFilters();
+                renderTimeline();
+            }));
+            document.getElementById('show-edits').addEventListener('change', e => {
+                filters.edits = e.target.checked;
+                renderTimeline();
+            });
+        }
+
+        function eventTags(evt) {
+            const tags = [];
+            if (evt.category) tags.push(`<span class="chip ${esc(evt.category)}">${esc(evt.category)}</span>`);
+            if (evt.rule) tags.push(`<span class="chip rule">Rule: ${esc(evt.rule)}</span>`);
+            if (evt.proactive) tags.push('<span class="chip proactive">Sent without a question</span>');
+            return tags.length ? `<div class="tags">${tags.join('')}</div>` : '';
+        }
+
+        function renderTimeline() {
+            const box = document.getElementById('timeline');
+            const events = (currentStory.timeline || []).filter(evt =>
+                filters[evt.source] !== false && (filters.edits || evt.type !== 'edit'));
+            if (!events.length) {
+                box.innerHTML = '<div class="none">No activity for this selection.</div>';
+                return;
+            }
+            box.innerHTML = events.slice(-150).map(evt => {
+                const time = (evt.time || '').split(' ')[1] || evt.time || '';
+                const detail = evt.detail && evt.detail !== evt.summary
+                    ? `<details><summary>${esc(evt.summary)}</summary><pre>${esc(evt.detail)}</pre></details>`
+                    : esc(evt.summary);
+                return `<div class="event ${esc(evt.type)}">
+                    <span class="time">${esc(time.substring(0, 5))}</span>
+                    <span class="src ${esc(evt.source)}">${SOURCE_LABEL[evt.source] || esc(evt.source)}</span>
+                    <div class="text">${detail}${eventTags(evt)}</div>
+                </div>`;
+            }).join('');
+        }
+
+        function refresh() {
+            if (currentStudent) {
+                loadClass().then(() => openStudent(currentStudent));
+            } else {
+                loadClass();
+            }
+        }
+
+        loadClass();
+        // The class overview updates itself every 30 seconds.
+        setInterval(() => { if (!currentStudent) loadClass(); }, 30000);
     </script>
 </body>
 

@@ -115,6 +115,21 @@ def test_logs_are_stored_for_the_dashboard(ta):
     assert "pandas import" in story["jupyter"]["concepts_used"]
 
 
+def test_class_overview_and_timeline_tags(ta):
+    module, client, calls = ta
+    ask(client, "give me the code")
+    ask(client, "just write it")
+    rows = client.get("/teacher/class", headers=auth()).json()["students"]
+    assert rows[0]["student_id"] == "ana"
+    assert rows[0]["categories"] == {"executive": 2}
+    assert rows[0]["questions"] == 2
+    assert rows[0]["status"] == "active"
+    story = client.get("/teacher/student/ana/story", headers=auth()).json()
+    questions = [e for e in story["timeline"] if e["type"] == "question"]
+    assert [q["rule"] for q in questions] == ["First executive", "Second executive"]
+    assert questions[0]["category"] == "executive"
+
+
 def test_proactivity_and_disable(ta, inputs_dir):
     module, client, calls = ta
     payload = {"student_id": "ana", "file_name": "Task.chat", "processed_logs": "x"}

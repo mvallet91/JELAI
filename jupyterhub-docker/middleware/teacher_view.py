@@ -17,9 +17,9 @@ from pydantic import BaseModel
 
 import course_materials
 import llm_client
-from config_loader import INPUTS_DIR, config_error, model_override, validate_teacher_yaml
+from config_loader import INPUTS_DIR, config_error, model_override, section, validate_teacher_yaml
 from learning_story import (
-    get_all_students, build_learning_story, build_canvas, canvas_to_prompt
+    get_all_students, build_learning_story, build_canvas, canvas_to_prompt, build_class_overview
 )
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - TEACHER_VIEW - %(message)s')
@@ -74,6 +74,13 @@ def list_students():
     """List all active students with basic stats."""
     students = get_all_students()
     return {"students": students}
+
+
+@router.get("/class")
+def class_overview():
+    """Return one row for each student, for the class overview."""
+    interventions = section("interventions")
+    return {"students": build_class_overview(needs_guidance_cfg=interventions.get("needs_guidance") or {})}
 
 
 @router.get("/student/{student_id}/story")

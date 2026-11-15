@@ -160,16 +160,15 @@ def get_chat_history(student_id: Optional[str] = None, db_path: str = DATABASE_F
         with sqlite3.connect(db_path) as conn:
             conn.row_factory = sqlite3.Row
             c = conn.cursor()
+            # SELECT * also works with databases that do not have the intervention_rule column.
             if student_id:
-                c.execute(
-                    "SELECT student_id, timestamp, message_type, message_text, message_classification, file_name "
-                    "FROM chat_history WHERE student_id = ? ORDER BY timestamp", (student_id,))
+                c.execute("SELECT * FROM chat_history WHERE student_id = ? ORDER BY timestamp", (student_id,))
             else:
-                c.execute(
-                    "SELECT student_id, timestamp, message_type, message_text, message_classification, file_name "
-                    "FROM chat_history ORDER BY timestamp")
+                c.execute("SELECT * FROM chat_history ORDER BY timestamp")
             for r in c.fetchall():
-                rows.append(dict(r))
+                row = dict(r)
+                row.setdefault("intervention_rule", None)
+                rows.append(row)
     except Exception as e:
         logging.error(f"Error reading chat history: {e}")
     return rows
@@ -442,14 +441,18 @@ def build_timeline(student_id: str, pad_id: Optional[str] = None,
             events.append({
                 "time": time_str, "source": "chat", "type": "question",
                 "summary": f"Asked: \"{msg['message_text'][:100]}\"",
-                "detail": msg["message_text"]
+                "detail": msg["message_text"],
+                "category": msg.get("message_classification"),
+                "rule": msg.get("intervention_rule"),
             })
         else:
+            proactive = msg.get("message_classification") == "proactive"
             preview = msg["message_text"][:120].replace("\n", " ")
             events.append({
-                "time": time_str, "source": "chat", "type": "answer",
+                "time": time_str, "source": "chat", "type": "proactive" if proactive else "answer",
                 "summary": f"Juno: \"{preview}{'...' if len(msg['message_text']) > 120 else ''}\"",
-                "detail": msg["message_text"][:300]
+                "detail": msg["message_text"][:600],
+                "proactive": proactive,
             })
 
     # Sort everything by time
@@ -586,3 +589,75 @@ def build_learning_story(student_id: str, pad_id: Optional[str] = None,
         "recommendations": recommendations,
         "learner_model": learner_state,
     }
+
+
+# ---------------------------------------------------------------------------
+# Class overview: one row for each student
+# ---------------------------------------------------------------------------
+
+def _needs_guidance(chat: List[Dict], cfg: Dict[str, Any]) -> bool:
+    """Apply the interventions.needs_guidance rule of agent_config.yaml to the chat history."""
+    category = (cfg or {}).get("category")
+    if not category:
+        return False
+    default = "other"
+    questions = [m for m in chat if m.get("message_type") == "question" and m.get("message_classification")
+                 and m.get("message_classification") != default]
+    if len(questions) < int(cfg.get("min_questions", 6)):
+        return False
+    share = sum(1 for m in questions if m["message_classification"] == category) / len(questions)
+    return share > float(cfg.get("min_ratio", 0.6))
+
+
+def build_class_overview(logs_dir: str = PROCESSED_LOGS_DIR, db_path: str = DATABASE_FILE,
+                         needs_guidance_cfg: Optional[Dict[str, Any]] = None,
+                         now: Optional[float] = None) -> List[Dict[str, Any]]:
+    """Return one row for each student, with the facts that a teacher scans first.
+
+    Each row has the activity counts, the question categories and a list of
+    flags in plain words. The students with flags come first.
+    """
+    now = now or datetime.now().timestamp()
+    rows = []
+    for student in get_all_students(db_path):
+        student_id = student["student_id"]
+        canvas = build_canvas(student_id, logs_dir=logs_dir, db_path=db_path)
+        chat = get_chat_history(student_id, db_path)
+        categories: Dict[str, int] = {}
+        for msg in chat:
+            if msg.get("message_type") == "question" and msg.get("message_classification"):
+                categories[msg["message_classification"]] = categories.get(msg["message_classification"], 0) + 1
+
+        jupyter, pad = canvas["jupyter"], canvas["etherpad"]
+        gap_types = {g["type"] for g in canvas["cross_tool_gaps"]}
+        flags = []
+        if _needs_guidance(chat, needs_guidance_cfg or {}):
+            flags.append("Asks mostly for answers")
+        if "stuck_without_asking" in gap_types:
+            flags.append("Errors, but no questions")
+        if jupyter["total_executions"] >= 4 and jupyter["errors"] / jupyter["total_executions"] > 0.5:
+            flags.append("Many code errors")
+        if "code_without_writeup" in gap_types:
+            flags.append("No report yet")
+
+        minutes_ago = (now - student["last_seen"]) / 60 if student.get("last_seen") else None
+        if minutes_ago is not None and minutes_ago < 5:
+            status = "active"
+        elif minutes_ago is not None and minutes_ago < 30:
+            status = "idle"
+        else:
+            status = "away"
+
+        rows.append({
+            "student_id": student_id,
+            "status": status,
+            "last_seen": student.get("last_seen"),
+            "code_runs": jupyter["total_executions"],
+            "code_errors": jupyter["errors"],
+            "questions": canvas["chat"]["questions_asked"],
+            "categories": categories,
+            "report_words": pad["word_count"],
+            "flags": flags,
+        })
+    rows.sort(key=lambda r: (-len(r["flags"]), -(r["last_seen"] or 0)))
+    return rows
