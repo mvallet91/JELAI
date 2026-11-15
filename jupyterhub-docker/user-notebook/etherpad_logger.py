@@ -33,6 +33,12 @@ def _make_log_entry(content: str, notebook_path: str):
         }
     }
 
+def _is_default_pad_text(text: str) -> bool:
+    """Return True for the text that Etherpad puts in a new pad."""
+    default = os.getenv("ETHERPAD_DEFAULT_PAD_TEXT", "Welcome to Etherpad!")
+    return text.strip().startswith(default.strip()[:40])
+
+
 async def poll_etherpad(pad_id: str, log_file_path: str):
     """
     Polls the Etherpad API for text changes. 
@@ -54,7 +60,14 @@ async def poll_etherpad(pad_id: str, log_file_path: str):
                     data = response.json()
                     if data.get("code") == 0:
                         current_text = data.get("data", {}).get("text", "")
-                        
+
+                        # The first text that the logger sees can already be
+                        # the work of the student (for example a pasted report,
+                        # written before the first poll). Log it, unless it is
+                        # the default text of a new pad.
+                        if last_text is None and current_text.strip() and not _is_default_pad_text(current_text):
+                            last_text = ""
+
                         if last_text is not None and current_text != last_text:
                             logging.info(f"Pad {pad_id} changed! Length: {len(current_text)}")
                             
