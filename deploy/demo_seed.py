@@ -45,8 +45,8 @@ ANSWER = {
 }
 
 # Each student: minutes since the last activity, then a list of events.
-# Event kinds: run (code, output), error (code, error), ask (text, category),
-# nudge (text), pad (text).
+# Event kinds: run (code, output), error (code, error), ask (text, category[, answer]),
+# nudge (text), pad (text). An ask without an answer gets the default answer of its category.
 STUDENTS = {
     "sara.j": (2, [
         ("run", LOAD, ""), ("run", SHAPE, "(65793, 12)"), ("run", INFO, "RangeIndex: 65793 entries"),
@@ -61,13 +61,13 @@ STUDENTS = {
     ]),
     "tom.b": (11, [
         ("run", LOAD, ""),
-        ("ask", "give me the code for step 3", "executive"),
-        ("ask", "just write the code", "executive"),
+        ("ask", "give me the code for step 3", "executive", "Step 3 asks for the size of the data. Which attribute of a DataFrame gives the number of rows and columns? Try it and tell me what you see."),
+        ("ask", "just write the code", "executive", "I will not write it for you, but we can do it together. What do you want to know about the data in this step?"),
         ("run", SHAPE, "(65793, 12)"),
-        ("ask", "can you do step 5 for me", "executive"),
-        ("ask", "what is the answer to step 6", "executive"),
-        ("ask", "How do I check for missing values?", "instrumental"),
-        ("ask", "ok now give me the full code for step 6", "executive"),
+        ("ask", "can you do step 5 for me", "executive", "Step 5 is about missing values. A good question is: how can I see which values are empty? Try to ask it in that way."),
+        ("ask", "what is the answer to step 6", "executive", "Instead of asking for the answer, you could ask: which pandas method counts the distinct values in each group? Research shows that this kind of question helps you learn more."),
+        ("ask", "How do I check for missing values?", "instrumental", "That is a good question! `isna()` marks the empty values. What happens if you add `.sum()` after it?"),
+        ("ask", "ok now give me the full code for step 6", "executive", "You asked a good question about missing values a moment ago. Use the same approach here: group the rows by species first. What is your first line?"),
     ]),
     "lina.k": (6, [
         ("error", "sharks_df = pd.read_csv('shark.csv')", "FileNotFoundError: [Errno 2] No such file or directory: 'shark.csv'"),
@@ -103,7 +103,7 @@ STUDENTS = {
         ("pad", "The data has 65793 rows. I think there are many species, I will count them next."),
     ]),
     "mila.r": (1, [
-        ("ask", "hello", "other"),
+        ("ask", "Can you help me with step 1 of the shark task?", "instrumental", "Yes. Step 1 loads the data. Which pandas function reads a CSV file?"),
         ("run", LOAD, ""),
     ]),
     "finn.h": (24, [
@@ -194,9 +194,10 @@ def add(con):
                 con.execute("INSERT INTO chat_history (student_id, timestamp, message_type, message_text, "
                             "message_classification, file_name, intervention_rule) VALUES (?, ?, 'question', ?, ?, ?, ?)",
                             (student, t, event[1], category, CHAT_FILE, rule))
+                answer = event[3] if len(event) > 3 else ANSWER[category]
                 con.execute("INSERT INTO chat_history (student_id, timestamp, message_type, message_text, "
                             "message_classification, file_name) VALUES (?, ?, 'response', ?, NULL, ?)",
-                            (student, t + 8, ANSWER[category], CHAT_FILE))
+                            (student, t + 8, answer, CHAT_FILE))
                 previous = category
         store_student_logs(student, logs)
     con.commit()

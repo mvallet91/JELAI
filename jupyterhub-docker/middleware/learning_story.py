@@ -379,7 +379,10 @@ def canvas_to_prompt(canvas: Dict[str, Any]) -> str:
 def plain_text(markdown: str) -> str:
     """Return a one-line preview of Markdown text without the formatting marks."""
     text = re.sub(r"```.*?(```|$)", " [code] ", markdown or "", flags=re.DOTALL)
-    text = re.sub(r"[*_`#>|]+", "", text)
+    # Remove the marks for bold, italics and code, but keep the underscores in names such as sharks_df.
+    text = re.sub(r"(\*\*|__)(.+?)\1", r"\2", text)
+    text = re.sub(r"(?<!\w)[*_](\S.*?)[*_](?!\w)", r"\1", text)
+    text = re.sub(r"[`|]+|^\s*[#>]+\s*|(?<=\s)[#>]+\s", "", text, flags=re.MULTILINE)
     return re.sub(r"\s+", " ", text).strip()
 
 
