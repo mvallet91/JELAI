@@ -13,6 +13,9 @@ from config_loader import section
 import httpx
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - LEARNING_STORY - %(message)s')
+# httpx logs each request URL at INFO level. The URL of the Etherpad API
+# contains the API key, so keep httpx quiet. The key must not go into the logs.
+logging.getLogger("httpx").setLevel(logging.WARNING)
 
 DATABASE_FILE = os.getenv("DATABASE_FILE", "/app/chat_histories/chat_history.db")
 ETHERPAD_URL = os.getenv("ETHERPAD_URL", "http://etherpad:9001")
