@@ -75,6 +75,15 @@ the chat, the dashboard data and the pad are removed, and
 `agent_config.yaml` is put back to the version in Git. The accounts, the
 course materials and the start notebook stay.
 
+To show a class on the teacher dashboard, add eight made-up students with
+different patterns (a strong student, a student who asks only for answers,
+a student who has errors and asks nothing, and others):
+
+```bash
+bash /opt/jelai/deploy/demo-seed.sh          # add the students again, with times relative to now
+bash /opt/jelai/deploy/demo-seed.sh remove   # remove them
+```
+
 The free tier of Groq allows about 8,000 tokens per minute for each model,
 and one tutor answer uses a large part of it. Wait about 20 seconds between
 chat messages, or the tutor answers that it gets too many questions.
