@@ -29,6 +29,7 @@ llm:
     expert: ""
     proactivity: ""
     report: ""
+    assistant: ""   # the help assistant on the teacher pages
 
 # ---------------------------------------------------------------------------
 # Prompt files in the inputs directory. If the file does not exist, the
@@ -324,3 +325,11 @@ commands:
       Please return to the survey tab and enter the following code to finalize your submission:
 
       **`{code}`**
+
+# ---------------------------------------------------------------------------
+# Help assistant on the teacher pages (button "? Help"). It answers questions
+# about the configuration of JELAI and can propose changes to the input
+# files. A change is saved only when the teacher clicks "Apply".
+# ---------------------------------------------------------------------------
+teacher_assistant:
+  enabled: true

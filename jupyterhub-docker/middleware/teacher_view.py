@@ -8,15 +8,16 @@ import logging
 import os
 import secrets
 from pathlib import Path
-from typing import Optional
+from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, Response
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from pydantic import BaseModel
 
 import course_materials
 import llm_client
+import teacher_assistant
 from config_loader import INPUTS_DIR, config_error, model_override, section, validate_teacher_yaml
 from learning_story import (
     get_all_students, build_learning_story, build_canvas, canvas_to_prompt, build_class_overview
@@ -218,17 +219,15 @@ def validate_file(update: FileUpdate):
     return _validate_content(_editable_path(update.path), update.content)
 
 
-@router.put("/settings/file")
-def save_editable_file(update: FileUpdate):
-    """Validate and save an input file. The tutor uses it for the next message."""
-    target = _editable_path(update.path)
-    result = _validate_content(target, update.content)
+def _save_file(target: Path, content: str) -> dict:
+    """Validate and save an input file. Raise 422 if the content is not valid."""
+    result = _validate_content(target, content)
     if result["errors"]:
         raise HTTPException(status_code=422, detail=result)
     try:
         target.parent.mkdir(parents=True, exist_ok=True)
         tmp_path = target.with_name(f".{target.name}.tmp")
-        tmp_path.write_text(update.content, encoding="utf-8")
+        tmp_path.write_text(content, encoding="utf-8")
         os.replace(tmp_path, target)
     except OSError as e:
         raise HTTPException(
@@ -238,6 +237,12 @@ def save_editable_file(update: FileUpdate):
         )
     logging.info(f"Teacher saved {target}")
     return {"saved": str(target.relative_to(INPUTS_DIR.resolve())), **result}
+
+
+@router.put("/settings/file")
+def save_editable_file(update: FileUpdate):
+    """Validate and save an input file. The tutor uses it for the next message."""
+    return _save_file(_editable_path(update.path), update.content)
 
 
 def _effective_settings() -> llm_client.LLMSettings:
@@ -328,3 +333,74 @@ def set_start_notebook(body: StartNotebook):
         return {"start_notebook": course_materials.set_start_notebook(body.path)}
     except course_materials.MaterialsError as e:
         raise _materials_error(e)
+
+
+# ---------------------------------------------------------------------------
+# Help assistant API
+# ---------------------------------------------------------------------------
+
+class ChatMessage(BaseModel):
+    role: str
+    content: str
+
+
+class AssistantRequest(BaseModel):
+    messages: List[ChatMessage]
+    current_path: Optional[str] = None
+
+
+class ApplyProposal(BaseModel):
+    path: str
+    content: str
+    base_sha256: str
+
+
+@router.get("/assistant.js")
+def assistant_script():
+    """Serve the script of the help panel. The teacher pages load it."""
+    path = os.path.join(TEMPLATE_DIR, "assistant.js")
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            return Response(content=f.read(), media_type="text/javascript")
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="templates/assistant.js is missing.")
+
+
+@router.post("/assistant/chat")
+async def assistant_chat(body: AssistantRequest):
+    """Answer a question of the teacher. Return the text and the proposed file changes."""
+    if not teacher_assistant.enabled():
+        raise HTTPException(status_code=403, detail={"errors": [
+            "The help assistant is off. Set teacher_assistant.enabled to true in agent_config.yaml."]})
+    history = [m.model_dump() for m in body.messages]
+    if not history or history[-1]["role"] != "user" or not history[-1]["content"].strip():
+        raise HTTPException(status_code=400, detail={"errors": ["Write a question."]})
+    current_path = None
+    if body.current_path:
+        try:
+            current_path = str(_editable_path(body.current_path).relative_to(INPUTS_DIR.resolve()))
+        except HTTPException:
+            current_path = None
+    settings = _effective_settings()
+    state = teacher_assistant.server_state(settings.describe(), current_path)
+    messages = teacher_assistant.build_messages(history, teacher_assistant.load_docs(), state)
+    try:
+        reply = await llm_client.call_llm(messages, role="assistant", purpose="teacher help assistant",
+                                          settings=settings)
+    except llm_client.LLMError as e:
+        raise HTTPException(status_code=502, detail={"errors": [
+            f"The LLM did not answer: {e}. Click 'Test connection' on the settings page."]})
+    text, proposals = teacher_assistant.parse_reply(reply)
+    prepared = [teacher_assistant.prepare_proposal(p, _editable_path, _validate_content) for p in proposals]
+    return {"reply": text, "raw_reply": reply, "proposals": prepared}
+
+
+@router.post("/assistant/apply")
+def assistant_apply(body: ApplyProposal):
+    """Save a proposed change. Refuse it if the file changed after the proposal."""
+    target = _editable_path(body.path)
+    relative = str(target.relative_to(INPUTS_DIR.resolve()))
+    if teacher_assistant.disk_sha256(relative) != body.base_sha256:
+        raise HTTPException(status_code=409, detail={"errors": [
+            f"{relative} changed after the proposal. Ask the assistant again."], "warnings": []})
+    return _save_file(target, body.content)

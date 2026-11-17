@@ -144,6 +144,8 @@ services:
       - "./etherpad:/etc/jelai/etherpad:ro"
       # Course materials, uploaded on the teacher settings page
       - "course-materials:/app/course_materials"
+      # Documentation for the help assistant of the teacher pages
+      - "../docs:/app/docs:ro"
     ports:
       # Teacher dashboard and settings: http://<server>:8004/teacher-view
       - "${TEACHER_DASHBOARD_PORT:-8004}:8004"

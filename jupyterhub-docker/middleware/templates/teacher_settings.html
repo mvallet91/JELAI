@@ -286,7 +286,7 @@
         }
 
         async function openFile(path) {
-            if (dirty && !confirm('Discard the changes that you did not save?')) return;
+            if (dirty && !confirm('Discard the changes that you did not save?')) return false;
             const data = await api('/teacher/settings/file?path=' + encodeURIComponent(path));
             currentPath = data.path || path;
             dirty = false;
@@ -303,6 +303,7 @@
             box.innerHTML = '';
             info.forEach(t => box.appendChild(el('div', { class: 'msg info' }, t)));
             loadFiles();
+            return true;
         }
 
         async function validateFile() {
@@ -449,10 +450,30 @@
         });
         window.addEventListener('beforeunload', e => { if (dirty) e.preventDefault(); });
 
+        // Connection to the help panel (assistant.js).
+        window.JELAI_ASSISTANT_HOOKS = {
+            currentPath: () => currentPath,
+            afterApply: path => {
+                loadStatus().catch(() => {});
+                if (path !== currentPath) { loadFiles(); return; }
+                if (!dirty) { openFile(path); return; }
+                showMessages('messages', { warnings: ['The help assistant saved a new version of this file. ' +
+                    'The editor still shows your text that is not saved. Open the file again to see the new version.'] });
+            },
+            openProposal: async (path, content) => {
+                if (!(await openFile(path))) return;
+                document.getElementById('editor').value = content;
+                dirty = true;
+                showMessages('messages', { warnings: ['This is the proposal of the help assistant. It is not saved. ' +
+                    'Change it if necessary, then click Check and Save.'] });
+            },
+        };
+
         loadFiles().then(() => openFile('agent_config.yaml')).catch(r => showMessages('messages', r));
         loadStatus().catch(r => showMessages('llm-result', r));
         loadMaterials().catch(r => showMessages('materials-result', r));
     </script>
+    <script src="/teacher/assistant.js"></script>
 </body>
 
 </html>

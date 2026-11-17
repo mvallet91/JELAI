@@ -14,6 +14,7 @@ schools that do not have a GPU server or a budget for an API.
 | `LLM_API_KEY` | The API key. A local Ollama server does not need one. |
 | `LLM_MODEL` | The model for all tasks. Empty means the default model of the preset. |
 | `LLM_MODEL_CLASSIFICATION`, `LLM_MODEL_RESPONSE`, `LLM_MODEL_EXPERT`, `LLM_MODEL_PROACTIVITY`, `LLM_MODEL_REPORT` | Optional: a different model for each task. |
+| `LLM_MODEL_ASSISTANT` | Optional: the model of the help assistant on the teacher pages. Empty means the model of the response. |
 | `LLM_TIMEOUT_SECONDS`, `LLM_MAX_RETRIES` | The request timeout, and the number of retries after HTTP 429 (rate limit) or HTTP 5xx. |
 
 Teachers can also set the model for each task in `agent_config.yaml`
