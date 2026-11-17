@@ -89,6 +89,8 @@ and `COMPOSE_PROFILES=etherpad,https` in `jupyterhub-docker/.env`, put
 
 ## Update and stop
 
+To update in one step, run `bash /opt/jelai/deploy/update.sh` as root (pull, build, start, health check).
+
 ```bash
 cd /opt/jelai && git pull && cd jupyterhub-docker && docker compose build && docker compose up -d
 docker compose down        # stop. The data stays in Docker volumes.
