@@ -1,0 +1,161 @@
+# Teacher Chat Integration Stack
+# Runs alongside (but independently of) docker-compose-dev.yml
+# Usage: docker compose -f docker-compose-teacher.yml up -d
+
+services:
+  clickhouse:
+    image: clickhouse/clickhouse-server:latest
+    container_name: clickhouse
+    ports:
+      - "8123:8123" # HTTP interface (playground at /play)
+      - "9000:9000" # Native TCP protocol
+    volumes:
+      - clickhouse-data:/var/lib/clickhouse
+      - ./teacher-chat/clickhouse/init:/docker-entrypoint-initdb.d
+    environment:
+      - CLICKHOUSE_DB=teacher_analytics
+      - CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT=1
+    networks:
+      - teacher-chat-network
+    healthcheck:
+      test: [ "CMD", "clickhouse-client", "--query", "SELECT 1" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  librechat-mongo:
+    image: mongo:latest
+    container_name: librechat-mongo
+    volumes:
+      - librechat-mongo-data:/data/db
+    networks:
+      - teacher-chat-network
+    healthcheck:
+      test: [ "CMD", "mongosh", "--eval", "db.runCommand('ping').ok" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+  litellm:
+    image: ghcr.io/berriai/litellm:main-latest
+    container_name: litellm
+    ports:
+      - "4000:4000"
+    volumes:
+      - ./teacher-chat/litellm/config.yaml:/app/config.yaml
+    env_file:
+      - ./teacher-chat/.env.teacher
+    environment:
+      - LANGFUSE_PUBLIC_KEY=${LANGFUSE_PUBLIC_KEY}
+      - LANGFUSE_SECRET_KEY=${LANGFUSE_SECRET_KEY}
+      - LANGFUSE_HOST=${LANGFUSE_HOST}
+      - OLLAMA_API_KEY=${OLLAMA_API_KEY}
+    command: [ "--config", "/app/config.yaml", "--detailed_debug" ]
+    networks:
+      - teacher-chat-network
+    depends_on:
+      - langfuse
+
+  librechat:
+    image: ghcr.io/danny-avila/librechat:latest
+    container_name: librechat
+    ports:
+      - "3080:3080"
+    volumes:
+      - ./teacher-chat/librechat/librechat.yaml:/app/librechat.yaml
+    env_file:
+      - ./teacher-chat/.env
+    environment:
+      - MONGO_URI=mongodb://librechat-mongo:27017/LibreChat
+      - ALLOW_REGISTRATION=true
+      - ALLOW_SOCIAL_LOGIN=false
+      - CONFIG_PATH=/app/librechat.yaml
+      - DEBUG_LOGGING=true
+      - DEBUG_CONSOLE=true
+      - OLLAMA_API_KEY=${OLLAMA_API_KEY}
+    depends_on:
+      librechat-mongo:
+        condition: service_healthy
+      mcp-middleware:
+        condition: service_started
+    networks:
+      - teacher-chat-network
+
+  mcp-middleware:
+    build:
+      context: ./teacher-chat/mcp-middleware
+      dockerfile: Dockerfile
+    container_name: mcp-middleware
+    ports:
+      - "8005:8005"
+    volumes:
+      - ./teacher-chat/scripts:/app/scripts
+      - "${DATASETS_HOST_PATH}:/app/datasets"
+    environment:
+      - CLICKHOUSE_HOST=clickhouse
+      - CLICKHOUSE_PORT=8123
+      - CLICKHOUSE_DB=teacher_analytics
+      - OLLAMA_URL=https://llm.learn.ewi.tudelft.nl
+      - OLLAMA_MODEL=gemma3:27b
+      - EMBEDDING_MODEL=bge-m3
+    depends_on:
+      clickhouse:
+        condition: service_healthy
+    networks:
+      - teacher-chat-network
+
+  langfuse-postgres:
+    image: postgres:16-alpine
+    container_name: langfuse-postgres
+    volumes:
+      - langfuse-pg-data:/var/lib/postgresql/data
+    env_file:
+      - ./teacher-chat/.env.teacher
+    environment:
+      - POSTGRES_USER=${LANGFUSE_DB_USER}
+      - POSTGRES_PASSWORD=${LANGFUSE_DB_PASSWORD}
+      - POSTGRES_DB=${LANGFUSE_DB_NAME}
+    networks:
+      - teacher-chat-network
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ${LANGFUSE_DB_USER}" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  langfuse:
+    image: langfuse/langfuse:2
+    container_name: langfuse
+    ports:
+      - "3001:3000"
+    env_file:
+      - ./teacher-chat/.env.teacher
+    environment:
+      - DATABASE_URL=postgresql://${LANGFUSE_DB_USER}:${LANGFUSE_DB_PASSWORD}@langfuse-postgres:5432/${LANGFUSE_DB_NAME}
+      - NEXTAUTH_SECRET=${LANGFUSE_NEXTAUTH_SECRET}
+      - NEXTAUTH_URL=http://localhost:3001
+      - SALT=${LANGFUSE_SALT}
+      - LANGFUSE_INIT_ORG_ID=jelai
+      - LANGFUSE_INIT_ORG_NAME=JELAI
+      - LANGFUSE_INIT_PROJECT_ID=teacher-chat
+      - LANGFUSE_INIT_PROJECT_NAME=Teacher Chat
+      - LANGFUSE_INIT_PROJECT_PUBLIC_KEY=pk-lf-local
+      - LANGFUSE_INIT_PROJECT_SECRET_KEY=sk-lf-local
+      - LANGFUSE_INIT_USER_EMAIL=${LANGFUSE_INIT_USER_EMAIL}
+      - LANGFUSE_INIT_USER_NAME=${LANGFUSE_INIT_USER_NAME}
+      - LANGFUSE_INIT_USER_PASSWORD=${LANGFUSE_INIT_USER_PASSWORD}
+    depends_on:
+      langfuse-postgres:
+        condition: service_healthy
+    networks:
+      - teacher-chat-network
+
+volumes:
+  clickhouse-data:
+  librechat-mongo-data:
+  langfuse-pg-data:
+
+
+networks:
+  teacher-chat-network:
+    name: teacher-chat-network
+    driver: bridge

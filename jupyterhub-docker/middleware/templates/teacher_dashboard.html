@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JELAI Teacher Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #f7f6f2;
+            --surface: #ffffff;
+            --line: #e4e1d8;
+            --text: #1f2328;
+            --muted: #5f6368;
+            --faint: #8a8f96;
+            --accent: #2f6fb3;
+            --ok: #2e7d4f;
+            --ok-bg: #e6f2ea;
+            --warn: #a15c00;
+            --warn-bg: #fdf0dc;
+            --error: #b3261e;
+            --error-bg: #fbe9e7;
+            --neutral-bg: #eeede8;
+            --notebook: #c27c0e;
+            --chat: #2f6fb3;
+            --report: #7b5ea7;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Inter', Arial, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            font-size: 15px;
+            line-height: 1.5;
+        }
+
+        button { font: inherit; }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 32px;
+            background: var(--surface);
+            border-bottom: 1px solid var(--line);
+        }
+
+        .header h1 { font-size: 18px; font-weight: 600; }
+        .header h1 .product { color: var(--accent); }
+
+        .btn {
+            background: var(--surface);
+            border: 1px solid var(--line);
+            color: var(--text);
+            padding: 7px 14px;
+            border-radius: 8px;
+            cursor: pointer;
+            text-decoration: none;
+            font-size: 14px;
+            margin-left: 8px;
+        }
+
+        .btn:hover { border-color: var(--accent); color: var(--accent); }
+
+        main { max-width: 1180px; margin: 0 auto; padding: 28px 32px 64px; }
+
+        .page-title { font-size: 26px; font-weight: 600; margin-bottom: 4px; }
+        .page-sub { color: var(--muted); margin-bottom: 24px; }
+
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            padding: 20px 24px;
+            margin-bottom: 20px;
+        }
+
+        .card h2 { font-size: 16px; font-weight: 600; margin-bottom: 12px; }
+
+        /* --- Class overview --- */
+        table { width: 100%; border-collapse: collapse; }
+        th {
+            text-align: left;
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+            padding: 0 12px 10px;
+            border-bottom: 1px solid var(--line);
+        }
+        td { padding: 14px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+        tbody tr { cursor: pointer; }
+        tbody tr:hover { background: #fbfaf7; }
+        tbody tr:last-child td { border-bottom: none; }
+        .student-name { font-weight: 600; }
+        .small { font-size: 13px; color: var(--muted); }
+
+        .status { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); }
+        .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--faint); }
+        .dot.active { background: var(--ok); }
+        .dot.idle { background: var(--warn); }
+
+        .chip {
+            display: inline-block;
+            padding: 2px 9px;
+            border-radius: 999px;
+            font-size: 12px;
+            font-weight: 500;
+            background: var(--neutral-bg);
+            color: var(--muted);
+            margin: 0 4px 4px 0;
+            white-space: nowrap;
+        }
+        .chip.instrumental { background: var(--ok-bg); color: var(--ok); }
+        .chip.executive { background: var(--warn-bg); color: var(--warn); }
+        .chip.flag { background: var(--warn-bg); color: var(--warn); }
+        .chip.proactive { background: #e8eef7; color: var(--accent); }
+        .chip.rule { background: transparent; border: 1px solid var(--line); color: var(--muted); font-weight: 400; }
+
+        .none { color: var(--faint); font-size: 13px; }
+
+        /* --- Student view --- */
+        .back { display: inline-block; margin-bottom: 16px; color: var(--accent); cursor: pointer; background: none; border: none; }
+        .back:hover { text-decoration: underline; }
+
+        .facts { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px; }
+        .fact { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 14px 18px; }
+        .fact .num { font-size: 26px; font-weight: 600; }
+        .fact .num.bad { color: var(--error); }
+        .fact .label { font-size: 13px; color: var(--muted); }
+
+        .story { font-size: 16px; }
+
+        .attention li { margin: 0 0 8px 20px; }
+        .attention { border-left: 4px solid var(--warn); }
+
+        .filters { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 14px; }
+        .filter {
+            border: 1px solid var(--line);
+            background: var(--surface);
+            border-radius: 999px;
+            padding: 4px 12px;
+            font-size: 13px;
+            cursor: pointer;
+            color: var(--muted);
+        }
+        .filter.on { border-color: var(--text); color: var(--text); }
+        .filter .swatch { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }
+        .filters label { font-size: 13px; color: var(--muted); margin-left: 8px; cursor: pointer; }
+
+        .event { display: grid; grid-template-columns: 52px 96px 1fr; gap: 12px; padding: 9px 0; border-top: 1px solid var(--line); }
+        .event:first-child { border-top: none; }
+        .event .time { font-size: 13px; color: var(--faint); font-variant-numeric: tabular-nums; }
+        .event .src { font-size: 13px; font-weight: 500; }
+        .event .src.jupyter { color: var(--notebook); }
+        .event .src.chat { color: var(--chat); }
+        .event .src.etherpad { color: var(--report); }
+        .event .text { min-width: 0; overflow-wrap: anywhere; }
+        .event.code_error .text { color: var(--error); }
+        .event.question .text { font-weight: 500; }
+        .event .tags { margin-top: 4px; }
+        .event details summary { cursor: pointer; list-style: none; }
+        .event details summary::-webkit-details-marker { display: none; }
+        .event details pre {
+            white-space: pre-wrap;
+            font-size: 13px;
+            background: var(--bg);
+            border-radius: 8px;
+            padding: 10px 12px;
+            margin-top: 8px;
+            color: var(--text);
+            font-family: ui-monospace, Consolas, monospace;
+        }
+
+        .bars div { margin-bottom: 10px; font-size: 13px; color: var(--muted); }
+        .bar { height: 6px; background: var(--neutral-bg); border-radius: 3px; margin-top: 4px; overflow: hidden; }
+        .bar span { display: block; height: 100%; background: var(--accent); }
+
+        .empty { text-align: center; padding: 60px 20px; color: var(--muted); }
+
+        @media (max-width: 760px) {
+            .header, main { padding-left: 16px; padding-right: 16px; }
+            .facts { grid-template-columns: repeat(2, 1fr); }
+            .hide-narrow { display: none; }
+            .event { grid-template-columns: 44px 1fr; }
+            .event .src { display: none; }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="header">
+        <h1><span class="product">JELAI</span> · Teacher dashboard</h1>
+        <div>
+            <a class="btn" href="/teacher-settings">Settings</a>
+            <button class="btn" onclick="refresh()">Refresh</button>
+        </div>
+    </div>
+    <main id="main"><div class="empty">Loading the class...</div></main>
+
+    <script>
+        // Labels in plain words for the sources and event types of the timeline.
+        const SOURCE_LABEL = { jupyter: 'Notebook', chat: 'Chat', etherpad: 'Report' };
+        const SOURCE_COLOR = { jupyter: 'var(--notebook)', chat: 'var(--chat)', etherpad: 'var(--report)' };
+
+        let classRows = [];
+        let currentStudent = null;
+        let currentStory = null;
+        const filters = { jupyter: true, chat: true, etherpad: true, edits: false };
+
+        function esc(text) {
+            const div = document.createElement('div');
+            div.textContent = text == null ? '' : String(text);
+            return div.innerHTML;
+        }
+
+        function ago(seconds) {
+            if (!seconds) return 'no activity yet';
+            const mins = Math.floor((Date.now() / 1000 - seconds) / 60);
+            if (mins < 1) return 'just now';
+            if (mins < 60) return `${mins} min ago`;
+            const hours = Math.floor(mins / 60);
+            if (hours < 24) return `${hours} h ago`;
+            return `${Math.floor(hours / 24)} days ago`;
+        }
+
+        const STATUS_LABEL = { active: 'Active', idle: 'Idle', away: 'Away' };
+
+        function categoryChips(categories) {
+            const entries = Object.entries(categories || {});
+            if (!entries.length) return '<span class="none">No questions</span>';
+            return entries.sort((a, b) => b[1] - a[1])
+                .map(([name, n]) => `<span class="chip ${esc(name)}">${esc(name)} ${n}</span>`).join('');
+        }
+
+        async function loadClass() {
+            const main = document.getElementById('main');
+            try {
+                const resp = await fetch('/teacher/class');
+                const data = await resp.json();
+                classRows = data.students || [];
+            } catch (e) {
+                main.innerHTML = '<div class="empty">The class data could not be loaded. Select Refresh to try again.</div>';
+                return;
+            }
+            if (!currentStudent) renderClass();
+        }
+
+        function renderClass() {
+            const main = document.getElementById('main');
+            const flagged = classRows.filter(r => r.flags.length).length;
+            const active = classRows.filter(r => r.status === 'active').length;
+            if (!classRows.length) {
+                main.innerHTML = `<div class="page-title">Class</div>
+                    <div class="empty">No student has used the tutor yet. Students show here after their first chat message.</div>`;
+                return;
+            }
+            main.innerHTML = `
+                <div class="page-title">Class</div>
+                <div class="page-sub">${classRows.length} ${classRows.length === 1 ? 'student' : 'students'} · ${active} active now ·
+                    ${flagged ? `<strong>${flagged} may need you</strong>` : 'nobody needs attention now'}</div>
+                <div class="card" style="padding: 8px 12px">
+                    <table>
+                        <thead><tr>
+                            <th>Student</th>
+                            <th class="hide-narrow">Notebook</th>
+                            <th>Questions to the tutor</th>
+                            <th class="hide-narrow">Report</th>
+                            <th>Needs attention</th>
+                        </tr></thead>
+                        <tbody>
+                            ${classRows.map((r, i) => `
+                                <tr data-index="${i}">
+                                    <td>
+                                        <div class="student-name">${esc(r.student_id)}</div>
+                                        <span class="status"><span class="dot ${r.status}"></span>${STATUS_LABEL[r.status]} · ${ago(r.last_seen)}</span>
+                                    </td>
+                                    <td class="hide-narrow">${r.code_runs} ${r.code_runs === 1 ? 'run' : 'runs'}<br><span class="small">${r.code_errors} with errors</span></td>
+                                    <td>${categoryChips(r.categories)}</td>
+                                    <td class="hide-narrow">${r.report_words ? `${r.report_words} words` : '<span class="none">Not started</span>'}</td>
+                                    <td>${r.flags.length ? r.flags.map(f => `<span class="chip flag">${esc(f)}</span>`).join('') : '<span class="none">None</span>'}</td>
+                                </tr>`).join('')}
+                        </tbody>
+                    </table>
+                </div>
+                <p class="small">Categories come from the classification settings. A student shows here after the first chat message.</p>`;
+            main.querySelectorAll('tbody tr').forEach(tr => {
+                tr.addEventListener('click', () => openStudent(classRows[Number(tr.dataset.index)].student_id));
+            });
+        }
+
+        async function openStudent(studentId) {
+            currentStudent = studentId;
+            const main = document.getElementById('main');
+            main.innerHTML = '<div class="empty">Loading the learning story...</div>';
+            try {
+                const resp = await fetch(`/teacher/student/${encodeURIComponent(studentId)}/story`);
+                currentStory = await resp.json();
+                renderStudent();
+            } catch (e) {
+                main.innerHTML = `<button class="back" onclick="backToClass()">← Class</button>
+                    <div class="empty">The learning story could not be loaded.</div>`;
+            }
+        }
+
+        function backToClass() {
+            currentStudent = null;
+            currentStory = null;
+            renderClass();
+            loadClass();
+        }
+
+        function attentionItems(story, row) {
+            // The gap details already explain these two flags.
+            const coveredByGaps = ['No report yet', 'Errors, but no questions'];
+            const items = [];
+            (row ? row.flags : []).filter(f => !coveredByGaps.includes(f))
+                .forEach(f => items.push(`<strong>${esc(f)}</strong>`));
+            (story.canvas.cross_tool_gaps || []).forEach(g => items.push(esc(g.detail)));
+            return [...new Set(items)];
+        }
+
+        function hasLearnerData(model) {
+            if (!model) return false;
+            const knowledge = Object.values(model.knowledge || {}).some(k => (k.score || 0) > 0);
+            const state = model.metacognition && model.metacognition.state && model.metacognition.state !== 'Unknown';
+            return knowledge || state;
+        }
+
+        function renderLearner(model) {
+            const names = { data_loading: 'Data loading', data_exploration: 'Exploration', data_manipulation: 'Manipulation', visualization: 'Visualization', data_interpretation: 'Interpretation' };
+            const bars = Object.entries(model.knowledge || {}).filter(([k]) => names[k]).map(([k, v]) => {
+                const pct = Math.min(100, Math.round((v.score || 0) * 100));
+                return `<div>${names[k]} · ${pct}%<div class="bar"><span style="width:${pct}%"></span></div></div>`;
+            }).join('');
+            return `<div class="card">
+                <h2>Learner model</h2>
+                <p class="small" style="margin-bottom:12px">An estimate from the notebook activity. It becomes more reliable with more activity.</p>
+                <p style="margin-bottom:12px">Way of working: <strong>${esc(model.metacognition?.state || 'Unknown')}</strong> ·
+                   Mood: <strong>${esc(model.affect?.state || 'Neutral')}</strong></p>
+                <div class="bars">${bars}</div>
+            </div>`;
+        }
+
+        function renderStudent() {
+            const story = currentStory;
+            const row = classRows.find(r => r.student_id === story.student_id);
+            const canvas = story.canvas;
+            const items = attentionItems(story, row);
+            const main = document.getElementById('main');
+            main.innerHTML = `
+                <button class="back" onclick="backToClass()">← Class</button>
+                <div class="page-title">${esc(story.student_id)}</div>
+                <div class="page-sub">${row ? `<span class="status"><span class="dot ${row.status}"></span>${STATUS_LABEL[row.status]} · ${ago(row.last_seen)}</span> · ` : ''}Session ${esc(story.session_duration)}</div>
+
+                <div class="card story"><h2>Learning story</h2>${esc(story.summary)}</div>
+
+                ${items.length ? `<div class="card attention"><h2>Needs attention</h2><ul>${items.map(i => `<li>${i}</li>`).join('')}</ul></div>` : ''}
+
+                <div class="facts">
+                    <div class="fact"><div class="num">${canvas.jupyter.total_executions}</div><div class="label">code runs</div></div>
+                    <div class="fact"><div class="num ${canvas.jupyter.errors ? 'bad' : ''}">${canvas.jupyter.errors}</div><div class="label">runs with errors</div></div>
+                    <div class="fact"><div class="num">${canvas.chat.questions_asked}</div><div class="label">questions to the tutor</div></div>
+                    <div class="fact"><div class="num">${canvas.etherpad.word_count}</div><div class="label">words in the report</div></div>
+                </div>
+
+                <div class="card">
+                    <h2>What happened</h2>
+                    <div class="filters" id="filters"></div>
+                    <div id="timeline"></div>
+                </div>
+
+                ${hasLearnerData(story.learner_model) ? renderLearner(story.learner_model) : ''}`;
+            renderFilters();
+            renderTimeline();
+        }
+
+        function renderFilters() {
+            const box = document.getElementById('filters');
+            box.innerHTML = ['jupyter', 'chat', 'etherpad'].map(src =>
+                `<button class="filter ${filters[src] ? 'on' : ''}" data-src="${src}"><span class="swatch" style="background:${SOURCE_COLOR[src]}"></span>${SOURCE_LABEL[src]}</button>`
+            ).join('') + `<label><input type="checkbox" id="show-edits" ${filters.edits ? 'checked' : ''}> Show cell edits</label>`;
+            box.querySelectorAll('.filter').forEach(b => b.addEventListener('click', () => {
+                filters[b.dataset.src] = !filters[b.dataset.src];
+                renderFilters();
+                renderTimeline();
+            }));
+            document.getElementById('show-edits').addEventListener('change', e => {
+                filters.edits = e.target.checked;
+                renderTimeline();
+            });
+        }
+
+        function eventTags(evt) {
+            const tags = [];
+            if (evt.category) tags.push(`<span class="chip ${esc(evt.category)}">${esc(evt.category)}</span>`);
+            if (evt.rule) tags.push(`<span class="chip rule">Rule: ${esc(evt.rule)}</span>`);
+            if (evt.proactive) tags.push('<span class="chip proactive">Sent without a question</span>');
+            if (evt.report) tags.push('<span class="chip proactive">Report for the student · select to read</span>');
+            return tags.length ? `<div class="tags">${tags.join('')}</div>` : '';
+        }
+
+        function renderTimeline() {
+            const box = document.getElementById('timeline');
+            const events = (currentStory.timeline || []).filter(evt =>
+                filters[evt.source] !== false && (filters.edits || evt.type !== 'edit'));
+            if (!events.length) {
+                box.innerHTML = '<div class="none">No activity for this selection.</div>';
+                return;
+            }
+            box.innerHTML = events.slice(-150).map(evt => {
+                const time = (evt.time || '').split(' ')[1] || evt.time || '';
+                const detail = evt.detail && evt.detail !== evt.summary
+                    ? `<details><summary>${esc(evt.summary)}</summary><pre>${esc(evt.detail)}</pre></details>`
+                    : esc(evt.summary);
+                return `<div class="event ${esc(evt.type)}">
+                    <span class="time">${esc(time.substring(0, 5))}</span>
+                    <span class="src ${esc(evt.source)}">${SOURCE_LABEL[evt.source] || esc(evt.source)}</span>
+                    <div class="text">${detail}${eventTags(evt)}</div>
+                </div>`;
+            }).join('');
+        }
+
+        function refresh() {
+            if (currentStudent) {
+                loadClass().then(() => openStudent(currentStudent));
+            } else {
+                loadClass();
+            }
+        }
+
+        loadClass();
+        // The class overview updates itself every 30 seconds.
+        setInterval(() => { if (!currentStudent) loadClass(); }, 30000);
+    </script>
+</body>
+
+</html>

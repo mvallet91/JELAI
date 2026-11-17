@@ -1,0 +1,25 @@
+model_list:
+  - model_name: gemma3:27b
+    litellm_params:
+      model: openai/gemma3:27b
+      api_base: https://webui.learn.ewi.tudelft.nl/v1/
+      api_key: ${OLLAMA_API_KEY}
+  - model_name: mistral-small3.1:latest
+    litellm_params:
+      model: openai/mistral-small3.1:latest
+      api_base: https://webui.learn.ewi.tudelft.nl/v1/
+      api_key: ${OLLAMA_API_KEY}
+  - model_name: qwen3:32b
+    litellm_params:
+      model: openai/qwen3:32b
+      api_base: https://webui.learn.ewi.tudelft.nl/v1/
+      api_key: ${OLLAMA_API_KEY}
+  - model_name: gemma3:4b
+    litellm_params:
+      model: openai/gemma3:4b
+      api_base: https://webui.learn.ewi.tudelft.nl/v1/
+      api_key: ${OLLAMA_API_KEY}
+
+litellm_settings:
+  success_callback: ["langfuse"]
+  failure_callback: ["langfuse"]

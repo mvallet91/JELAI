@@ -1,0 +1,26 @@
+# HTTPS for JELAI. Caddy gets and renews the certificates (Let's Encrypt).
+# The host names come from the .env file. A name that is not set gets a
+# ".localhost" default, which is not reachable from the internet.
+
+{$JELAI_DOMAIN:jelai.localhost} {
+	reverse_proxy jupyterhub:8000
+}
+
+# Teacher dashboard and settings. Only the teacher pages are open: the other
+# paths of the middleware are for the student notebooks on the Docker network.
+{$TEACHER_DOMAIN:teacher.localhost} {
+	@teacher path /teacher /teacher/* /teacher-view /teacher-settings
+	handle @teacher {
+		reverse_proxy middleware:8004
+	}
+	handle / {
+		redir * /teacher-view
+	}
+	handle {
+		respond 404
+	}
+}
+
+{$ETHERPAD_DOMAIN:pad.localhost} {
+	reverse_proxy etherpad:9001
+}
