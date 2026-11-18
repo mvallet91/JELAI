@@ -5,11 +5,18 @@ JELAI, for example "How do I change the prompt of the tutor?" or "How do I
 add an assignment?". It uses two sources of knowledge:
 
 1. The documentation: the Markdown files in ``TEACHER_DOCS_DIR``
-   (default ``/app/docs``). The files are short, so all of them go into the
-   prompt. A search index is not necessary.
-2. The live state of the server: the teacher configuration, the list of
-   input files, the course materials, the start notebook and the LLM
-   settings. The API key and the student data never go into the prompt.
+   (default ``/app/docs``).
+2. The live state of the server: a short summary (input files, course
+   materials, start notebook, LLM settings), and the text of the input
+   files. The API key and the student data never go into the prompt.
+
+The full documentation and the input files are too large for the token
+limits of free LLM tiers (for example 8000 tokens per minute on Groq).
+Thus the module cuts them into chunks: one chunk for each section of a
+Markdown file and for each top-level key of agent_config.yaml, and one
+chunk for each prompt file. The prompt gets the chunks that share the most
+words with the question, up to ``teacher_assistant.max_context_chars``
+characters, and a list of the titles of all chunks.
 
 The assistant does not save files. It can propose a change to an input
 file. A proposal is a set of find-and-replace edits. This module applies
@@ -47,10 +54,12 @@ from typing import Callable, Dict, List, Optional, Tuple
 import course_materials
 from config_loader import INPUTS_DIR, config_error, get_config, section
 
-DOCS_MAX_CHARS = 60000
-FILE_MAX_CHARS = 12000
-HISTORY_MAX_MESSAGES = 12
-MESSAGE_MAX_CHARS = 6000
+DEFAULT_CONTEXT_CHARS = 12000
+CURRENT_FILE_MAX_CHARS = 4000
+CHUNK_MAX_CHARS = 5000
+HISTORY_MAX_MESSAGES = 8
+HISTORY_MAX_CHARS = 6000
+MESSAGE_MAX_CHARS = 3000
 ASSIGNMENT_DIRS = ("assignment_descriptions", "learning_objectives", "next_steps")
 
 EDIT_START = re.compile(r"^```jelai-edit\s+path=(?P<path>\S+)\s*$")
@@ -64,12 +73,15 @@ chat with an AI tutor. Teachers configure the tutor on the settings page
 (/teacher-settings) and follow the class on the dashboard (/teacher-view).
 
 Your task: answer questions of the teacher about how to configure and use
-JELAI. Use only the documentation and the server state below. If they do
-not give the answer, say that you do not know, and tell the teacher where
-to look. Do not invent settings, keys, files or pages.
+JELAI. Use only the documentation and the server state below. They show
+only the parts that are related to the question, and a list of the other
+parts. If they do not give the answer, say that you do not know, and name
+the part of the list where the teacher can look. Do not invent settings,
+keys, files or pages.
 
 Rules:
-- Write in the language of the teacher. Use short, clear sentences.
+- Write in the language of the last message of the teacher. If you are
+  not sure of the language, write in English. Use short, clear sentences.
 - Give steps in the order that the teacher does them. Refer to the
   settings page by the names that it shows (for example "Course
   materials", "Learning objectives", "Save").
@@ -92,7 +104,8 @@ Rules:
 ```
 
   The FIND text must be an exact copy of lines in the current file, with
-  enough lines to be unique. Keep it short. To make a new file, or to
+  enough lines to be unique. Propose a change only to text that you can
+  see below. Keep it short. To make a new file, or to
   replace a full file, leave the FIND part empty. One proposal can have
   more than one FIND/REPLACE block. Propose only changes that the teacher
   asked for. Do not change other lines. Keep the comments in YAML files.
@@ -112,31 +125,176 @@ def docs_dir() -> Path:
     return Path(os.getenv("TEACHER_DOCS_DIR") or "/app/docs")
 
 
-def load_docs(max_chars: int = DOCS_MAX_CHARS) -> str:
-    """Return the text of all Markdown files in the docs directory."""
+@dataclass
+class Chunk:
+    """A part of the knowledge: a section of a document or of an input file."""
+    title: str
+    text: str
+    source: str
+    order: int = 0
+
+
+_WORD = re.compile(r"[a-z0-9]+")
+_STOPWORDS = {
+    "the", "and", "for", "you", "are", "how", "can", "what", "with", "this", "that", "use", "does",
+    "from", "not", "have", "has", "its", "into", "then", "when", "only", "file", "files", "jelai",
+    "want", "need", "should", "would", "could", "about", "there", "they", "them", "your", "our",
+}
+
+
+def _terms(text: str) -> List[str]:
+    """Return the search words of a text (lower case, 3 letters or more, no stop words)."""
+    words = _WORD.findall((text or "").lower().replace("_", " ").replace("-", " "))
+    return [w for w in words if len(w) >= 3 and w not in _STOPWORDS]
+
+
+def _split_markdown(name: str, text: str) -> List[Chunk]:
+    """Cut a Markdown file into one chunk for each '## ' section."""
+    chunks: List[Chunk] = []
+    title, lines = name, []
+    for line in text.splitlines():
+        if line.startswith("## ") and lines:
+            chunks.append(Chunk(title, "\n".join(lines).strip(), name))
+            title, lines = f"{name}: {line[3:].strip()}", []
+        elif line.startswith("## "):
+            title = f"{name}: {line[3:].strip()}"
+        lines.append(line)
+    if lines:
+        chunks.append(Chunk(title, "\n".join(lines).strip(), name))
+    return [c for c in chunks if c.text]
+
+
+def _split_yaml(name: str, text: str) -> List[Chunk]:
+    """Cut a YAML file into one chunk for each top-level key.
+
+    The comment lines above a key go into the chunk of that key, so the
+    chunk has the full text that a proposal can replace.
+    """
+    chunks: List[Chunk] = []
+    current: List[str] = []
+    key = None
+    for line in text.splitlines():
+        match = re.match(r"^([A-Za-z_][\w-]*):", line)
+        if match and key is not None:
+            # Move the comments and blank lines at the end to the next chunk.
+            tail: List[str] = []
+            while current and (not current[-1].strip() or current[-1].lstrip().startswith("#")):
+                tail.insert(0, current.pop())
+            chunks.append(Chunk(f"{name}: {key}", "\n".join(current).strip("\n"), name))
+            current = tail
+        if match:
+            key = match.group(1)
+        current.append(line)
+    if current:
+        chunks.append(Chunk(f"{name}: {key or 'header'}", "\n".join(current).strip("\n"), name))
+    return [c for c in chunks if c.text.strip()]
+
+
+def _cap(chunk: Chunk) -> Chunk:
+    if len(chunk.text) > CHUNK_MAX_CHARS:
+        chunk.text = chunk.text[:CHUNK_MAX_CHARS] + "\n[The rest of this part is not shown.]"
+    return chunk
+
+
+def load_chunks() -> List[Chunk]:
+    """Return the chunks of the documentation and of the input files."""
+    chunks: List[Chunk] = []
     directory = docs_dir()
-    if not directory.is_dir():
-        return ""
-    parts, total = [], 0
-    for path in sorted(directory.glob("*.md")):
-        try:
-            text = path.read_text(encoding="utf-8").strip()
-        except OSError:
+    if directory.is_dir():
+        for path in sorted(directory.glob("*.md")):
+            try:
+                chunks.extend(_split_markdown(f"docs/{path.name}", path.read_text(encoding="utf-8")))
+            except OSError:
+                continue
+    content, exists, from_sample = read_input_file("agent_config.yaml")
+    if content:
+        chunks.extend(_split_yaml("agent_config.yaml", content))
+    inputs = INPUTS_DIR.resolve()
+    names = sorted({p.name[: -len(".sample")] if p.name.endswith(".sample") else p.name
+                    for p in inputs.glob("*.txt*")}) if inputs.is_dir() else []
+    for name in names:
+        if not name.endswith(".txt"):
             continue
-        part = f"### File docs/{path.name}\n\n{text}\n"
-        if total + len(part) > max_chars:
-            part = part[: max(0, max_chars - total)] + "\n[The rest of this file is not shown.]\n"
-        parts.append(part)
-        total += len(part)
-        if total >= max_chars:
+        content, exists, from_sample = read_input_file(name)
+        if content:
+            note = " (sample file)" if from_sample else ""
+            chunks.append(Chunk(f"{name}{note}", content.strip(), name))
+    for index, chunk in enumerate(chunks):
+        chunk.order = index
+        _cap(chunk)
+    return chunks
+
+
+def _score(chunk: Chunk, query: Dict[str, float]) -> float:
+    title_terms = set(_terms(chunk.title))
+    body = _terms(chunk.text)
+    counts: Dict[str, int] = {}
+    for word in body:
+        counts[word] = counts.get(word, 0) + 1
+    score = 0.0
+    for term, weight in query.items():
+        hit = min(counts.get(term, 0), 3) + (4 if term in title_terms else 0)
+        score += weight * hit
+    # Prefer short chunks when the scores are similar.
+    return score / (1 + len(chunk.text) / 4000)
+
+
+def select_chunks(chunks: List[Chunk], questions: List[str], max_chars: int,
+                  exclude_source: Optional[str] = None) -> List[Chunk]:
+    """Return the chunks that are most related to the questions, up to ``max_chars``.
+
+    ``questions`` are the messages of the teacher, the most recent last. The
+    last message has the most weight. When no chunk shares a word with the
+    questions, the chunks of the teacher documentation come first.
+    """
+    query: Dict[str, float] = {}
+    for age, question in enumerate(reversed(questions[-3:])):
+        for term in _terms(question):
+            query[term] = max(query.get(term, 0.0), 1.0 / (1 + age))
+    candidates = [c for c in chunks if c.source != exclude_source]
+    scored = [(_score(c, query), c) for c in candidates]
+    if not any(score > 0 for score, _ in scored):
+        scored = [(1.0 if "teacher-configuration" in c.source else 0.5 if c.source.startswith("docs/") else 0.0, c)
+                  for c in candidates]
+    scored.sort(key=lambda item: (-item[0], item[1].order))
+    selected, total = [], 0
+    for score, chunk in scored:
+        if score <= 0:
             break
+        if total + len(chunk.text) > max_chars:
+            continue
+        selected.append(chunk)
+        total += len(chunk.text)
+    return sorted(selected, key=lambda c: c.order)
+
+
+def format_knowledge(chunks: List[Chunk], selected: List[Chunk]) -> str:
+    """Return the prompt text: the selected chunks and the titles of the others."""
+    parts = ["## Documentation and input files (the parts related to the question)", ""]
+    if not chunks:
+        parts.append("The documentation is not available on this server.")
+    for chunk in selected:
+        parts.append(f"### {chunk.title}")
+        if chunk.source.startswith("docs/"):
+            parts.append(chunk.text)
+        else:
+            parts.append("```")
+            parts.append(chunk.text)
+            parts.append("```")
+        parts.append("")
+    others = [c.title for c in chunks if c not in selected]
+    if others:
+        parts.append("## Other parts (not shown here; the teacher can ask about them)")
+        parts.extend(f"- {title}" for title in others)
     return "\n".join(parts)
 
 
-def _truncate(text: str, limit: int = FILE_MAX_CHARS) -> str:
-    if len(text) <= limit:
-        return text
-    return text[:limit] + "\n[The rest of this file is not shown.]"
+def context_chars() -> int:
+    value = section("teacher_assistant").get("max_context_chars")
+    try:
+        return max(2000, int(value)) if value else DEFAULT_CONTEXT_CHARS
+    except (TypeError, ValueError):
+        return DEFAULT_CONTEXT_CHARS
 
 
 def read_input_file(relative: str) -> Tuple[str, bool, bool]:
@@ -240,38 +398,58 @@ def server_state(llm_description: Optional[Dict] = None, current_path: Optional[
         lines.extend(gaps)
     lines.append("")
 
-    files = ["agent_config.yaml", "ta_system_prompt.txt"]
-    if current_path and current_path not in files:
-        files.append(current_path)
-    for relative in files:
+    if current_path and current_path != "agent_config.yaml":
         try:
-            content, exists, from_sample = read_input_file(relative)
+            content, exists, from_sample = read_input_file(current_path)
         except (OSError, ValueError):
-            continue
-        if not content and not exists:
-            continue
-        note = " (the sample file; the teacher has no own copy yet)" if from_sample else ""
-        open_note = " The teacher has this file open in the editor now." if relative == current_path else ""
-        lines.append(f"### Current content of {relative}{note}.{open_note}")
-        lines.append("```")
-        lines.append(_truncate(content))
-        lines.append("```")
+            content, exists, from_sample = "", False, False
+        if content or exists:
+            note = " (the sample file; the teacher has no own copy yet)" if from_sample else ""
+            if len(content) > CURRENT_FILE_MAX_CHARS:
+                content = content[:CURRENT_FILE_MAX_CHARS] + "\n[The rest of this file is not shown.]"
+            lines.append(f"### The teacher has {current_path} open in the editor now{note}. Its content:")
+            lines.append("```")
+            lines.append(content)
+            lines.append("```")
+            lines.append("")
+    elif current_path:
+        lines.append("The teacher has agent_config.yaml open in the editor now.")
         lines.append("")
     return "\n".join(lines)
 
 
-def build_messages(history: List[Dict[str, str]], docs: str, state: str) -> List[Dict[str, str]]:
-    """Return the messages for the LLM: the system prompt and the recent chat."""
-    system = SYSTEM_PROMPT
-    system += "\n\n## Documentation\n\n" + (docs or "The documentation is not available on this server.")
-    system += "\n\n" + state
-    messages = [{"role": "system", "content": system}]
-    for item in history[-HISTORY_MAX_MESSAGES:]:
+def build_messages(history: List[Dict[str, str]], knowledge: str, state: str) -> List[Dict[str, str]]:
+    """Return the messages for the LLM: the system prompt and the recent chat.
+
+    The chat is cut to the most recent messages, up to ``HISTORY_MAX_CHARS``
+    characters. The last message (the question) is always kept.
+    """
+    system = SYSTEM_PROMPT + "\n\n" + state + "\n\n" + knowledge
+    recent: List[Dict[str, str]] = []
+    total = 0
+    for item in reversed(history[-HISTORY_MAX_MESSAGES:]):
         role = item.get("role")
         content = str(item.get("content") or "")[:MESSAGE_MAX_CHARS]
-        if role in ("user", "assistant") and content.strip():
-            messages.append({"role": role, "content": content})
-    return messages
+        if role not in ("user", "assistant") or not content.strip():
+            continue
+        if recent and total + len(content) > HISTORY_MAX_CHARS:
+            break
+        recent.insert(0, {"role": role, "content": content})
+        total += len(content)
+    return [{"role": "system", "content": system}] + recent
+
+
+def build_prompt(history: List[Dict[str, str]], llm_description: Optional[Dict] = None,
+                 current_path: Optional[str] = None) -> List[Dict[str, str]]:
+    """Return the messages for the LLM, with the knowledge that is related to the chat."""
+    questions = [str(m.get("content") or "") for m in history if m.get("role") == "user"]
+    if current_path:
+        questions[-1:] = [current_path + " " + questions[-1]] if questions else [current_path]
+    chunks = load_chunks()
+    exclude = current_path if current_path and current_path != "agent_config.yaml" else None
+    selected = select_chunks(chunks, questions, context_chars(), exclude_source=exclude)
+    state = server_state(llm_description, current_path)
+    return build_messages(history, format_knowledge(chunks, selected), state)
 
 
 # ---------------------------------------------------------------------------

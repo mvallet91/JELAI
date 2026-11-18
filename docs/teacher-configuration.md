@@ -66,6 +66,14 @@ same checks as for **Save** apply. If the file changed after the proposal,
 The assistant cannot change the `.env` file, the course materials or the
 start notebook. It explains the steps for these.
 
+The full documentation and the input files are too large for one prompt on
+a free LLM tier. Thus the assistant sends only the parts (sections of the
+documentation, top-level keys of `agent_config.yaml`, prompt files) that
+share the most words with the question, and a list of the titles of the
+other parts. `teacher_assistant.max_context_chars` (default 12000, about
+3500 tokens) sets the maximum size of these parts. If the answers miss
+information and your LLM has a higher limit, increase it.
+
 The assistant uses the LLM model of the role `assistant` (`LLM_MODEL_ASSISTANT`
 in `.env`, or `llm.models.assistant` in `agent_config.yaml`). If both are
 empty, it uses the model of the response. The documentation comes from the

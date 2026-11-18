@@ -61,12 +61,49 @@ def test_assignment_gaps(inputs_dir, monkeypatch):
     assert "learning_objectives" not in gaps[0]
 
 
-def test_load_docs_reads_markdown(tmp_path, monkeypatch):
-    monkeypatch.setenv("TEACHER_DOCS_DIR", str(tmp_path))
-    (tmp_path / "a.md").write_text("# Title\nText")
-    assert "docs/a.md" in teacher_assistant.load_docs()
-    monkeypatch.setenv("TEACHER_DOCS_DIR", str(tmp_path / "none"))
-    assert teacher_assistant.load_docs() == ""
+def test_split_markdown_and_yaml():
+    md = teacher_assistant._split_markdown("docs/a.md", "# Title\nIntro\n\n## One\nText one\n\n## Two\nText two")
+    assert [c.title for c in md] == ["docs/a.md", "docs/a.md: One", "docs/a.md: Two"]
+    yml = teacher_assistant._split_yaml("x.yaml", "# head\nagent:\n  name: A\n\n# Models\nllm:\n  models: {}\n")
+    assert [c.title for c in yml] == ["x.yaml: agent", "x.yaml: llm"]
+    # The comment above a key goes with that key.
+    assert yml[1].text.startswith("\n# Models") or yml[1].text.startswith("# Models")
+    assert "# head" in yml[0].text
+
+
+def test_select_chunks_prefers_related_parts_and_respects_budget(inputs_dir, tmp_path, monkeypatch):
+    monkeypatch.setattr(teacher_assistant, "INPUTS_DIR", inputs_dir)
+    monkeypatch.setenv("TEACHER_DOCS_DIR", str(tmp_path / "docs"))
+    (tmp_path / "docs").mkdir()
+    (tmp_path / "docs" / "guide.md").write_text(
+        "# Guide\n\n## Add an assignment\nUpload the notebook.\n\n## LLM provider\nSet LLM_PROVIDER in .env.\n")
+    chunks = teacher_assistant.load_chunks()
+    titles = [c.title for c in chunks]
+    assert "agent_config.yaml: agent" in titles
+    assert any(t.startswith("ta_system_prompt.txt") for t in titles)
+
+    selected = teacher_assistant.select_chunks(chunks, ["Rename the tutor: agent name"], 3000)
+    assert "agent_config.yaml: agent" in [c.title for c in selected]
+    assert sum(len(c.text) for c in selected) <= 3000
+
+    selected = teacher_assistant.select_chunks(chunks, ["Wie ändere ich den LLM-Anbieter?"], 3000)
+    assert "docs/guide.md: LLM provider" in [c.title for c in selected]
+
+    knowledge = teacher_assistant.format_knowledge(chunks, selected)
+    assert "Other parts" in knowledge and "agent_config.yaml: interventions" in knowledge
+
+
+def test_prompt_fits_free_tier_limit(inputs_dir, monkeypatch):
+    """The prompt must stay far below 8000 tokens (Groq free tier) with the real docs."""
+    from conftest import MIDDLEWARE_DIR
+    monkeypatch.setattr(teacher_assistant, "INPUTS_DIR", inputs_dir)
+    monkeypatch.setenv("TEACHER_DOCS_DIR", str(MIDDLEWARE_DIR.parent.parent / "docs"))
+    monkeypatch.setenv("COURSE_MATERIALS_DIR", str(inputs_dir / "none"))
+    history = [{"role": "user", "content": q} for q in (
+        "How do I change the prompt of the tutor?", "How do I add a new assignment?")]
+    messages = teacher_assistant.build_prompt(history, {"models": {"response": "m"}}, "ta_system_prompt.txt")
+    chars = sum(len(m["content"]) for m in messages)
+    assert chars < 20000  # about 5000 tokens
 
 
 def test_assistant_role_uses_response_model():
@@ -81,7 +118,7 @@ def assistant(ta, monkeypatch, tmp_path):  # noqa: F811
     module, client, _ = ta
     docs = tmp_path / "docs"
     docs.mkdir()
-    (docs / "teacher-configuration.md").write_text("# Teacher configuration\nUse the settings page.")
+    (docs / "teacher-configuration.md").write_text("# Teacher configuration\n\n## Rename the tutor\nUse the settings page.")
     monkeypatch.setenv("TEACHER_DOCS_DIR", str(docs))
     monkeypatch.setenv("COURSE_MATERIALS_DIR", str(tmp_path / "materials"))
     (tmp_path / "materials").mkdir()

@@ -382,8 +382,7 @@ async def assistant_chat(body: AssistantRequest):
         except HTTPException:
             current_path = None
     settings = _effective_settings()
-    state = teacher_assistant.server_state(settings.describe(), current_path)
-    messages = teacher_assistant.build_messages(history, teacher_assistant.load_docs(), state)
+    messages = teacher_assistant.build_prompt(history, settings.describe(), current_path)
     try:
         reply = await llm_client.call_llm(messages, role="assistant", purpose="teacher help assistant",
                                           settings=settings)

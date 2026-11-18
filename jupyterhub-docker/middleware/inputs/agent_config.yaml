@@ -333,3 +333,9 @@ commands:
 # ---------------------------------------------------------------------------
 teacher_assistant:
   enabled: true
+  # The maximum number of characters of documentation and input files in
+  # one prompt. The assistant selects the parts that are related to the
+  # question. 12000 characters is about 3500 tokens: this fits the limit of
+  # free tiers (for example 8000 tokens per minute on Groq). With a larger
+  # limit, the answers can use more context.
+  max_context_chars: 12000
