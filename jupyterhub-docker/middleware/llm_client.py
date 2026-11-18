@@ -19,8 +19,9 @@ Configuration comes from environment variables:
 ``LLM_MODEL``
     The default model for all roles.
 ``LLM_MODEL_CLASSIFICATION``, ``LLM_MODEL_RESPONSE``, ``LLM_MODEL_EXPERT``,
-``LLM_MODEL_PROACTIVITY``, ``LLM_MODEL_REPORT``
-    Optional models for each role. The presets use a large model for the
+``LLM_MODEL_PROACTIVITY``, ``LLM_MODEL_REPORT``, ``LLM_MODEL_ASSISTANT``
+    Optional models for each role. The role ``assistant`` is the help
+    assistant on the teacher pages. The presets use a large model for the
     response (the tutor that talks to the student) and a small or medium
     model for classification and the expert agent. This makes these steps
     fast and saves quota on free tiers.
@@ -44,7 +45,7 @@ import httpx
 
 logger = logging.getLogger("jelai.llm")
 
-ROLES = ("classification", "response", "expert", "proactivity", "report")
+ROLES = ("classification", "response", "expert", "proactivity", "report", "assistant")
 
 # Each preset gives a base URL and default models. ``models`` maps a role
 # to a model; the key ``default`` applies to roles without an entry.
@@ -113,6 +114,7 @@ LEGACY_MODEL_VARS = {
     "expert": "ollama_ea_model",
     "proactivity": "ollama_response_model",
     "report": "ollama_response_model",
+    "assistant": "ollama_response_model",
 }
 
 FALLBACK_MODEL = "gemma3:4b"
@@ -215,6 +217,7 @@ def load_settings(env: Optional[Dict[str, str]] = None) -> LLMSettings:
             or default_model
             or get(LEGACY_MODEL_VARS[role])
             or preset["models"].get(role)
+            or (preset["models"].get("response") if role == "assistant" else None)
             or preset["models"].get("default")
             or FALLBACK_MODEL
         )

@@ -11,6 +11,75 @@ http://<server>:8004/teacher-settings      (user name: teacher, password: TEACHE
 The settings page checks a file before it saves it. The tutor uses the new
 settings for the next student message. A restart is not necessary.
 
+## Add an assignment
+
+An assignment is a notebook and up to three text files with the same name.
+For the notebook `Task2.ipynb`, do these steps on the settings page:
+
+1. In **Course materials**, upload `Task2.ipynb` (or a ZIP file with the
+   notebook and its data files). The notebooks of the students get the new
+   files within a minute. A file that a student has already is not
+   replaced: use a new file name for a new version.
+2. Optional: in **Notebook that opens after login**, select `Task2.ipynb`.
+   This is active for the next start of a student notebook server.
+3. In **Assignment descriptions**, type `Task2` and click **Add**. Write
+   the description of the assignment, then click **Save**. The tutor uses
+   it in its prompt.
+4. In **Learning objectives**, add `Task2` in the same way. Write one
+   learning objective on each line. The tutor matches each question to
+   one of them, and the `/report` command uses them.
+5. Optional: in **Next steps**, add `Task2` in the same way, with one next
+   step on each line, for the `/report` command.
+
+The student chat for the notebook is `Task2.chat`. The tutor finds the
+files by this name.
+
+## Change the prompt of the tutor
+
+The system prompt of the tutor is the file `ta_system_prompt.txt` (section
+**Prompts** on the settings page). Open it, change the text and click
+**Save**. If the file shows "(sample)", the tutor uses the sample file now,
+and **Save** makes your own copy. Other text that goes into the prompt:
+
+- The hints of the reactive rules: `interventions.reactive.rules` in
+  `agent_config.yaml`.
+- The name of the tutor: `agent.name` in `agent_config.yaml`.
+- The prompt of the classification: `classification.prompt`.
+- The prompt of the proactive messages: `proactivity.system_prompt`.
+- The prompt of `/report`: `commands.report.system_prompt`.
+
+## Help assistant
+
+The teacher pages have a **? Help** button. It opens a chat with a help
+assistant. The assistant answers questions about the configuration, for
+example "How do I add a new assignment?". It reads this documentation and
+the current settings of the server: `agent_config.yaml`, the list of input
+files, the course materials and the LLM settings. It does not read student
+data, and the API key never goes to the LLM.
+
+The assistant can propose a change to an input file. The proposal shows
+the change as a diff. Click **Apply** to save it, or **Edit first** to open
+it in the editor (the file is not saved until you click **Save**). The
+same checks as for **Save** apply. If the file changed after the proposal,
+**Apply** does not save it.
+
+The assistant cannot change the `.env` file, the course materials or the
+start notebook. It explains the steps for these.
+
+The full documentation and the input files are too large for one prompt on
+a free LLM tier. Thus the assistant sends only the parts (sections of the
+documentation, top-level keys of `agent_config.yaml`, prompt files) that
+share the most words with the question, and a list of the titles of the
+other parts. `teacher_assistant.max_context_chars` (default 12000, about
+3500 tokens) sets the maximum size of these parts. If the answers miss
+information and your LLM has a higher limit, increase it.
+
+The assistant uses the LLM model of the role `assistant` (`LLM_MODEL_ASSISTANT`
+in `.env`, or `llm.models.assistant` in `agent_config.yaml`). If both are
+empty, it uses the model of the response. The documentation comes from the
+`docs` directory of the repository; `docker-compose.yml` mounts it at
+`/app/docs` (`TEACHER_DOCS_DIR`).
+
 ## The tutor pipeline
 
 For each student message, the tutor does these steps:
@@ -46,6 +115,7 @@ The file `agent_config.yaml` controls all three steps.
 | `proactivity` | When and how the tutor sends messages without a question. |
 | `message_gateway` | Text patterns that the tutor must never send to a student. |
 | `commands` | The chat commands `/report` and the optional completion code. |
+| `teacher_assistant` | The help assistant on the teacher pages. Set `enabled: false` to remove it. |
 
 If you remove a key from the file, the tutor uses the original value. If the
 file has a syntax error, the tutor uses the original file and the settings

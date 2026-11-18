@@ -83,6 +83,9 @@ services:
       - "./jupyterhub-docker/middleware/learning_story.py:/app/learning_story.py"
       - "./jupyterhub-docker/middleware/learner_model.py:/app/learner_model.py"
       - "./jupyterhub-docker/middleware/teacher_view.py:/app/teacher_view.py"
+      - "./jupyterhub-docker/middleware/teacher_assistant.py:/app/teacher_assistant.py"
+      # Documentation for the help assistant of the teacher pages
+      - "./docs:/app/docs:ro"
       - "./jupyterhub-docker/middleware/templates:/app/templates"
       - "./jupyterhub-docker/middleware/inputs:/app/inputs"
       - "./jupyterhub-docker/etherpad:/etc/jelai/etherpad:ro"
